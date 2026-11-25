@@ -436,7 +436,6 @@ namespace Kezor.Core.Server
         // ------------------------------------------------------------ GM (testes)
         private string Gm(Character c, string[] p)
         {
-            if (!_opt.AllowGm) return "ERR comandos GM desativados neste servidor";
             switch (p[1].ToUpperInvariant())
             {
                 case "LEVEL":

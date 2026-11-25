@@ -12,12 +12,11 @@ using Kezor.Core.World;
 
 namespace Kezor.Client
 {
-    public enum ConnectMode { Local, Host, Online }
-
     /// <summary>
     /// Ponto de entrada do cliente. Cria-se sozinho ao apertar Play em qualquer cena (ou pode ser colocado numa cena).
-    /// Fluxo: tela de entrada -> conexão (servidor embutido, host LAN ou servidor remoto) -> mundo.
-    /// Toda regra de jogo está no servidor; aqui só há visual, entrada do jogador e HUD.
+    /// Só multiplayer: lista de servidores -> conta e senha -> seleção de personagem -> mundo dividido com os outros jogadores.
+    /// Sempre por TCP, inclusive no "Servidor deste PC" (o jogo abre um servidor de verdade aqui e entra nele como qualquer
+    /// outro jogador). Toda regra de jogo está no servidor; aqui só há visual, entrada do jogador e HUD.
     /// </summary>
     public sealed partial class KezorGame : MonoBehaviour
     {
@@ -37,8 +36,9 @@ namespace Kezor.Client
         // ---------------------------------------------------------------- estado
         public readonly ClientState State = new ClientState();
         private IClientConnection? _conn;
-        private GameServer? _localServer;
-        private TcpServerHost? _lanHost;
+        private float _nextPing, _pingSentAt = -1;
+        /// <summary>Latência medida pelo PING (ms); -1 enquanto não mediu.</summary>
+        public int PingMs { get; private set; } = -1;
         private readonly Queue<Action<string>?> _replyHandlers = new Queue<Action<string>?>();
 
         private Camera _cam = null!;
@@ -55,7 +55,8 @@ namespace Kezor.Client
         // login
         internal string _name = "";
         internal int _classIndex;
-        internal ConnectMode _mode = ConnectMode.Local;
+        /// <summary>Nome do servidor e canal onde o jogador entrou (para a interface).</summary>
+        internal string _serverLabel = "";
         internal string _host = "127.0.0.1", _port = Protocol.DefaultPort.ToString();
         internal string _loginError = "";
         internal bool _connecting;
@@ -123,43 +124,58 @@ namespace Kezor.Client
         {
             if (Instance == this) Instance = null;
             Disconnect();
+            StopHost();
         }
 
+        private void OnApplicationQuit() { Disconnect(); StopHost(); }
+
         // ---------------------------------------------------------------- conexão
+        /// <summary>Conecta por TCP no servidor escolhido (_host/_port) e, ao conectar, entra na conta (AUTH ou REGISTER).</summary>
         internal void StartGame()
         {
             _loginError = "";
             Disconnect();
             State.MyId = 0;
-            switch (_mode)
-            {
-                case ConnectMode.Local:
-                    _localServer = new GameServer(repo: LocalRepo("local"), options: new ServerOptions { AllowGm = true, EventFirstDelay = 240f });
-                    _conn = new LoopbackConnection(_localServer);
-                    break;
-                case ConnectMode.Host:
-                    _localServer = new GameServer(repo: LocalRepo("lan"), options: new ServerOptions { AllowGm = false });
-                    try
-                    {
-                        _lanHost = new TcpServerHost(_localServer, int.Parse(_port));
-                        _lanHost.Start();
-                    }
-                    catch (Exception e) { _loginError = "Não foi possível abrir a porta: " + e.Message; _localServer = null; return; }
-                    _conn = new LoopbackConnection(_localServer);
-                    break;
-                default:
-                    if (!int.TryParse(_port, out var port)) { _loginError = "Porta inválida"; return; }
-                    _conn = new TcpClientConnection(_host.Trim(), port);
-                    break;
-            }
+            if (!int.TryParse(_port, out var port) || port < 1 || port > 65535) { _loginError = "Porta inválida"; return; }
+            if (_host.Trim().Length == 0) { _loginError = "Endereço do servidor vazio"; return; }
+            _conn = new TcpClientConnection(_host.Trim(), port);
             _connecting = true; _connectStarted = Time.time;
+            PingMs = -1; _pingSentAt = -1; _nextPing = Time.unscaledTime + 5f;
+        }
+
+        /// <summary>Sai do mundo e volta para a seleção de personagem sem desconectar (o servidor salva o herói).</summary>
+        internal void BackToCharacterSelect()
+        {
+            if (!InWorld) return;
+            Send("SELECT", r =>
+            {
+                if (r.StartsWith("ERR")) { State.AddLog("err", r.Substring(4)); return; }
+                LeaveWorldLocally();
+                ParseCharList(r);
+            });
+        }
+
+        /// <summary>Volta para a lista de servidores (desconecta).</summary>
+        internal void BackToServerList()
+        {
+            Disconnect();
+            _loginStage = LoginStage.Form;
+        }
+
+        private void LeaveWorldLocally()
+        {
+            CloseAll();
+            foreach (var v in _views.Values) if (v != null) Destroy(v.gameObject);
+            _views.Clear(); _diedAt.Clear(); _selectedTarget = 0; _pendingNpc = null;
+            State.Entities.Clear();
+            State.MyId = 0;
+            State.VaultOpen = false;
         }
 
         internal void Disconnect()
         {
             _conn?.Dispose(); _conn = null;
-            _lanHost?.Dispose(); _lanHost = null;
-            _localServer = null;
+            _connecting = false;
             _replyHandlers.Clear();
             foreach (var v in _views.Values) if (v != null) Destroy(v.gameObject);
             _views.Clear();
@@ -179,6 +195,7 @@ namespace Kezor.Client
         // ---------------------------------------------------------------- loop
         private void Update()
         {
+            PumpHost();
             UpdatePointer();
             if (_cam != null && _cam.enabled) LocalLights.Upload(_iso != null && _iso.Target != null ? _iso.Target.position : _cam.transform.position + _cam.transform.forward * 30f);
             float dt = Time.deltaTime;
@@ -189,14 +206,18 @@ namespace Kezor.Client
                 if (_connecting && _conn.Connected)
                 {
                     _connecting = false;
-                    if (_mode == ConnectMode.Online) SendAccountLogin();
-                    else SendLocalAccountLogin();      // local/LAN: conta automática deste computador -> tela de seleção
+                    SendAccountLogin();
                 }
                 else if (_connecting && Time.time - _connectStarted > 6f) { _loginError = "Sem resposta do servidor: " + _conn.Error; _connecting = false; Disconnect(); return; }
                 else if (!_connecting && !_conn.Connected) { _loginError = "Conexão perdida: " + _conn.Error; Disconnect(); return; }
 
                 _conn.Update(dt);
-                _lanHost?.Pump();
+                if (!_connecting && Time.unscaledTime >= _nextPing)
+                {   // "ainda estou aqui" (o servidor derruba conexões mudas) e mede a latência
+                    _nextPing = Time.unscaledTime + 10f;
+                    _pingSentAt = Time.unscaledTime;
+                    Send("PING", _ => { if (_pingSentAt >= 0) PingMs = Mathf.RoundToInt((Time.unscaledTime - _pingSentAt) * 1000f); _pingSentAt = -1; });
+                }
                 while (_conn != null && _conn.TryReceive(out var line))
                 {
                     State.Process(line);

@@ -5,13 +5,13 @@ using System.Threading;
 using Kezor.Core.Server;
 
 // Servidor dedicado de Kezor sem Unity (mesmo Core).
-// Uso: dotnet run -- [porta] [--gm] [--data <pasta>] [--guest] [--name <nome>] [--channel <n>] [--max <jogadores>]
-//   --data  pasta dos saves JSON (contas e personagens). Padrão: ./data
-//   --guest permite jogar sem conta (como o modo local); por padrão o servidor exige REGISTER/AUTH.
+// Uso: dotnet run -- [porta] [--data <pasta>] [--gm-account <conta>] [--gm] [--name <nome>] [--channel <n>] [--max <jogadores>]
+//   --data        pasta dos saves JSON (contas e personagens). Padrão: ./data
+//   --gm-account  conta com comandos GM (pode repetir). --gm libera GM para todo mundo (só para teste).
+//   Todo jogador entra com conta (REGISTER/AUTH), escolhe o herói (CHARS/PLAY) e joga no mesmo mundo.
 //   --name/--channel/--max: nome e canal mostrados na lista de servidores do login (comando STATUS) e limite de jogadores.
 int port = args.Length > 0 && int.TryParse(args[0], out var p) ? p : Protocol.DefaultPort;
 bool gm = Array.IndexOf(args, "--gm") >= 0;
-bool guest = Array.IndexOf(args, "--guest") >= 0;
 int di = Array.IndexOf(args, "--data");
 string data = di >= 0 && di + 1 < args.Length ? args[di + 1] : Path.Combine(Environment.CurrentDirectory, "data");
 string Arg(string flag, string def) { int i = Array.IndexOf(args, flag); return i >= 0 && i + 1 < args.Length ? args[i + 1] : def; }
@@ -20,10 +20,12 @@ int channel = int.TryParse(Arg("--channel", "1"), out var ch) ? ch : 1;
 int max = int.TryParse(Arg("--max", "500"), out var mx) ? mx : 500;
 
 var repo = new JsonFileRepository(data);
-var game = new GameServer(repo: repo, options: new ServerOptions { AllowGm = gm, RequireAccounts = !guest, ServerName = name, Channel = channel, MaxPlayers = max });
+var options = new ServerOptions { AllowGm = gm, RequireAccounts = true, ServerName = name, Channel = channel, MaxPlayers = max };
+for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "--gm-account") options.GmAccounts.Add(args[i + 1]);
+var game = new GameServer(repo: repo, options: options);
 using var host = new TcpServerHost(game, port);
 host.Start();
-Console.WriteLine($"Kezor: servidor \"{name}\" canal {channel} ouvindo na porta {port}{(gm ? " (comandos GM ligados)" : "")}. Saves em {data}. Ctrl+C para sair.");
+Console.WriteLine($"Kezor: servidor \"{name}\" canal {channel} ouvindo na porta {port}{(gm ? " (comandos GM para todos)" : options.GmAccounts.Count > 0 ? " (GM: " + string.Join(", ", options.GmAccounts) + ")" : "")}. Saves em {data}. Ctrl+C para sair.");
 
 bool running = true;
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; running = false; };

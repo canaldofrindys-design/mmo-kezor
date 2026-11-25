@@ -7,8 +7,8 @@ using Kezor.Core.Net;
 namespace Kezor.Client
 {
     /// <summary>
-    /// Atalho de teste (modo local, comandos GM): cria um herói, sobe de nível, distribui pontos e equipa itens numa
-    /// chamada só. Usado pelos testes no Play e para tirar capturas; não existe em servidor dedicado (GM desligado).
+    /// Atalho de teste (servidor deste PC, conta "dev" com GM): cria um herói, sobe de nível, distribui pontos e equipa
+    /// itens numa chamada só. Usado pelos testes no Play e para tirar capturas; num servidor de fora o GM fica desligado.
     /// </summary>
     public sealed partial class KezorGame
     {
@@ -17,12 +17,19 @@ namespace Kezor.Client
 
         private IEnumerator DevSetupRoutine(string name, int classIndex, int level, string stats, int[] items, int itemLevel)
         {
-            if (InWorld) Disconnect();
+            if (_conn != null) Disconnect();
             yield return null;
-            _name = name; _classIndex = classIndex; _mode = ConnectMode.Local;
+            _name = name; _classIndex = classIndex;
             _helpShownOnce = true; _showHelp = false;
-            StartGame();
-            for (int i = 0; i < 100 && _loginStage != LoginStage.Characters; i++) yield return new WaitForSeconds(0.05f);
+            if (!EnsureHost(Kezor.Core.Server.Protocol.DefaultPort, out _, out var hostErr)) { Debug.LogWarning("[Kezor] DevSetup: " + hostErr); yield break; }
+            _host = "127.0.0.1"; _port = Kezor.Core.Server.Protocol.DefaultPort.ToString(); _serverLabel = "Servidor deste PC";
+            for (int attempt = 0; attempt < 2 && _loginStage != LoginStage.Characters; attempt++)
+            {   // primeiro tenta entrar; se a conta ainda não existe, cria
+                _account = "dev"; _password = "kezor-dev"; _registering = attempt == 1;
+                StartGame();
+                for (int i = 0; i < 100 && _loginStage != LoginStage.Characters && (_conn != null || i < 2); i++) yield return new WaitForSeconds(0.05f);
+            }
+            if (_loginStage != LoginStage.Characters) { Debug.LogWarning("[Kezor] DevSetup: não entrou na conta dev: " + _loginError); yield break; }
             if (!_charRows.Exists(r => string.Equals(r.Name, name, System.StringComparison.OrdinalIgnoreCase)))
             {   // conta local: cria se ainda não existe (se a conta estiver cheia, apaga o último)
                 if (_charRows.Count >= 5) { var last = _charRows[_charRows.Count - 1].Name; Send($"DELCHAR {last} {last}"); }

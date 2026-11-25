@@ -20,7 +20,6 @@ namespace Kezor.Client.UI
         public readonly VisualElement Root;
         private readonly HeroPreview _preview;
         private readonly VisualElement _left, _modeTabs, _formLocal, _formOnline, _formChars, _classList, _charList, _createBox;
-        private readonly Dictionary<ConnectMode, Button> _modes = new Dictionary<ConnectMode, Button>();
         private readonly List<(VisualElement row, int idx)> _classRows = new List<(VisualElement, int)>();
         private readonly TextField _name, _port, _host, _portOnline, _account, _password, _newName;
         private readonly Toggle _register, _showcase;
@@ -63,11 +62,6 @@ namespace Kezor.Client.UI
             // ---------------- coluna da esquerda
             _left = Kz.El("kz-panel entry__left", Root, pick: true);
             _modeTabs = Kz.El("win-tabs", _left, pick: true);
-            foreach (var (m, label) in new[] { (ConnectMode.Local, "Jogar local"), (ConnectMode.Host, "Hospedar LAN"), (ConnectMode.Online, "Servidor") })
-            {
-                var mode = m;
-                _modes[m] = Kz.Btn(label, () => { G._mode = mode; G._loginError = ""; }, "kz-tab", _modeTabs);
-            }
 
             // local e LAN: nome + classe
             _formLocal = Kz.El("entry__form", _left, pick: true);
@@ -123,7 +117,7 @@ namespace Kezor.Client.UI
 
             _error = Kz.Text("", "entry__error", _left);
             _back = Kz.Btn("Voltar para a seleção", () => { G._loginError = ""; G._loginStage = KezorGame.LoginStage.Characters; }, "kz-btn", _left);
-            _enter = Kz.Btn("Entrar", () => { if (Creating) CreateFromForm(); else G.StartGame(); }, "kz-btn kz-btn--primary entry__enter", _left);
+            _enter = Kz.Btn("Entrar", () => { if (Creating) CreateFromForm(); }, "kz-btn kz-btn--primary entry__enter", _left);
 
             // ---------------- herói em destaque
             var stage = Kz.El("entry__stage", Root, pick: true);
@@ -152,7 +146,7 @@ namespace Kezor.Client.UI
 
             Kz.Text("Kezor · fantasia sombria low poly · servidor autoritativo", "entry__footer", Root);
             _name.value = G._name; _port.value = G._port; _portOnline.value = G._port; _host.value = G._host;
-            Root.RegisterCallback<KeyDownEvent>(e => { if ((e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) && !G._connecting) { if (G._loginStage == KezorGame.LoginStage.Characters && G._mode == ConnectMode.Online) PlaySelected(); else G.StartGame(); } }, TrickleDown.TrickleDown);
+            Root.RegisterCallback<KeyDownEvent>(e => { if ((e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) && !G._connecting) { if (Creating) CreateFromForm(); else if (G._loginStage == KezorGame.LoginStage.Characters) PlaySelected(); } }, TrickleDown.TrickleDown);
         }
 
         private TextField Field(VisualElement parent, int max, string placeholder)
@@ -207,20 +201,15 @@ namespace Kezor.Client.UI
             Root.Show(show);
             _preview.SetActive(show && creating);
             if (!show) return;
-            bool online = G._mode == ConnectMode.Online;
-            foreach (var kv in _modes) kv.Value.SetClass("kz-tab--on", kv.Key == G._mode);
-            _modeTabs.Show(!creating);
-            _formLocal.Show(!creating && !online);
-            _formOnline.Show(!creating && online);
+            _modeTabs.Show(false);
+            _formLocal.Show(false);
+            _formOnline.Show(false);
             _formChars.Show(false);
             _formCreate.Show(creating);
             _back.Show(creating);
             _stageEl.Show(creating);
-            _enter.text = creating ? "Criar herói" : G._connecting ? "Conectando..." : online ? "Entrar na conta" : G._mode == ConnectMode.Host ? "Hospedar e jogar" : "Jogar neste computador";
+            _enter.text = "Criar herói";
             _enter.SetEnabled(!G._connecting);
-            _hostHint.Set(G._mode == ConnectMode.Host ? "Outros jogadores na sua rede entram pelo seu IP e por esta porta. Seus heróis ficam salvos neste computador."
-                                                    : "Servidor embutido no seu computador; seus heróis ficam salvos aqui. Comandos GM liberados para testar.");
-            _port.parent.Show(G._mode == ConnectMode.Host);
             _error.Set(G._loginError != "" ? $"<color=#ff7a6a>{G._loginError}</color>" : "");
             foreach (var (row, idx) in _classRows)
             {

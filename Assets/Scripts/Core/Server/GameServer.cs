@@ -13,14 +13,17 @@ namespace Kezor.Core.Server
     public sealed class ServerOptions
     {
         public int? Seed;
-        /// <summary>Permite comandos GM (teste). Ligado no modo local, desligado no servidor dedicado.</summary>
+        /// <summary>Libera comandos GM para todas as contas (só para teste). Normalmente use <see cref="GmAccounts"/>.</summary>
         public bool AllowGm;
+        /// <summary>Contas com comandos GM (como os GMs de um servidor online). O servidor deste PC marca a conta do dono.</summary>
+        public readonly HashSet<string> GmAccounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public float SnapshotInterval = 0.1f;
         public float ViewRange = 60f;   // AOI: a câmera mais alta mostra mais chão
         public float EventFirstDelay = 180f;
         public float EventInterval = 900f;
         public float EventDuration = 300f;
-        /// <summary>Servidor dedicado: exige conta (REGISTER/AUTH) para criar e jogar. O modo local deixa jogar como convidado.</summary>
+        /// <summary>Exige conta (REGISTER/AUTH) para criar e jogar. Todo servidor de verdade (dedicado e o deste PC) liga isto;
+        /// desligado só nos testes automáticos, que criam heróis direto.</summary>
         public bool RequireAccounts;
         /// <summary>Salva todos os personagens e contas online a cada N segundos (0 = só ao desconectar).</summary>
         public float AutosaveSeconds = 60f;
@@ -159,12 +162,9 @@ namespace Kezor.Core.Server
         public void Disconnect(int sessionId)
         {
             if (!_sessions.TryGetValue(sessionId, out var s)) return;
-            var gone = s.Character;
-            if (gone != null) { LeaveParty(gone); SaveCharacter(s); }
+            LeaveWorld(s);
             _sessions.Remove(sessionId);
             _guildInvite.Remove(sessionId);
-            _shops.Remove(sessionId);
-            if (gone != null) { var g = GuildOf(gone.Name); if (g != null) SendGuild(g); }   // atualiza quem está online
         }
 
         public Character? GetCharacter(int sessionId) => _sessions.TryGetValue(sessionId, out var s) ? s.Character : null;
@@ -215,10 +215,12 @@ namespace Kezor.Core.Server
                 if (cmd == "CHARS") return Chars(s);
                 if (cmd == "PLAY") return Play(s, parts);
                 if (cmd == "DELCHAR") return DeleteChar(s, parts);
+                if (cmd == "PING") return "OK pong";
+                if (cmd == "SELECT") return BackToSelect(s);
                 if (cmd == "HELP") return "OK REGISTER <conta> <senha> | AUTH <conta> <senha> | CHARS | PLAY <nome> | CREATE <nome> <GUA|ARC|PAT> | LOGIN <nome> | MOVE <x> <z> | STOP | ATTACK <id> | SKILL <skillId> <id> | PICK <id> | " +
                                           "ADD <STR|AGI|VIT|ENE> <n> | STATS | LOOK | INV | EQUIP <slot> | UNEQUIP <RightHand|Helm..> | USE <slot> | RUNE <runa> <alvo> | " +
                                           "FORGEPREVIEW <s1,s2,..> | FORGE <s1,s2,..> | BUY <itemId> [qtd] | SELL <slot> | REPAIR | QUICK <0-3> <itemId> | USEQ <0-3> | REBIRTH | SAY <texto> | " +
-                                          "PARTY INVITE <nome>|ACCEPT|LEAVE | MOUNT | WARP [destino] | VAULT | VPUT <slot> [qtd] [casa] | VTAKE <slot> [qtd] [casa] | IMOVE <de> <para> | VMOVE <de> <para> | VGOLDIN <n> | VGOLDOUT <n> | VCLOSE | TRADE <nome>|ACCEPT|DECLINE|ADD <slot>|REMOVE <slot>|GOLD <n>|LOCK|CONFIRM|CANCEL | GUILD CREATE|INVITE|ACCEPT|LEAVE|KICK|PROMOTE|DEMOTE|DISBAND|INFO|WAR <guilda>|WARACCEPT|WARDECLINE|WARINFO | GSAY <texto> | RANKING [GERAL|GUILDAS|GUA|ARC|PAT|LAM|COM|INV|PUN] | SHOP OPEN <nome>|ADD <slot> <preço>|REMOVE <slot>|CLOSE|VIEW <jogador>|BUY <jogador> <slot> <preço>" + (_opt.AllowGm ? " | GM LEVEL <n>|GOLD <n>|RUNES|EVENT|HEAL|ITEM <id> [nível]" : "");
+                                          "PARTY INVITE <nome>|ACCEPT|LEAVE | MOUNT | WARP [destino] | VAULT | VPUT <slot> [qtd] [casa] | VTAKE <slot> [qtd] [casa] | IMOVE <de> <para> | VMOVE <de> <para> | VGOLDIN <n> | VGOLDOUT <n> | VCLOSE | TRADE <nome>|ACCEPT|DECLINE|ADD <slot>|REMOVE <slot>|GOLD <n>|LOCK|CONFIRM|CANCEL | GUILD CREATE|INVITE|ACCEPT|LEAVE|KICK|PROMOTE|DEMOTE|DISBAND|INFO|WAR <guilda>|WARACCEPT|WARDECLINE|WARINFO | GSAY <texto> | RANKING [GERAL|GUILDAS|GUA|ARC|PAT|LAM|COM|INV|PUN] | SHOP OPEN <nome>|ADD <slot> <preço>|REMOVE <slot>|CLOSE|VIEW <jogador>|BUY <jogador> <slot> <preço> | W <nome> <texto> | ONLINE | SELECT | PING" + (IsGm(s) ? " | GM LEVEL <n>|GOLD <n>|RUNES|EVENT|HEAL|ITEM <id> [nível]" : "");
                 var c = s.Character;
                 if (c == null) return "ERR faça LOGIN ou CREATE primeiro";
                 switch (cmd)
@@ -263,7 +265,9 @@ namespace Kezor.Core.Server
                     case "VTAKE": return VaultTake(s, c, parts);
                     case "VGOLDIN": return VaultGold(s, c, parts, true);
                     case "VGOLDOUT": return VaultGold(s, c, parts, false);
-                    case "GM": return Gm(c, parts);
+                    case "GM": return IsGm(s) ? Gm(c, parts) : "ERR comandos GM desativados para esta conta";
+                    case "W": case "WHISPER": return Whisper(s, c, parts);
+                    case "ONLINE": return OnlineList();
                     default: return "ERR comando desconhecido (HELP)";
                 }
             }

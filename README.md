@@ -11,7 +11,12 @@ itens Ascendentes, combos, PvP, grupo, evento de invasão), com **mundo, classes
 1. Abra a pasta `C:\MuProtoUnity` no **Unity Hub** (Add ▸ Add project from disk). Testado para Unity **2021.3 LTS ou mais novo** (inclusive Unity 6).
 2. Abra qualquer cena (a vazia serve) e aperte **Play**. O jogo se monta sozinho (`KezorGame` se cria automaticamente).
    - Opcional: menu **Kezor ▸ Criar cena do jogo (cliente)** salva `Assets/Scenes/Kezor.unity` e coloca no Build Settings.
-3. Escolha nome e classe, deixe **“Jogar local”** marcado e clique **Entrar no mundo**.
+3. O jogo é **só multiplayer** (como os MMOs clássicos): escolha **Servidor deste PC** e clique **Continuar**. O jogo abre um
+   servidor de verdade no seu PC e você entra nele pela rede, como qualquer outro jogador.
+4. Na primeira vez marque **Criar conta nova**, digite conta e senha (6+ caracteres) e clique **Criar conta e entrar**.
+   Depois crie seu herói na tela de seleção e clique **Entrar**. Nas próximas vezes é só conta e senha.
+   - Se o Windows perguntar sobre o firewall, clique **Permitir** (é o que deixa os amigos entrarem).
+   - Heróis do antigo “Jogar local” foram copiados para o servidor deste PC na conta **jogadorlocal**, senha **kezor-local**.
 
 Se a Unity pedir para mudar o *Active Input Handling*, deixe em **Input Manager (Old)** ou **Both** (o cliente usa `UnityEngine.Input`).
 
@@ -31,7 +36,8 @@ Se a Unity pedir para mudar o *Active Input Handling*, deixe em **Input Manager 
 | Ranking | **K** (geral, por classe e de guildas) |
 | Pegar item | clicar no item ou **Espaço** |
 | Janelas | **C** personagem · **I** inventário · **P** grupo · **G** guilda · **K** ranking · **M** mapa e viagem · **O** opções · **H** ajuda · **Esc** fecha |
-| Chat | **Enter** (`/p texto` = grupo; `/comando` envia um comando cru, ex.: `/gm level 50`) |
+| Chat | **Enter** (`/p texto` = grupo · `/g texto` = guilda · `/w Nome texto` = sussurro · `/online` = quem está jogando · `/comando` envia um comando cru, ex.: `/gm level 50`) |
+| Trocar personagem / servidor | **O** (Opções) ▸ Conexão |
 | Câmera | roda = zoom · botão do meio arrastando = girar |
 
 NPCs da vila: **Mercadora Tália** (loja/venda), **Ferreiro Bram** (Forja Arcana e reparo), **Sentinela Orvo**.
@@ -56,21 +62,32 @@ toasts; 14 janelas arrastáveis (posição salva) com tooltip de item com compar
 o herói 3D girando num pedestal; tela de carregamento entre mapas. Escala automática de 720p a 4K e opção de escala (O).
 Arte da interface e ícones são gerados em código: menus **Kezor ▸ Gerar arte da UI** e **Kezor ▸ Gerar ícones**.
 
-### Modos de conexão
-- **Jogar local**: servidor embutido no cliente (mesmo código do dedicado). Comandos GM liberados para testar:
-  `/gm level 50`, `/gm gold 10000000`, `/gm runes`, `/gm event` (inicia a Invasão), `/gm heal`, `/gm item <id> [nível]` (ex.: `/gm item 302 9` = Asas de Brasalume +9).
-- **Hospedar na rede (LAN)**: abre a porta 55901 no seu PC e você joga; amigos usam “Conectar a um servidor” com o seu IP.
-- **Conectar a um servidor dedicado**: veja abaixo.
+### Multiplayer (o único modo)
+Todo mundo entra do mesmo jeito: **servidor → conta e senha → seleção de personagem → mundo** dividido com os outros jogadores
+do canal (todos se veem, conversam, formam grupo, trocam itens, fazem guilda e PvP). O servidor é autoritativo: toda regra roda
+nele e os saves ficam no servidor. A tela de login lista:
+- **Servidor deste PC**: o jogo abre o servidor aqui (porta 55901, muda no campo Porta) e entra nele. Ele continua ligado
+  enquanto o jogo estiver aberto, mesmo voltando para o login, e salva tudo ao fechar. A sua conta neste servidor tem comandos GM:
+  `/gm level 50`, `/gm gold 10000000`, `/gm runes`, `/gm event` (inicia a Invasão), `/gm heal`, `/gm item <id> [nível]` (ex.: `/gm item 302 9`).
+  Saves em `%USERPROFILE%\AppData\LocalLow\<empresa>\<projeto>\kezor\servidor`.
+- **Entrar por IP**: digite o IP e a porta de um amigo que está com o “Servidor deste PC” aberto (a tela dele mostra o IP).
+- Os servidores do `servers.json` (com canais, população e ping).
+
+**Testar com 2 jogadores sozinho:** dê Play no Unity (Servidor deste PC) e abra também um build do jogo (File ▸ Build And Run);
+no build escolha **Servidor deste PC** de novo: ele percebe que o servidor já está aberto e só entra. Use outra conta.
+
+Se ninguém mandar nada por 60 s (cabo puxado, jogo travado) o servidor derruba a conexão e salva o herói; o jogo manda um PING a
+cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma conta só pode estar conectada uma vez.
 
 ## Servidor dedicado
-- **Sem Unity** (recomendado): `cd Build && dotnet run --project Headless -- 55901` (adicione `--gm` para liberar comandos GM).
-  O servidor exige **conta**: no cliente, escolha “Conectar a um servidor dedicado”, marque “Criar conta nova” na primeira vez e depois
-  crie até 3 personagens. Os saves ficam em JSON na pasta `data/` (mude com `--data <pasta>`; `--guest` deixa jogar sem conta).
+- **Sem Unity** (recomendado para deixar ligado): `cd Build && dotnet run --project Headless -- 55901 --gm-account SuaConta`
+  (`--gm-account` dá GM a uma conta e pode repetir; `--gm` dá GM para todos, só para teste). Todo jogador entra com conta e cria até
+  5 personagens. Os saves ficam em JSON na pasta `data/` (mude com `--data <pasta>`). Nome, canal e limite: `--name`, `--channel`, `--max`.
 - **No Unity**: menu **Kezor ▸ Criar cena do servidor dedicado** (usa `ServerBootstrap`) e gere um build *Dedicated Server*.
 - Dá para testar na mão com `telnet`/`nc localhost 55901` e digitar `HELP`.
 
 ## Testes
-- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (109 testes: inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
+- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (144 testes: multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
 - No Unity: **Window ▸ General ▸ Test Runner ▸ EditMode**.
 - `Build/ClientCheck` compila o cliente fora do Unity (referências do UnityEngine via NuGet) para pegar erros cedo.
 

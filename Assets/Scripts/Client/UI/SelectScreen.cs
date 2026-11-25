@@ -254,7 +254,7 @@ namespace Kezor.Client.UI
             _menu = Kz.El("kz-panel sel__menu", Root, pick: true);
             Kz.Text("Menu", "kz-h2", _menu);
             Kz.Btn("Opções", () => { _menu.Show(false); ToggleOptionsOverlay(); }, "kz-btn", _menu);
-            Kz.Btn("Sair da conta", () => { _menu.Show(false); G.Disconnect(); G._loginStage = KezorGame.LoginStage.Form; }, "kz-btn", _menu);
+            Kz.Btn("Sair da conta", () => { _menu.Show(false); G.BackToServerList(); }, "kz-btn", _menu);
             Kz.Btn("Fechar o jogo", Application.Quit, "kz-btn", _menu);
             _menu.Show(false);
 
@@ -344,7 +344,7 @@ namespace Kezor.Client.UI
             _enter.SetEnabled(_sel >= 0);
             _delete.SetEnabled(_sel >= 0);
             _create.SetEnabled(rows.Count < 5);
-            _title.Set(G._mode == ConnectMode.Online ? $"Conta {G._account}  ·  escolha seu herói" : "Escolha seu herói");
+            _title.Set($"Conta {G._account}{(G._serverLabel != "" ? "  ·  " + G._serverLabel : "")}  ·  escolha seu herói");
             _error.Set(G._loginError != "" ? $"<color=#ff7a6a>{G._loginError}</color>" : (G._awaitingList ? "Carregando..." : ""));
             if (Event.current == null && InputK.KeyDown(KeyCode.Return) && !_modal.visible) Enter();
             if (InputK.KeyDown(KeyCode.LeftArrow)) _sel = Mathf.Max(0, _sel - 1);

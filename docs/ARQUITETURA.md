@@ -8,7 +8,7 @@
  │ EntityView/Models/WorldBuilder/Effects: só visual            │ linhas │  · sessões, movimento, IA, combate    │
  │ HUD IMGUI: orbes, skills, chat, inventário, forja, loja       │ UTF-8  │  · drops, grupo, PvP, evento          │
  └───────────────────────────────────────────────────────────────┘        └────────────────────────────────────────┘
-          ▲ modo local/host: LoopbackConnection chama o MESMO GameServer em processo
+          ▲ só multiplayer: até no "Servidor deste PC" o cliente abre um TcpServerHost local e entra nele por TCP como os outros
 ```
 - **Kezor.Core** (`noEngineReferences`): personagens, combate, itens, runas, forja, monstros, mapa, servidor, protocolo e
   o lado cliente da rede (`ClientState`, conexões). Compila em netstandard2.1, então roda no Unity, num `dotnet` headless e nos testes.

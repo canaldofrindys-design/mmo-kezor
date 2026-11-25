@@ -703,9 +703,19 @@ namespace Kezor.Client.UI
         private readonly Toggle _bloom;
         private readonly List<Button> _quality = new List<Button>(), _fps = new List<Button>();
         private readonly Toggle _minimap, _vsync, _full;
+        private readonly VisualElement _conn;
+        private readonly Label _connLabel;
 
         public OptionsWindow(UiRoot ui) : base(ui, "options", "Opções", 440, new Vector2(580, 120))
         {
+            _conn = Kz.El("", Body, pick: true);
+            Kz.Text("Conexão", "kz-h2", _conn);
+            _connLabel = Kz.Text("", "kz-text", _conn);
+            var cr = Row(_conn);
+            Kz.Btn("Trocar personagem", () => { G.BackToCharacterSelect(); Close(); }, "kz-btn kz-btn--small", cr);
+            Kz.Btn("Trocar de servidor", () => { G.BackToServerList(); Close(); }, "kz-btn kz-btn--small", cr);
+            Kz.El("kz-divider", _conn);
+
             Kz.Text("Interface", "kz-h2", Body);
             _scaleLabel = Kz.Text("", "kz-text", Body);
             var scale = new Slider(0.8f, 1.4f) { value = ui.UserScale }; scale.AddToClassList("kz-slider"); Body.Add(scale);
@@ -753,6 +763,10 @@ namespace Kezor.Client.UI
 
         public override void Refresh()
         {
+            _conn.Show(G.InWorld);
+            if (G.InWorld)
+                _connLabel.Set($"<b>{(G._serverLabel != "" ? G._serverLabel : "Servidor")}</b>  ·  conta {G._account}  ·  " +
+                               (G.PingMs >= 0 ? $"{G.PingMs} ms" : "medindo...") + (G.Hosting ? $"  ·  você hospeda ({G.HostPlayers} online)" : ""));
             _scaleLabel.Set($"Escala da interface: <b>{Ui.UserScale * 100f:0}%</b>");
             _volLabel.Set($"Volume geral: <b>{AudioListener.volume * 100f:0}%</b>");
             _bloomLabel.Set(KezorBloom.On ? $"Intensidade do brilho: <b>{KezorBloom.Intensity * 100f:0}%</b>" : "Intensidade do brilho: <b>desligado</b>");
@@ -794,7 +808,8 @@ namespace Kezor.Client.UI
             Section("Mundo",
                 "• A vila de Brasalume é área segura. Fora dela há PvP (nível 6+) e monstros mais fortes longe da vila.\n" +
                 "• A Invasão das Cinzas ataca o portão sul de tempos em tempos: derrote o Arauto para ganhar runas.\n" +
-                "• Grupo (P) divide experiência. Chat: Enter. Comandos: /party invite Nome, /gm level 50 (modo local).");
+                "• Grupo (P) divide experiência. Chat: Enter. /p texto = grupo, /g texto = guilda, /w Nome texto = sussurro, /online = quem está jogando.\n" +
+                "• Opções (O) ▸ Conexão: trocar de personagem ou de servidor. No servidor deste PC, a sua conta tem comandos GM (/gm level 50).");
             Kz.Btn("Entendi", Close, "kz-btn kz-btn--primary", Body);
         }
 

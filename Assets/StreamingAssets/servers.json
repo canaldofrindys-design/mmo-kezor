@@ -1,22 +1,14 @@
 {
-  "_comentario": "Lista de servidores do login. Copie para <persistentDataPath>/kezor/servers.json para ter a sua. Cada canal é uma porta do mesmo endereço.",
-  "servers": [
-    {
-      "id": "brasalume-teste",
-      "name": "Brasalume (teste neste PC)",
-      "host": "127.0.0.1",
-      "region": "BR",
-      "channels": [
-        { "name": "Canal 1", "port": 55901 },
-        { "name": "Canal 2", "port": 55902 }
-      ]
-    },
-    {
-      "id": "cinzas",
-      "name": "Cinzas do Norte (exemplo)",
-      "host": "kezor.exemplo.invalid",
-      "region": "BR",
-      "port": 55901
-    }
-  ]
+  "_comentario": "Servidores extras da tela de login (o 'Servidor deste PC' e o 'Entrar por IP' ja vem sempre). Para ter a sua lista, copie este arquivo para <persistentDataPath>/kezor/servers.json e coloque os servidores em 'servers'. Cada canal e uma porta do mesmo endereco.",
+  "_exemplo": {
+    "id": "brasalume",
+    "name": "Brasalume",
+    "host": "jogo.exemplo.com",
+    "region": "BR",
+    "channels": [
+      { "name": "Canal 1", "port": 55901 },
+      { "name": "Canal 2", "port": 55902 }
+    ]
+  },
+  "servers": []
 }
