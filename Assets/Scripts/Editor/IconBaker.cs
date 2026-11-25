@@ -153,6 +153,7 @@ namespace Kezor.EditorTools
             Shader.SetGlobalColor("_KezorFogColor", Color.black);
             Shader.SetGlobalVector("_KezorFogParams", new Vector4(5000f, 6000f, 0f, 0f));
             Shader.SetGlobalVector("_KezorSeeTarget", Vector4.zero);
+            Kezor.Client.KezorUrp.SetSun(Quaternion.Euler(40f, -30f, 0) * Vector3.forward, new Color(1f, 0.9f, 0.75f), 0f);
 
             var camGo = new GameObject("IconCam");
             var cam = camGo.AddComponent<Camera>();

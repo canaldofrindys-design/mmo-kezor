@@ -7,6 +7,7 @@ namespace Kezor.Client
     /// Luzes locais do cenário (braseiros, postes, forja, portais, fonte). O shader Kezor/LowPoly soma até 8 delas,
     /// as mais próximas do foco da câmera, como poças de luz quente no chão e nas paredes. Sem Light do Unity:
     /// o mapa registra as luzes ao ser montado e a cada quadro sobem só as 8 mais perto.
+    /// Na URP, as 16 mais perto também viram Light pontuais (KezorUrp), que os shaders URP somam pelo Forward+.
     /// </summary>
     public static class LocalLights
     {
@@ -38,7 +39,9 @@ namespace Kezor.Client
                     _pos[k] = new Vector4(p.x, p.y, p.z, r); _col[k] = (Vector4)(c * flick);
                 }
                 else { _pos[k] = new Vector4(0, -999, 0, 0.01f); _col[k] = Vector4.zero; }
+                if (k < set.Count) KezorUrp.SetPoint(k, set[k].pos, (Color)_col[k], set[k].range);
             }
+            KezorUrp.HidePointsFrom(Mathf.Min(set.Count, Max));
             Shader.SetGlobalVectorArray(PosId, _pos);
             Shader.SetGlobalVectorArray(ColId, _col);
         }
@@ -52,6 +55,14 @@ namespace Kezor.Client
             for (int i = 0; i < _all.Count; i++) _sort.Add(((_all[i].Pos - focus).sqrMagnitude, i));
             _sort.Sort((a, b) => a.d.CompareTo(b.d));
             float t = Time.time;
+            int urp = KezorUrp.Active ? Mathf.Min(_sort.Count, KezorUrp.PointPool) : 0;
+            for (int k = 0; k < urp; k++)
+            {   // URP: luzes pontuais de verdade (Forward+), as mais perto do foco
+                var l = _all[_sort[k].i];
+                float flick = 0.88f + Mathf.Sin(t * 9f + l.Phase) * 0.07f + Mathf.Sin(t * 23f + l.Phase * 2f) * 0.05f;
+                KezorUrp.SetPoint(k, l.Pos, l.Col * (flick * Strength), l.Range);
+            }
+            KezorUrp.HidePointsFrom(urp);
             for (int k = 0; k < Max; k++)
             {
                 if (k < _sort.Count)

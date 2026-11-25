@@ -33,13 +33,17 @@ namespace Kezor.Client
             PlayerPrefs.SetInt(PrefOn, On ? 1 : 0);
             PlayerPrefs.SetFloat(PrefIntensity, Intensity);
             PlayerPrefs.Save();
+            KezorUrp.RefreshPost();
         }
 
         public static KezorBloom Attach(Camera cam)
         {
             cam.allowHDR = true;
             var b = cam.GetComponent<KezorBloom>();
-            return b != null ? b : cam.gameObject.AddComponent<KezorBloom>();
+            if (b == null) b = cam.gameObject.AddComponent<KezorBloom>();
+            // URP: o OnRenderImage não roda; o brilho vem do Bloom do Volume global (mesmas Opções)
+            if (KezorUrp.Active) { b.enabled = false; KezorUrp.EnsurePost(cam); }
+            return b;
         }
 
         private static Material? Mat

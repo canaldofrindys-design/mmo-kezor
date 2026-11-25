@@ -202,6 +202,7 @@ namespace Kezor.Client
             Shader.SetGlobalColor("_KezorFogColor", fog);
             Shader.SetGlobalVector("_KezorFogParams", fogP);
             Shader.SetGlobalFloat("_KezorEmissive", 1f);
+            KezorUrp.SetSun(sun, sunC, mapId == Kezor.Core.World.MapDefinition.ValeId ? 0.65f : 0.8f);   // URP: sol com sombra
             // névoa rasteira (x = topo, y = espessura, z = intensidade, w = puxa para o tom do céu)
             Shader.SetGlobalVector("_KezorLowFog", mapId == Kezor.Core.World.MapDefinition.SwampId ? new Vector4(0.7f, 1.1f, 0.75f, 0.25f)
                 : mapId == Kezor.Core.World.MapDefinition.CryptId ? new Vector4(0.35f, 0.7f, 0.5f, 0.45f) : new Vector4(0.8f, 1.2f, 0.5f, 0.35f));
@@ -217,8 +218,7 @@ namespace Kezor.Client
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = occluder ? OccluderMaterial : Material;
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            r.receiveShadows = false;
+            KezorUrp.Shadows(r);
             return go;
         }
 

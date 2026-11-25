@@ -16,6 +16,11 @@ float4 _KezorLowFog;      // névoa rasteira: x = topo, y = espessura, z = inten
 float4 _KezorLowFogColor;
 float _KezorEmissive;     // multiplicador global do emissivo (1 = normal; o Bloom da URP pega o que passa de 1)
 float4 _KezorSeeTarget;   // xyz = ponto do herói que a câmera precisa ver, w = 1 liga o recorte
+// luz ambiente e névoa por mapa (KezorLook.ApplyEnvironment): os mesmos valores do visual antigo
+float4 _KezorSkyColor;
+float4 _KezorGroundColor;
+float4 _KezorFogColor;
+float4 _KezorFogParams;   // x = início, y = fim, z = intensidade
 
 half3 KezorDetailTri(float3 p, float3 n, float layer)
 {
@@ -36,7 +41,8 @@ half3 KezorLit(half3 albedo, float3 positionWS, half3 normalWS, float4 positionC
     d.viewDirectionWS = GetWorldSpaceNormalizeViewDir(positionWS);
     d.shadowCoord = TransformWorldToShadowCoord(positionWS);
     d.fogCoord = 0;
-    d.bakedGI = SampleSH(normalWS);
+    // ambiente hemisférico (céu em cima, chão embaixo), igual ao visual antigo e sem depender de sonda bakeada
+    d.bakedGI = lerp(_KezorGroundColor.rgb, _KezorSkyColor.rgb, normalWS.y * 0.5 + 0.5);
     d.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(positionCS);
     d.shadowMask = half4(1, 1, 1, 1);
     SurfaceData s = (SurfaceData)0;
@@ -48,14 +54,15 @@ half3 KezorLit(half3 albedo, float3 positionWS, half3 normalWS, float4 positionC
     return UniversalFragmentBlinnPhong(d, s).rgb;
 }
 
-// Névoa da URP (linear, RenderSettings) + névoa rasteira do Kezor nas baixadas
+// Névoa por distância do Kezor (_KezorFogParams, por mapa) + névoa rasteira nas baixadas.
+// fogCoord fica na assinatura por compatibilidade; a névoa não depende do RenderSettings.
 half3 KezorFog(half3 col, float3 wp, float fogCoord, half emissive)
 {
-    half3 fogged = MixFog(col, fogCoord);
-    col = lerp(fogged, col, emissive * 0.7);
+    float d = distance(wp, _WorldSpaceCameraPos);
+    float f = saturate((d - _KezorFogParams.x) / max(0.001, _KezorFogParams.y - _KezorFogParams.x)) * _KezorFogParams.z;
+    col = lerp(col, _KezorFogColor.rgb, f * (1.0 - emissive * 0.7));
     if (_KezorLowFog.z > 0.001)
     {
-        float d = distance(wp, _WorldSpaceCameraPos);
         float wave = sin(wp.x * 0.13 + _Time.y * 0.35) * sin(wp.z * 0.11 - _Time.y * 0.27) * 0.35;
         float h = saturate((_KezorLowFog.x + wave - wp.y) / max(0.05, _KezorLowFog.y));
         float lf = h * h * _KezorLowFog.z * saturate((d - 6.0) / 18.0);

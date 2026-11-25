@@ -42,8 +42,7 @@ namespace Kezor.Client
                 var mats = new Material[n];
                 for (int i = 0; i < n; i++) mats[i] = KezorLook.Material;
                 r.sharedMaterials = mats;
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                r.receiveShadows = false;
+                KezorUrp.Shadows(r);
                 into?.Add(r);
             }
         }

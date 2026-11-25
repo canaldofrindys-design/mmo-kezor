@@ -69,6 +69,7 @@ namespace Kezor.Client
             Shader.SetGlobalColor("_KezorSkyColor", new Color(0.42f, 0.45f, 0.55f));
             Shader.SetGlobalColor("_KezorGroundColor", new Color(0.16f, 0.13f, 0.11f));
             Shader.SetGlobalVector("_KezorFogParams", new Vector4(400f, 500f, 0f, 0));
+            KezorUrp.SetSun(Quaternion.Euler(38f, 32f, 0) * Vector3.forward, new Color(1f, 0.9f, 0.78f) * 0.95f, 0.5f);
             var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 8 };
             cam.targetTexture = rt;
             cam.Render();

@@ -115,6 +115,8 @@ namespace Kezor.Client.UI
             Shader.SetGlobalColor("_KezorGroundColor", new Color(0.06f, 0.05f, 0.05f));
             Shader.SetGlobalColor("_KezorFogColor", new Color(0.02f, 0.025f, 0.05f));
             Shader.SetGlobalVector("_KezorFogParams", new Vector4(20f, 46f, 0.9f, 0));
+            KezorUrp.SetSun(Quaternion.Euler(28f, 160f, 0) * Vector3.forward, new Color(0.55f, 0.62f, 0.9f) * 0.42f, 0.6f);
+            KezorUrp.EnsurePost(cam);
             cam.backgroundColor = new Color(0.02f, 0.025f, 0.05f);
         }
 
