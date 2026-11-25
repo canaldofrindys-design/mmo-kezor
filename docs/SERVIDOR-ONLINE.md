@@ -52,6 +52,36 @@ Tabelas: `accounts` (conta, hash da senha, criação, ban), `characters` (nome, 
 Saves antigos em arquivos `.json` na pasta `data` são copiados para o banco sozinhos na primeira vez (nada é apagado).
 Para continuar com arquivos, use `KEZOR_DB=json`. O "Servidor deste PC" (dentro do Unity) continua usando arquivos.
 
+## Moderação (GM) e registros
+
+As contas da lista de GMs (`KEZOR_GM_ACCOUNTS` no `/etc/kezor/kezor.env`, ou a sua conta no "Servidor deste PC") usam estes comandos
+no chat do jogo. Onde está `<nome>` pode ser o nome do herói ou da conta.
+
+| No chat do jogo | O que faz |
+|---|---|
+| `/gm kick <nome> [motivo]` | derruba o jogador (o herói é salvo) |
+| `/gm ban <nome> <dias> [motivo]` ou `/gm ban <nome> perm [motivo]` | bane a conta (cai na hora e não entra mais) |
+| `/gm unban <conta>` | tira o banimento |
+| `/gm mute <nome> [minutos]` / `/gm unmute <nome>` | bloqueia / libera o chat (dizer, sussurro, grupo, guilda) |
+| `/gm info <nome>` | conta, heróis, mapa, posição, ouro, se está banida ou silenciada |
+| `/gm goto <nome>` / `/gm bring <nome>` | vai até o jogador / traz o jogador até você (em qualquer mapa) |
+| `/gm aviso <texto>` | aviso em destaque para todo mundo |
+| `/gm rift` / `/gm event` | abre a Fenda da Geada Rubra / começa a Invasão das Cinzas |
+
+No console do servidor (quando roda numa janela, não como serviço) os mesmos comandos existem em português:
+`info`, `expulsar`, `banir <conta> <dias|perm> [motivo]`, `desbanir`, `silenciar`, `liberar`, `aviso`, `evento`, `fenda`, `online`, `salvar`, `backup`, `sair`.
+Um GM não consegue banir outro GM pelo jogo; pelo console pode.
+
+**Registro:** tudo fica em `/opt/kezor/data/logs/kezor-AAAA-MM-DD.log` (um arquivo por dia) e no `journalctl -u kezor-server`:
+entradas e saídas, contas criadas, logins recusados de contas banidas, trocas entre jogadores (o que cada um deu), compras em lojas
+de jogadores, itens raros pegos do chão (runas, joias, épicos, asas, itens +7), prêmios da Fenda e todo comando de GM
+(inclusive `/gm level`, `/gm gold` e `/gm item`, para ninguém da equipe criar item escondido).
+
+**Proteção contra trapaça:** o servidor decide tudo (movimento, colisão, dano, drops, ouro, trocas e lojas); o jogo só pede.
+Cada conexão tem limite de 60 mensagens por segundo e linhas de no máximo 512 caracteres; o chat tem intervalo mínimo;
+a troca é revalidada na hora de concluir (itens e ouro precisam continuar lá); a mesma conta não entra duas vezes;
+conexão muda cai em 60 s; senhas são guardadas com PBKDF2.
+
 ## Windows em vez de Linux
 Também funciona num VPS Windows: monte com
 `dotnet publish Build/Headless/Kezor.Server.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o Publish`,

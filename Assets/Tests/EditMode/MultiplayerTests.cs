@@ -201,6 +201,79 @@ namespace Kezor.Tests
         }
 
         [Test]
+        public void GmKicksBansAndUnbansOverTheNetwork()
+        {
+            using var w = new World();
+            w.Game.GrantGm("contagm");
+            var gm = w.Enter("contagm", "Mestre");
+            var bad = w.Enter("contaruim", "Bagunca");
+            StringAssert.StartsWith("ERR", w.Ask(bad, "GM KICK Mestre"), "jogador comum não expulsa ninguém");
+
+            StringAssert.StartsWith("OK", w.Ask(gm, "GM KICK Bagunca flood no chat"));
+            Assert.IsTrue(w.Step(() => !bad.Conn.Connected), "o expulso cai");
+            Assert.IsTrue(bad.All.Any(l => l.Contains("desconectado por um GM: flood no chat")), "e vê o motivo");
+            Assert.IsTrue(w.Step(() => w.Game.OnlineCount == 1));
+
+            // volta, leva ban de 3 dias: cai e não consegue mais entrar
+            var again = w.Join();
+            StringAssert.StartsWith("OK", w.Ask(again, "AUTH contaruim segredo123"));
+            StringAssert.StartsWith("OK", w.Ask(again, "PLAY Bagunca"));
+            StringAssert.StartsWith("OK conta contaruim banida até", w.Ask(gm, "GM BAN Bagunca 3 trapaça"));
+            Assert.IsTrue(w.Step(() => !again.Conn.Connected), "banido cai na hora");
+            var third = w.Join();
+            var r = w.Ask(third, "AUTH contaruim segredo123");
+            StringAssert.StartsWith("ERR esta conta está banida", r);
+            StringAssert.Contains("trapaça", r);
+            StringAssert.Contains("BANIDA", w.Ask(gm, "GM INFO contaruim"));
+
+            StringAssert.StartsWith("OK", w.Ask(gm, "GM UNBAN contaruim"));
+            StringAssert.StartsWith("OK chars Bagunca", w.Ask(third, "AUTH contaruim segredo123"));
+
+            // para sempre
+            StringAssert.Contains("para sempre", w.Ask(gm, "GM BAN contaruim perm"));
+            Assert.IsTrue(w.Step(() => !third.Conn.Connected));
+            var fourth = w.Join();
+            StringAssert.Contains("para sempre", w.Ask(fourth, "AUTH contaruim segredo123"));
+        }
+
+        [Test]
+        public void MutedPlayerCannotTalkUntilReleased()
+        {
+            using var w = new World();
+            w.Game.GrantGm("contagm2");
+            var gm = w.Enter("contagm2", "Juiz");
+            var loud = w.Enter("contagrito", "Grito");
+            StringAssert.StartsWith("OK", w.Ask(gm, "GM MUTE Grito 10"));
+            Assert.IsTrue(w.Step(() => loud.All.Any(l => l.Contains("chat foi bloqueado"))));
+            StringAssert.StartsWith("ERR seu chat está bloqueado", w.Ask(loud, "SAY oi"));
+            StringAssert.StartsWith("ERR seu chat está bloqueado", w.Ask(loud, "W Juiz oi"));
+            StringAssert.StartsWith("ERR seu chat está bloqueado", w.Ask(loud, "SAY /p oi"));
+            StringAssert.StartsWith("OK", w.Ask(loud, "ONLINE"), "o resto do jogo continua");
+            StringAssert.StartsWith("OK", w.Ask(gm, "GM UNMUTE Grito"));
+            StringAssert.StartsWith("OK", w.Ask(loud, "SAY voltei"));
+        }
+
+        [Test]
+        public void GmGoesToPlayerAndBringsPlayer()
+        {
+            using var w = new World();
+            w.Game.GrantGm("contagm3");
+            var gm = w.Enter("contagm3", "Guia");
+            var lost = w.Enter("contaperdido", "Perdido");
+            var lc = w.Game.OnlineCharacter("Perdido")!;
+            while (lc.Level < 30) lc.GainExperience(Kezor.Core.Characters.Character.ExpToNext(lc.Level) - lc.Experience);
+            lc.Gold = 1_000_000;
+            StringAssert.StartsWith("OK", w.Ask(lost, "WARP PANTANO"));
+            StringAssert.StartsWith("OK", w.Ask(gm, "GM GOTO Perdido"));
+            var gc = w.Game.OnlineCharacter("Guia")!;
+            Assert.AreEqual(lc.MapId, gc.MapId, "o GM vai para o mapa do jogador");
+            Assert.Less(Kezor.Core.MathK.Dist(gc.X, gc.Z, lc.X, lc.Z), 3f);
+            StringAssert.StartsWith("OK", w.Ask(gm, "WARP VALE"));
+            StringAssert.StartsWith("OK", w.Ask(gm, "GM BRING Perdido"));
+            Assert.AreEqual(gc.MapId, lc.MapId, "e traz o jogador até ele");
+        }
+
+        [Test]
         public void ServerRequiresAccountsForEveryone()
         {
             using var w = new World();

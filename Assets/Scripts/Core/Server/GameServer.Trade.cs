@@ -186,6 +186,7 @@ namespace Kezor.Core.Server
             a.Gold += t.Sides[1].Gold - t.Sides[0].Gold;
             b.Gold += t.Sides[0].Gold - t.Sides[1].Gold;
             a.Inventory.Touch(); b.Inventory.Touch();
+            LogLine($"troca: {a.Name} deu [{Describe(t.Sides[0].Items.Select(x => x.item), t.Sides[0].Gold)}] e {b.Name} deu [{Describe(t.Sides[1].Items.Select(x => x.item), t.Sides[1].Gold)}]");
             EndTrade(t, "Troca concluída!");
             SaveCharacter(sa); SaveCharacter(sb);
             return "OK troca concluída";

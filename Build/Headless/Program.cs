@@ -16,11 +16,22 @@ using Kezor.Server.Data;
 //   --gm-account  conta com comandos GM (pode repetir). --gm libera GM para todo mundo (só para teste).
 //   Também lê variáveis de ambiente: KEZOR_PORT, KEZOR_DATA, KEZOR_DB, KEZOR_NAME, KEZOR_GM_ACCOUNTS (separadas por vírgula).
 //   Todo jogador entra com conta (REGISTER/AUTH), escolhe o herói (CHARS/PLAY) e joga no mesmo mundo.
-// No console: ajuda | online | salvar | backup | aviso <texto> | sair  (num serviço do Linux o console não é usado).
+// No console: ajuda | online | salvar | backup | aviso <texto> | info <nome> | expulsar <nome> [motivo] | banir <conta> <dias|perm> [motivo]
+//             | desbanir <conta> | silenciar <nome> [minutos] | liberar <nome> | evento | fenda | sair
+//   (num serviço do Linux o console não é usado; os mesmos comandos existem no jogo como /gm para as contas GM).
+// Registro em <data>/logs/kezor-AAAA-MM-DD.log: entradas e saídas, trocas, compras em lojas, itens raros, ações de GM e banimentos.
 
 string Arg(string flag, string def) { int i = Array.IndexOf(args, flag); return i >= 0 && i + 1 < args.Length ? args[i + 1] : def; }
 string Env(string key, string def) { var v = Environment.GetEnvironmentVariable(key); return string.IsNullOrWhiteSpace(v) ? def : v.Trim(); }
-void Log(string text) => Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {text}");
+// Registro: na tela (no Linux vai para o journal do systemd) e em <data>/logs/kezor-AAAA-MM-DD.log (um arquivo por dia).
+string? logDir = null;
+void Log(string text)
+{
+    var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {text}";
+    Console.WriteLine(line);
+    if (logDir == null) return;
+    try { File.AppendAllText(Path.Combine(logDir, $"kezor-{DateTime.Now:yyyy-MM-dd}.log"), line + Environment.NewLine); } catch { }
+}
 
 int port = args.Length > 0 && int.TryParse(args[0], out var p) ? p : int.TryParse(Env("KEZOR_PORT", ""), out var ep) ? ep : Protocol.DefaultPort;
 bool gm = Array.IndexOf(args, "--gm") >= 0;
@@ -34,6 +45,8 @@ for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "--gm-account") options
 foreach (var a in Env("KEZOR_GM_ACCOUNTS", "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) options.GmAccounts.Add(a);
 
 Directory.CreateDirectory(data);
+logDir = Path.Combine(data, "logs");
+try { Directory.CreateDirectory(logDir); } catch { logDir = null; }
 string dbSpec = Arg("--db", Env("KEZOR_DB", "sqlite:" + Path.Combine(data, "kezor.db")));
 ICharacterRepository repo;
 if (dbSpec.Trim().Equals("json", StringComparison.OrdinalIgnoreCase))
@@ -103,13 +116,29 @@ string ConsoleCommand(string line)
     var sp = line.IndexOf(' ');
     var cmd = (sp < 0 ? line : line.Substring(0, sp)).ToLowerInvariant();
     var rest = sp < 0 ? "" : line.Substring(sp + 1).Trim();
+    var words = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    string Word(int i) => i < words.Length ? words[i] : "";
+    string After(int i) => i < words.Length ? string.Join(" ", words, i, words.Length - i) : "";
     switch (cmd)
     {
-        case "ajuda": case "help": return "Comandos: online | salvar | backup | aviso <texto> | sair";
+        case "ajuda": case "help": return "Comandos: online | salvar | backup | aviso <texto> | info <nome> | expulsar <nome> [motivo] | banir <conta> <dias|perm> [motivo] | desbanir <conta> | silenciar <nome> [minutos] | liberar <nome> | evento | fenda | sair";
         case "online": return game.AdminOnline();
         case "salvar": case "save": game.SaveAll(); return "Tudo salvo.";
         case "backup": game.SaveAll(); Backup(); return "Backup feito.";
         case "aviso": case "announce": return rest.Length == 0 ? "Use: aviso <texto>" : game.Announce(rest);
+        case "info": return rest.Length == 0 ? "Use: info <nome>" : game.AdminInfo(Word(0));
+        case "expulsar": case "kick": return rest.Length == 0 ? "Use: expulsar <nome> [motivo]" : game.AdminKick(Word(0), After(1), "console");
+        case "banir": case "ban":
+        {
+            if (Word(1) == "") return "Use: banir <conta> <dias|perm> [motivo]";
+            int days = Word(1).Equals("perm", StringComparison.OrdinalIgnoreCase) ? 0 : int.TryParse(Word(1), out var d) && d > 0 ? d : -1;
+            return days < 0 ? "Dias inválidos (use um número ou perm)" : game.AdminBan(Word(0), days, After(2), "console");
+        }
+        case "desbanir": case "unban": return rest.Length == 0 ? "Use: desbanir <conta>" : game.AdminUnban(Word(0), "console");
+        case "silenciar": case "mute": return rest.Length == 0 ? "Use: silenciar <nome> [minutos]" : game.AdminMute(Word(0), int.TryParse(Word(1), out var m) ? m : 30, "console");
+        case "liberar": case "unmute": return rest.Length == 0 ? "Use: liberar <nome>" : game.AdminUnmute(Word(0), "console");
+        case "evento": return game.StartInvasionNow();
+        case "fenda": if (game.RiftActive) return "A fenda já está aberta."; game.StartRift(); return "Fenda aberta na Escarpa.";
         case "sair": case "exit": case "quit": RequestStop("console"); return "Saindo...";
         default: return "Comando desconhecido. Digite ajuda.";
     }

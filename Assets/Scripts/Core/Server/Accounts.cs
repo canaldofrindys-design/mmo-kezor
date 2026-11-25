@@ -14,7 +14,9 @@ namespace Kezor.Core.Server
         public readonly List<string> Characters = new List<string>();
         public Vault Vault = new Vault();
         public DateTime Created = DateTime.UtcNow;
-        /// <summary>Banida até esta data (UTC). DateTime.MaxValue = para sempre. Null = livre.</summary>
+        /// <summary>Banimento "para sempre" (uma data bem distante, que cabe em qualquer banco e fuso).</summary>
+        public static readonly DateTime PermanentBan = new DateTime(9000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        /// <summary>Banida até esta data (UTC). <see cref="PermanentBan"/> = para sempre. Null = livre.</summary>
         public DateTime? BannedUntil;
         public string BanReason = "";
         /// <summary>Chat bloqueado até esta data (UTC).</summary>

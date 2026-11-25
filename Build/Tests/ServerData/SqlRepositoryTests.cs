@@ -88,6 +88,23 @@ namespace Kezor.Tests
         }
 
         [Test]
+        public void PermanentBanAndMuteSurviveTheDatabase()
+        {
+            var db = Open();
+            var a = new Account { Name = "Banida", PasswordHash = PasswordHasher.Hash("segredo1", 1000) };
+            a.BannedUntil = Account.PermanentBan; a.BanReason = "trapaça"; a.MutedUntil = DateTime.UtcNow.AddMinutes(30);
+            db.Save(a);
+            var back = ((IAccountRepository)Open()).Load("Banida")!;
+            Assert.IsTrue(back.IsBanned(DateTime.UtcNow));
+            Assert.AreEqual(Account.PermanentBan.Year, back.BannedUntil!.Value.Year);
+            Assert.AreEqual("trapaça", back.BanReason);
+            Assert.IsTrue(back.IsMuted(DateTime.UtcNow));
+            back.BannedUntil = null; back.BanReason = "";
+            db.Save(back);
+            Assert.IsFalse(((IAccountRepository)Open()).Load("Banida")!.IsBanned(DateTime.UtcNow));
+        }
+
+        [Test]
         public void ServerKeepsProgressAcrossRestartWithDatabase()
         {
             var gs = new GameServer(new SystemRandom(1), repo: Open(), options: Opt());

@@ -224,9 +224,10 @@ namespace Kezor.Core.Server
                 if (cmd == "HELP") return "OK REGISTER <conta> <senha> | AUTH <conta> <senha> | CHARS | PLAY <nome> | CREATE <nome> <GUA|ARC|PAT> | LOGIN <nome> | MOVE <x> <z> | STOP | ATTACK <id> | SKILL <skillId> <id> | PICK <id> | " +
                                           "ADD <STR|AGI|VIT|ENE> <n> | STATS | LOOK | INV | EQUIP <slot> | UNEQUIP <RightHand|Helm..> | USE <slot> | RUNE <runa> <alvo> | " +
                                           "FORGEPREVIEW <s1,s2,..> | FORGE <s1,s2,..> | BUY <itemId> [qtd] | SELL <slot> | REPAIR | QUICK <0-3> <itemId> | USEQ <0-3> | REBIRTH | SAY <texto> | " +
-                                          "PARTY INVITE <nome>|ACCEPT|LEAVE | MOUNT | WARP [destino] | VAULT | VPUT <slot> [qtd] [casa] | VTAKE <slot> [qtd] [casa] | IMOVE <de> <para> | VMOVE <de> <para> | VGOLDIN <n> | VGOLDOUT <n> | VCLOSE | TRADE <nome>|ACCEPT|DECLINE|ADD <slot>|REMOVE <slot>|GOLD <n>|LOCK|CONFIRM|CANCEL | GUILD CREATE|INVITE|ACCEPT|LEAVE|KICK|PROMOTE|DEMOTE|DISBAND|INFO|WAR <guilda>|WARACCEPT|WARDECLINE|WARINFO | GSAY <texto> | RANKING [GERAL|GUILDAS|GUA|ARC|PAT|LAM|COM|INV|PUN] | SHOP OPEN <nome>|ADD <slot> <preço>|REMOVE <slot>|CLOSE|VIEW <jogador>|BUY <jogador> <slot> <preço> | W <nome> <texto> | ONLINE | SELECT | PING" + (IsGm(s) ? " | GM LEVEL <n>|GOLD <n>|RUNES|EVENT|HEAL|ITEM <id> [nível]" : "");
+                                          "PARTY INVITE <nome>|ACCEPT|LEAVE | MOUNT | WARP [destino] | VAULT | VPUT <slot> [qtd] [casa] | VTAKE <slot> [qtd] [casa] | IMOVE <de> <para> | VMOVE <de> <para> | VGOLDIN <n> | VGOLDOUT <n> | VCLOSE | TRADE <nome>|ACCEPT|DECLINE|ADD <slot>|REMOVE <slot>|GOLD <n>|LOCK|CONFIRM|CANCEL | GUILD CREATE|INVITE|ACCEPT|LEAVE|KICK|PROMOTE|DEMOTE|DISBAND|INFO|WAR <guilda>|WARACCEPT|WARDECLINE|WARINFO | GSAY <texto> | RANKING [GERAL|GUILDAS|GUA|ARC|PAT|LAM|COM|INV|PUN] | SHOP OPEN <nome>|ADD <slot> <preço>|REMOVE <slot>|CLOSE|VIEW <jogador>|BUY <jogador> <slot> <preço> | W <nome> <texto> | ONLINE | SELECT | PING" + (IsGm(s) ? " | GM KICK <nome> [motivo]|BAN <conta> <dias|perm> [motivo]|UNBAN <conta>|MUTE <nome> [min]|UNMUTE <nome>|INFO <nome>|GOTO <nome>|BRING <nome>|AVISO <texto>|LEVEL <n>|GOLD <n>|RUNES|EVENT|RIFT|HEAL|ITEM <id> [nível]" : "");
                 var c = s.Character;
                 if (c == null) return "ERR faça LOGIN ou CREATE primeiro";
+                if ((cmd == "SAY" || cmd == "W" || cmd == "WHISPER" || cmd == "GSAY") && MutedError(s) is string muted) return muted;
                 switch (cmd)
                 {
                     case "MOVE": return ShopOpen(s) ? "ERR feche a loja para andar (SHOP CLOSE)" : Move(s, c, parts);
@@ -269,7 +270,7 @@ namespace Kezor.Core.Server
                     case "VTAKE": return VaultTake(s, c, parts);
                     case "VGOLDIN": return VaultGold(s, c, parts, true);
                     case "VGOLDOUT": return VaultGold(s, c, parts, false);
-                    case "GM": return IsGm(s) ? Gm(c, parts) : "ERR comandos GM desativados para esta conta";
+                    case "GM": return IsGm(s) ? Gm(s, c, parts) : "ERR comandos GM desativados para esta conta";
                     case "W": case "WHISPER": return Whisper(s, c, parts);
                     case "ONLINE": return OnlineList();
                     default: return "ERR comando desconhecido (HELP)";
@@ -352,6 +353,11 @@ namespace Kezor.Core.Server
             if (p.Length < 3) return "ERR use AUTH <conta> <senha>";
             var a = _accounts.Load(p[1]);
             if (a == null || !PasswordHasher.Verify(p[2], a.PasswordHash)) return "ERR conta ou senha incorretas";
+            if (a.IsBanned(DateTime.UtcNow))
+            {
+                LogLine($"login recusado (conta banida): {a.Name} (sessão {s.Id})");
+                return $"ERR esta conta está banida {Until(a.BannedUntil)}" + (a.BanReason.Length > 0 ? ": " + a.BanReason : "");
+            }
             if (_sessions.Values.Any(o => o != s && o.Account != null && string.Equals(o.Account.Name, a.Name, StringComparison.OrdinalIgnoreCase)))
                 return "ERR esta conta já está conectada";
             s.Account = a;
@@ -1035,6 +1041,7 @@ namespace Kezor.Core.Server
             if (!c.Inventory.TryAdd(g.Item, out _)) { Sys(s, "Inventário cheio."); return; }
             _ground.Remove(g.Id);
             Sys(s, $"Obteve: {g.Item.DisplayName}");
+            if (Notable(g.Item)) LogLine($"item: {c.Name} pegou {g.Item.DisplayName} ({MapOf(c.MapId).Name})");
         }
 
         // ------------------------------------------------------------ snapshots

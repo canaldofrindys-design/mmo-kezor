@@ -434,8 +434,12 @@ namespace Kezor.Core.Server
         }
 
         // ------------------------------------------------------------ GM (testes)
-        private string Gm(Character c, string[] p)
+        private string Gm(Session s, Character c, string[] p)
         {
+            if (p.Length < 2) return "ERR use GM <comando> (KICK|BAN|UNBAN|MUTE|UNMUTE|INFO|GOTO|BRING|AVISO|LEVEL|GOLD|RUNES|EVENT|RIFT|HEAL|ITEM|TP|ASC)";
+            var mod = GmModeration(s, c, p);
+            if (mod != null) return mod;
+            LogLine($"GM {s.Account?.Name ?? c.Name} ({c.Name}): {string.Join(" ", p)}");   // comandos que mexem em nível, ouro e itens
             switch (p[1].ToUpperInvariant())
             {
                 case "LEVEL":
@@ -474,7 +478,7 @@ namespace Kezor.Core.Server
                     if (def.MaxStack > 1) it.Quantity = def.MaxStack;
                     return c.Inventory.TryAdd(it, out _) ? $"OK {it.DisplayName}" : "ERR inventário cheio";
                 }
-                default: return "ERR GM LEVEL|GOLD|RUNES|EVENT|RIFT|HEAL|ITEM|TP|ASC";
+                default: return "ERR GM KICK|BAN|UNBAN|MUTE|UNMUTE|INFO|GOTO|BRING|AVISO|LEVEL|GOLD|RUNES|EVENT|RIFT|HEAL|ITEM|TP|ASC";
             }
         }
 
@@ -507,6 +511,14 @@ namespace Kezor.Core.Server
             }
             if (_eventTimer > 0) return;
             StartInvasion();
+        }
+
+        /// <summary>Console do servidor: começa a Invasão das Cinzas agora.</summary>
+        public string StartInvasionNow()
+        {
+            if (_eventActive) return "A Invasão já está acontecendo.";
+            StartInvasion();
+            return "Invasão das Cinzas iniciada.";
         }
 
         private void StartInvasion()
