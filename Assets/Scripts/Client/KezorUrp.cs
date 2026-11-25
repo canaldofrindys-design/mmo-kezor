@@ -9,7 +9,7 @@ namespace Kezor.Client
     /// Ponte entre o visual do Kezor e a URP. Os shaders Kezor/LowPoly e Kezor/Terrain usam a luz da URP (sombra da luz
     /// principal, luzes adicionais Forward+), mas o ambiente e a névoa continuam vindo dos globais _Kezor* por mapa.
     /// Aqui ficam: o sol (Light direcional com sombra), o conjunto de luzes pontuais dos braseiros e postes, a sombra
-    /// das malhas e o pós-processamento (Bloom, tonemapping e vinheta num Volume global, no lugar do KezorBloom).
+    /// das malhas e o pós-processamento (Bloom e vinheta num Volume global, no lugar do KezorBloom).
     /// </summary>
     public static class KezorUrp
     {
@@ -53,7 +53,7 @@ namespace Kezor.Client
         /// <summary>Quantas luzes pontuais da URP ficam acesas ao mesmo tempo (as mais perto do foco).</summary>
         public const int PointPool = 16;
         /// <summary>Converte a cor de LocalLights (pensada para o shader antigo) em intensidade de Light da URP.</summary>
-        public static float PointIntensity = 1.6f;
+        public static float PointIntensity = 3f;
         private static readonly List<Light> _points = new List<Light>();
         private static GameObject? _pointRoot;
 
@@ -134,10 +134,9 @@ namespace Kezor.Client
                 _bloom.threshold.Override(1.0f);
                 _bloom.scatter.Override(0.65f);
                 _bloom.tint.Override(new Color(1f, 0.93f, 0.85f));
-                var tone = p.Add<Tonemapping>(true);
-                tone.mode.Override(TonemappingMode.Neutral);
+                // sem tonemapping: o projeto usa espaço de cor Gamma, e o Neutral escurecia os tons médios da noite
                 _vignette = p.Add<Vignette>(true);
-                _vignette.intensity.Override(0.24f);
+                _vignette.intensity.Override(0.16f);
                 _vignette.smoothness.Override(0.45f);
                 _vignette.color.Override(new Color(0.02f, 0.015f, 0.03f));
                 _volume.sharedProfile = p;
