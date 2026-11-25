@@ -14,6 +14,13 @@ namespace Kezor.Core.Server
         public readonly List<string> Characters = new List<string>();
         public Vault Vault = new Vault();
         public DateTime Created = DateTime.UtcNow;
+        /// <summary>Banida até esta data (UTC). DateTime.MaxValue = para sempre. Null = livre.</summary>
+        public DateTime? BannedUntil;
+        public string BanReason = "";
+        /// <summary>Chat bloqueado até esta data (UTC).</summary>
+        public DateTime? MutedUntil;
+        public bool IsBanned(DateTime nowUtc) => BannedUntil.HasValue && BannedUntil.Value > nowUtc;
+        public bool IsMuted(DateTime nowUtc) => MutedUntil.HasValue && MutedUntil.Value > nowUtc;
     }
 
     /// <summary>

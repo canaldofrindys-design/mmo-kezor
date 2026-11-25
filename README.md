@@ -83,12 +83,14 @@ cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma con
 - **Online 24h num VPS**: duplo clique em `Tools/Publicar-Servidor.bat` (monta, envia e instala; guia completo em `docs/SERVIDOR-ONLINE.md`).
 - **Sem Unity** (recomendado para deixar ligado): `cd Build && dotnet run --project Headless -- 55901 --gm-account SuaConta`
   (`--gm-account` dá GM a uma conta e pode repetir; `--gm` dá GM para todos, só para teste). Todo jogador entra com conta e cria até
-  5 personagens. Os saves ficam em JSON na pasta `data/` (mude com `--data <pasta>`). Nome, canal e limite: `--name`, `--channel`, `--max`.
+  5 personagens. Os saves ficam num **banco SQL**: SQLite em `data/kezor.db` (padrão) ou MySQL/MariaDB com
+  `--db "mysql:Server=...;Database=kezor;User ID=...;Password=..."` (`--db json` volta para arquivos). Saves `.json` antigos da pasta
+  `data/` são importados sozinhos na primeira vez. Nome, canal e limite: `--name`, `--channel`, `--max`.
 - **No Unity**: menu **Kezor ▸ Criar cena do servidor dedicado** (usa `ServerBootstrap`) e gere um build *Dedicated Server*.
 - Dá para testar na mão com `telnet`/`nc localhost 55901` e digitar `HELP`.
 
 ## Testes
-- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (144 testes: multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
+- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (152 testes: banco SQL (SQLite e MySQL: contas, heróis, guildas, ranking, reinício do servidor, importação dos JSON, backup), multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
 - No Unity: **Window ▸ General ▸ Test Runner ▸ EditMode**.
 - `Build/ClientCheck` compila o cliente fora do Unity (referências do UnityEngine via NuGet) para pegar erros cedo.
 

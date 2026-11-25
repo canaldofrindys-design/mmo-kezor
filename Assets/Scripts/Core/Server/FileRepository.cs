@@ -167,17 +167,28 @@ namespace Kezor.Core.Server
             return c;
         }
 
-        public static Dictionary<string, object?> AccountToJson(Account a) => new Dictionary<string, object?>
+        public static Dictionary<string, object?> AccountToJson(Account a)
         {
-            ["v"] = Version, ["name"] = a.Name, ["password"] = a.PasswordHash, ["created"] = a.Created.ToString("o"),
-            ["characters"] = a.Characters.Cast<object?>().ToList(), ["vault"] = VaultToJson(a.Vault),
-        };
+            var d = new Dictionary<string, object?>
+            {
+                ["v"] = Version, ["name"] = a.Name, ["password"] = a.PasswordHash, ["created"] = a.Created.ToString("o"),
+                ["characters"] = a.Characters.Cast<object?>().ToList(), ["vault"] = VaultToJson(a.Vault),
+            };
+            if (a.BannedUntil.HasValue) { d["bannedUntil"] = a.BannedUntil.Value.ToString("o"); d["banReason"] = a.BanReason; }
+            if (a.MutedUntil.HasValue) d["mutedUntil"] = a.MutedUntil.Value.ToString("o");
+            return d;
+        }
+
+        private static DateTime? Utc(string s) =>
+            DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var d) ? d.ToUniversalTime() : (DateTime?)null;
 
         public static Account AccountFromJson(IDictionary<string, object?> o)
         {
             var a = new Account { Name = o.S("name"), PasswordHash = o.S("password"), Vault = VaultFromJson(o.O("vault")) };
             if (DateTime.TryParse(o.S("created"), null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt)) a.Created = dt;
             foreach (var n in o.A("characters")) if (n is string s) a.Characters.Add(s);
+            if (o.ContainsKey("bannedUntil")) { a.BannedUntil = Utc(o.S("bannedUntil")); a.BanReason = o.S("banReason"); }
+            if (o.ContainsKey("mutedUntil")) a.MutedUntil = Utc(o.S("mutedUntil"));
             return a;
         }
     }

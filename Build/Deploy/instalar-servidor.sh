@@ -35,6 +35,9 @@ KEZOR_PORT=${KEZOR_PORT:-55901}
 KEZOR_NAME=${KEZOR_NAME:-Kezor}
 # contas com comandos GM, separadas por vírgula
 KEZOR_GM_ACCOUNTS=${KEZOR_GM_ACCOUNTS:-}
+# banco de dados: vazio = SQLite em /opt/kezor/data/kezor.db (padrão, não precisa instalar nada)
+# para MySQL/MariaDB: KEZOR_DB=mysql:Server=localhost;Database=kezor;User ID=kezor;Password=SUA_SENHA
+KEZOR_DB=
 CONF
 fi
 chown -R kezor:kezor /opt/kezor

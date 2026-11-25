@@ -37,6 +37,21 @@ Ao parar ou atualizar, ele salva todos os jogadores antes de sair. Comandos úte
 - reiniciar / parar: `systemctl restart kezor-server` / `systemctl stop kezor-server`
 - mudar contas GM ou nome: edite `/etc/kezor/kezor.env` e reinicie.
 
+## Banco de dados
+O servidor online guarda contas, heróis, guildas e ranking num **banco SQL**:
+- **SQLite (padrão)**: um arquivo só, `/opt/kezor/data/kezor.db`. Não precisa instalar nada. Aguenta tranquilo um servidor
+  com centenas de contas. O servidor faz uma cópia do banco a cada 6 horas em `/opt/kezor/data/backups` (guarda as 14 últimas).
+- **MySQL / MariaDB** (como os servidores grandes): instale no VPS (`apt install mariadb-server`), crie um usuário e coloque em
+  `/etc/kezor/kezor.env`: `KEZOR_DB=mysql:Server=localhost;Database=kezor;User ID=kezor;Password=SUA_SENHA`.
+  O banco e as tabelas são criados sozinhos. Para backup use `mysqldump kezor > kezor.sql`.
+
+Tabelas: `accounts` (conta, hash da senha, criação, ban), `characters` (nome, conta, classe, nível, renascimentos),
+`guilds` e `ranking`. Cada linha tem o registro completo em JSON na coluna `data`. Dá para abrir com qualquer programa de SQL
+(DB Browser for SQLite, HeidiSQL, DBeaver).
+
+Saves antigos em arquivos `.json` na pasta `data` são copiados para o banco sozinhos na primeira vez (nada é apagado).
+Para continuar com arquivos, use `KEZOR_DB=json`. O "Servidor deste PC" (dentro do Unity) continua usando arquivos.
+
 ## Windows em vez de Linux
 Também funciona num VPS Windows: monte com
 `dotnet publish Build/Headless/Kezor.Server.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o Publish`,
