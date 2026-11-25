@@ -1,0 +1,8 @@
+{
+  "name": "Kezor.Client",
+  "rootNamespace": "Kezor.Client",
+  "references": [ "Kezor.Core", "Unity.InputSystem" ],
+  "versionDefines": [
+    { "name": "com.unity.inputsystem", "expression": "1.0.0", "define": "KEZOR_INPUTSYSTEM" }
+  ]
+}

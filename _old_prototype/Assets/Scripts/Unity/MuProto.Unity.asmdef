@@ -1,0 +1,4 @@
+{
+  "name": "MuProto.Unity",
+  "references": [ "MuProto.Core" ]
+}

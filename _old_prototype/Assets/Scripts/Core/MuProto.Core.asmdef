@@ -1,0 +1,6 @@
+{
+  "name": "MuProto.Core",
+  "rootNamespace": "MuProto.Core",
+  "noEngineReferences": true,
+  "autoReferenced": true
+}

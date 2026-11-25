@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Só para verificar a compilação do cliente fora do Unity. Usa as DLLs do próprio Unity 6 instalado (UI Toolkit, Painter2D etc.);
+       se a pasta não existir, cai no pacote NuGet antigo (sem UI Toolkit novo). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework><LangVersion>9.0</LangVersion><Nullable>enable</Nullable><NoWarn>CS0618;CS1701;CS1702</NoWarn>
+    <UnityManaged>C:\Program Files\Unity\Hub\Editor\6000.6.7f1\Editor\Data\Managed\UnityEngine</UnityManaged>
+  </PropertyGroup>
+  <ItemGroup><Compile Include="../../Assets/Scripts/Client/**/*.cs" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../Core/Kezor.Core.csproj" /></ItemGroup>
+  <ItemGroup Condition="Exists('$(UnityManaged)')">
+    <Reference Include="$(UnityManaged)\UnityEngine*.dll"><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('$(UnityManaged)')"><PackageReference Include="UnityEngine.Modules" Version="2021.3.33" /></ItemGroup>
+</Project>

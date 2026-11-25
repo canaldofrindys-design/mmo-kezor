@@ -1,0 +1,33 @@
+﻿# Gerado pelo Unity (recriado sozinho ao abrir o projeto)
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Bb]uilds/
+/*.csproj
+/*.sln
+/*.slnx
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+crashlytics-build.properties
+
+# Compilacao dos projetos auxiliares
+Build/**/bin/
+Build/**/obj/
+
+# Editores
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Segredos
+.env
+*.env
+credentials*.json

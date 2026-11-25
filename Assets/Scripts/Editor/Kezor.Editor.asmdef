@@ -1,0 +1,5 @@
+{
+  "name": "Kezor.Editor",
+  "references": [ "Kezor.Core", "Kezor.Client" ],
+  "includePlatforms": [ "Editor" ]
+}

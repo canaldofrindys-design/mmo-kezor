@@ -1,0 +1,6 @@
+{
+  "name": "MuProto.Tests",
+  "references": [ "MuProto.Core" ],
+  "optionalUnityReferences": [ "TestAssemblies" ],
+  "includePlatforms": [ "Editor" ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Kezor.Core",
+  "rootNamespace": "Kezor.Core",
+  "noEngineReferences": true,
+  "autoReferenced": true
+}
