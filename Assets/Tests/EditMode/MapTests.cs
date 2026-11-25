@@ -25,7 +25,8 @@ namespace Kezor.Tests
         public void MapsAreConsistent()
         {
             var maps = MapDefinition.CreateAll();
-            Assert.AreEqual(3, maps.Count);
+            Assert.AreEqual(4, maps.Count);
+            Assert.AreEqual(80, maps[MapDefinition.EscarpId].MinLevel);
             Assert.AreEqual(20, maps[MapDefinition.SwampId].MinLevel);
             Assert.AreEqual(45, maps[MapDefinition.CryptId].MinLevel);
             foreach (var m in maps.Values)
@@ -46,6 +47,7 @@ namespace Kezor.Tests
             Assert.IsTrue(maps[MapDefinition.SwampId].Spawns.All(g => g.Monster.Level >= 20 && g.Monster.Level <= 45));
             Assert.IsTrue(maps[MapDefinition.CryptId].Spawns.All(g => g.Monster.Level >= 45 && g.Monster.Level <= 80));
             Assert.IsTrue(maps[MapDefinition.CryptId].Spawns.Any(g => g.Monster.Boss && g.Monster.SpecialDrops.Length > 0));
+            Assert.IsTrue(maps[MapDefinition.EscarpId].Spawns.All(g => g.Monster.Level >= 80 && g.Monster.Level <= 120));
         }
 
         [Test]

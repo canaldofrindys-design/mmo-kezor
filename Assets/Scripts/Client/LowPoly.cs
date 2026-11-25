@@ -189,6 +189,11 @@ namespace Kezor.Client
                     sunC = new Color(0.5f, 0.45f, 0.66f); sky = new Color(0.42f, 0.38f, 0.56f); ground = new Color(0.16f, 0.13f, 0.2f);
                     fog = new Color(0.05f, 0.04f, 0.08f); fogP = new Vector4(12f, 40f, 0.95f, 0);
                     break;
+                case Kezor.Core.World.MapDefinition.EscarpId:   // planalto de neve: luz branca-azulada, névoa clara
+                    sun = Quaternion.Euler(40f, 30f, 0) * Vector3.forward;
+                    sunC = new Color(0.78f, 0.84f, 0.95f); sky = new Color(0.5f, 0.58f, 0.7f); ground = new Color(0.3f, 0.32f, 0.38f);
+                    fog = new Color(0.36f, 0.42f, 0.52f); fogP = new Vector4(18f, 62f, 0.9f, 0);
+                    break;
                 default:   // noite de luar: azul frio vindo de cima, o calor vem dos braseiros, postes e da fonte
                     sun = Quaternion.Euler(50f, -35f, 0) * Vector3.forward;
                     sunC = new Color(0.5f, 0.6f, 0.9f) * 0.5f; sky = new Color(0.17f, 0.21f, 0.33f); ground = new Color(0.07f, 0.06f, 0.07f);
@@ -205,7 +210,8 @@ namespace Kezor.Client
             KezorUrp.SetSun(sun, sunC, mapId == Kezor.Core.World.MapDefinition.ValeId ? 0.4f : 0.6f);   // URP: sol com sombra
             // névoa rasteira (x = topo, y = espessura, z = intensidade, w = puxa para o tom do céu)
             Shader.SetGlobalVector("_KezorLowFog", mapId == Kezor.Core.World.MapDefinition.SwampId ? new Vector4(0.7f, 1.1f, 0.75f, 0.25f)
-                : mapId == Kezor.Core.World.MapDefinition.CryptId ? new Vector4(0.35f, 0.7f, 0.5f, 0.45f) : new Vector4(0.8f, 1.2f, 0.5f, 0.35f));
+                : mapId == Kezor.Core.World.MapDefinition.CryptId ? new Vector4(0.35f, 0.7f, 0.5f, 0.45f)
+                : mapId == Kezor.Core.World.MapDefinition.EscarpId ? new Vector4(0.6f, 1.4f, 0.55f, 0.5f) : new Vector4(0.8f, 1.2f, 0.5f, 0.35f));
             DetailTextures.Ensure();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = fog;

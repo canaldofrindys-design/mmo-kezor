@@ -4,8 +4,8 @@ ARPG online isométrico de **fantasia sombria low poly**, feito em **Unity (C#)*
 Mecânicas clássicas do gênero (atributos por ponto, renascimento, refino +0~+15 com runas, forja com chance de falha,
 itens Ascendentes, combos, PvP, grupo, evento de invasão), com **mundo, classes, itens, monstros e arte 100% originais**.
 
-> Este *vertical slice* tem 3 mapas (Vale de Brasalume com a vila e o Bosque Cinzento, Pântano de Turfa Negra e a masmorra Cripta de Vidro Negro), 7 classes, 17 monstros (incluindo 2 ecos invocáveis),
-> ~35 itens, 4 runas, 2 receitas de forja e 1 evento. Tudo é gerado por código (malhas low poly procedurais), sem assets externos.
+> Este *vertical slice* tem 4 mapas (Vale de Brasalume com a vila e o Bosque Cinzento, Pântano de Turfa Negra, a masmorra Cripta de Vidro Negro e a Escarpa da Geada Rubra, nível 80+), 7 classes, 23 monstros (incluindo 2 ecos invocáveis),
+> ~45 itens, 4 runas, 2 receitas de forja e 2 eventos (Invasão das Cinzas no Vale e Fenda da Geada Rubra na Escarpa, com prêmio para quem mais causou dano). Tudo é gerado por código (malhas low poly procedurais), sem assets externos.
 
 ## Como jogar no Unity
 1. Abra a pasta `C:\MuProtoUnity` no **Unity Hub** (Add ▸ Add project from disk). Testado para Unity **2021.3 LTS ou mais novo** (inclusive Unity 6).
@@ -90,7 +90,7 @@ cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma con
 - Dá para testar na mão com `telnet`/`nc localhost 55901` e digitar `HELP`.
 
 ## Testes
-- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (152 testes: banco SQL (SQLite e MySQL: contas, heróis, guildas, ranking, reinício do servidor, importação dos JSON, backup), multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
+- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (156 testes: Escarpa e evento da Fenda (ondas, Colosso, prêmio por dano), banco SQL (SQLite e MySQL: contas, heróis, guildas, ranking, reinício do servidor, importação dos JSON, backup), multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
 - No Unity: **Window ▸ General ▸ Test Runner ▸ EditMode**.
 - `Build/ClientCheck` compila o cliente fora do Unity (referências do UnityEngine via NuGet) para pegar erros cedo.
 

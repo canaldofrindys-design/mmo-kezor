@@ -178,6 +178,20 @@ namespace Kezor.Client
             { 60, "Monsters/EcoSombrio" }, { 61, "Monsters/EcoLuminoso" },
         };
 
+        /// <summary>
+        /// Monstros da Escarpa reaproveitam modelos existentes com outra cor (tinta multiplicada no shader):
+        /// id do monstro → (id do modelo base, cor).
+        /// </summary>
+        public static readonly Dictionary<int, (int baseId, Color tint)> MonsterSkins = new Dictionary<int, (int, Color)>
+        {
+            { 13, (2, new Color(0.75f, 0.9f, 1.25f)) },    // Lince da Geada: lobo azul-gelo
+            { 14, (5, new Color(0.7f, 0.85f, 1.3f)) },     // Guardião de Escarcha: golem de gelo
+            { 15, (4, new Color(0.8f, 0.95f, 1.25f)) },    // Revenante Congelado: ossada azulada
+            { 16, (12, new Color(1.2f, 0.75f, 0.85f)) },   // Serpente de Escarcha: espectro avermelhado
+            { 54, (50, new Color(1.25f, 0.65f, 0.75f)) },  // Estilhaço da Fenda: cria rubra
+            { 53, (52, new Color(1.3f, 0.6f, 0.65f)) },    // Colosso da Geada Rubra: soberano rubro
+        };
+
         private static readonly Dictionary<int, string> MonsterNames = new Dictionary<int, string>
         {
             { 1, "Lodo Musgoso" }, { 2, "Lobo Cinzento" }, { 3, "Aranha Tecelã" }, { 4, "Ossada Errante" },
@@ -243,10 +257,13 @@ namespace Kezor.Client
         public static Rig Monster(int defId, float scale)
         {
             Rig? rig = null;
-            if (MonsterModels.TryGetValue(defId, out var path))
+            Color? tint = null;
+            int modelId = defId;
+            if (MonsterSkins.TryGetValue(defId, out var skin)) { modelId = skin.baseId; tint = skin.tint; }
+            if (MonsterModels.TryGetValue(modelId, out var path))
                 rig = ModelLibrary.Rig(path, Kezor.Core.World.MonsterCatalog.Get(defId)?.Name ?? path, bouncy: defId == 1,
                                        hover: defId == 51 || (Kezor.Core.World.MonsterCatalog.Get(defId)?.Hover ?? false));
-            if (rig == null) switch (defId)
+            if (rig == null) switch (modelId)
             {
                 case 1: rig = Slime(); break;
                 case 2: rig = Wolf(); break;
@@ -256,6 +273,17 @@ namespace Kezor.Client
                 case 50: rig = Ashling(); break;
                 case 51: rig = Herald(); break;
                 default: rig = Slime(); break;
+            }
+            if (tint is Color tc)
+            {
+                var mpb = new MaterialPropertyBlock();
+                foreach (var r in rig.Renderers)
+                {
+                    if (r == null) continue;
+                    r.GetPropertyBlock(mpb);
+                    mpb.SetColor(KezorLook.TintId, tc);
+                    r.SetPropertyBlock(mpb);
+                }
             }
             rig.Body.localScale *= scale;
             rig.Height *= scale;

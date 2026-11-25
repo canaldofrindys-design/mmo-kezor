@@ -20,6 +20,7 @@ namespace Kezor.Client
         {
             if (_map.Id == MapDefinition.SwampId) return SwampHeight(x, z);
             if (_map.Id == MapDefinition.CryptId) return 0f;
+            if (_map.Id == MapDefinition.EscarpId) return FrostHeight(x, z);
             float h = (Mathf.PerlinNoise(x * 0.045f + 11.3f, z * 0.045f + 7.1f) - 0.5f) * 3.2f
                     + (Mathf.PerlinNoise(x * 0.16f + 3.7f, z * 0.16f + 1.9f) - 0.5f) * 0.7f;
             float dTown = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
@@ -74,6 +75,7 @@ namespace Kezor.Client
             {
                 case MapDefinition.SwampId: BuildSwamp(root.transform); break;
                 case MapDefinition.CryptId: BuildCrypt(root.transform); break;
+                case MapDefinition.EscarpId: BuildEscarpment(root.transform); break;
                 default:
                     BuildTerrain(root.transform);
                     BuildTown(root.transform);
@@ -82,7 +84,7 @@ namespace Kezor.Client
                     break;
             }
             BuildPortals(root.transform);
-            if (map.Id != MapDefinition.CryptId) GroundScatter.Build(root.transform, map);   // grama, flores, pedrinhas, poças
+            if (map.Id != MapDefinition.CryptId && map.Id != MapDefinition.EscarpId) GroundScatter.Build(root.transform, map);   // grama, flores, pedrinhas, poças
             AmbientFx.Build(root.transform, map);                                            // vagalumes, poeira
             if (map.Id == MapDefinition.ValeId) TownAmbience.Build(root.transform, map);    // fonte, forja, mercado, grilos, coruja
             return root;

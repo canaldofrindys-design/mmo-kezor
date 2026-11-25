@@ -63,6 +63,7 @@ namespace Kezor.Client
         private static Color TerrainSplat(float x, float z, float h, float slope, out Vector4 w)
         {
             float jit = Mathf.PerlinNoise(x * 0.9f + 5.1f, z * 0.9f + 2.3f);
+            if (_map.Id == MapDefinition.EscarpId) return FrostColor(x, z, h, slope, jit, out w);
             if (_map.Id == MapDefinition.SwampId)
             {   // pântano: lama (terra) com manchas de musgo (grama)
                 var sc = SwampColor(x, z, h, jit);

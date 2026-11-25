@@ -448,6 +448,7 @@ namespace Kezor.Core.Server
                         c.Inventory.TryAdd(new Item(d), out _);
                     return "OK runas adicionadas";
                 case "EVENT": _eventTimer = 0.01f; return "OK evento iniciando";
+                case "RIFT": if (_riftActive) return "ERR a fenda já está aberta"; StartRift(); return "OK fenda aberta na Escarpa";
                 case "HEAL": c.Hp = c.MaxHp; c.Mp = c.MaxMp; return "OK";
                 case "ASC":
                 {   // GM ASC <nível>: libera e define o nível de Ascensão (testes e capturas)
@@ -473,7 +474,7 @@ namespace Kezor.Core.Server
                     if (def.MaxStack > 1) it.Quantity = def.MaxStack;
                     return c.Inventory.TryAdd(it, out _) ? $"OK {it.DisplayName}" : "ERR inventário cheio";
                 }
-                default: return "ERR GM LEVEL|GOLD|RUNES|EVENT|HEAL|ITEM|TP|ASC";
+                default: return "ERR GM LEVEL|GOLD|RUNES|EVENT|RIFT|HEAL|ITEM|TP|ASC";
             }
         }
 
@@ -528,8 +529,9 @@ namespace Kezor.Core.Server
 
         private void OnBossKilled(Monster m, Character owner)
         {
+            if (m.Def == MonsterCatalog.CrimsonFrostColossus) return;   // a Fenda avisa por conta própria
             SysAll($"[Evento] {owner.Name} derrotou o {m.Name}! As runas caíram no chão.");
-            Broadcast("@EV EVENT;0;Invasão das Cinzas");
+            if (m.Def == MonsterCatalog.AshHerald) Broadcast("@EV EVENT;0;Invasão das Cinzas");
         }
     }
 }

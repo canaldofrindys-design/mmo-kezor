@@ -51,12 +51,23 @@ namespace Kezor.Core.World
         public static readonly MonsterDefinition BlackGlassSovereign = new MonsterDefinition { Id = 52, Name = "Soberano de Vidro Negro", Level = 78, Hp = 30000, MinDamage = 160, MaxDamage = 210, Defense = 75, AttackRate = 420, DefenseRate = 95, Experience = 60000, RespawnSeconds = 240, GoldDropMax = 80000, MoveSpeed = 2.6f, AggroRange = 9f, AttackRange = 3f, AttackInterval = 1.8f, Scale = 2.0f, Boss = true, GuaranteedRunes = 2,
             SpecialDrops = new[] { 40, 41, 42, 300, 301 } };
 
+        // Escarpa da Geada Rubra (nível 80-120)
+        public static readonly MonsterDefinition FrostLynx = new MonsterDefinition { Id = 13, Name = "Lince da Geada", Level = 82, Hp = 4200, MinDamage = 150, MaxDamage = 180, Defense = 70, AttackRate = 400, DefenseRate = 100, Experience = 9500, RespawnSeconds = 10, GoldDropMax = 9000, MoveSpeed = 4.6f, AttackInterval = 1.2f };
+        public static readonly MonsterDefinition RimeWarden = new MonsterDefinition { Id = 14, Name = "Vigia de Gelo Rubro", Level = 90, Hp = 6500, MinDamage = 175, MaxDamage = 215, Defense = 95, AttackRate = 440, DefenseRate = 105, Experience = 12500, RespawnSeconds = 14, GoldDropMax = 11000, MoveSpeed = 2.4f, AttackInterval = 2.0f, AttackRange = 2.6f, Scale = 1.5f };
+        public static readonly MonsterDefinition FrozenRevenant = new MonsterDefinition { Id = 15, Name = "Ossada Congelada", Level = 98, Hp = 6000, MinDamage = 200, MaxDamage = 245, Defense = 92, AttackRate = 480, DefenseRate = 125, Experience = 15000, RespawnSeconds = 12, GoldDropMax = 12500, MoveSpeed = 3.4f };
+        public static readonly MonsterDefinition RimeSerpent = new MonsterDefinition { Id = 16, Name = "Serpe de Geada", Level = 106, Hp = 7200, MinDamage = 225, MaxDamage = 275, Defense = 100, AttackRate = 520, DefenseRate = 145, Experience = 18500, RespawnSeconds = 13, GoldDropMax = 14000, MoveSpeed = 4.2f, Hover = true, AttackRange = 2.4f };
+        // Evento: Fenda da Geada Rubra
+        public static readonly MonsterDefinition RiftShard = new MonsterDefinition { Id = 54, Name = "Estilhaço da Fenda", Level = 95, Hp = 5000, MinDamage = 190, MaxDamage = 230, Defense = 85, AttackRate = 470, DefenseRate = 115, Experience = 14000, RespawnSeconds = -1, GoldDropMax = 15000, MoveSpeed = 4.4f, AggroRange = 12f };
+        public static readonly MonsterDefinition CrimsonFrostColossus = new MonsterDefinition { Id = 53, Name = "Colosso da Geada Rubra", Level = 115, Hp = 90000, MinDamage = 260, MaxDamage = 340, Defense = 120, AttackRate = 600, DefenseRate = 160, Experience = 150000, RespawnSeconds = -1, GoldDropMax = 250000, MoveSpeed = 2.4f, AggroRange = 14f, AttackRange = 3.2f, AttackInterval = 1.9f, Scale = 2.3f, Boss = true, GuaranteedRunes = 4,
+            SpecialDrops = new[] { 70, 71, 72, 73, 74, 75, 76, 607 } };
+
         // Ecos da Invocadora (aliados, temporários). Os números são a base; a força escala com a energia de quem invocou.
         public static readonly MonsterDefinition ShadowEcho = new MonsterDefinition { Id = 60, Name = "Eco Sombrio", Level = 1, Hp = 300, MinDamage = 10, MaxDamage = 16, Defense = 8, AttackRate = 60, DefenseRate = 15, RespawnSeconds = -1, MoveSpeed = 5.5f, AttackInterval = 1.2f, AttackRange = 2f, Hover = true, Aggressive = false };
         public static readonly MonsterDefinition LuminousEcho = new MonsterDefinition { Id = 61, Name = "Eco Luminoso", Level = 1, Hp = 700, MinDamage = 8, MaxDamage = 13, Defense = 20, AttackRate = 60, DefenseRate = 25, RespawnSeconds = -1, MoveSpeed = 5f, AttackInterval = 1.4f, AttackRange = 2.2f, Hover = true, Aggressive = false, Scale = 1.15f };
 
         public static readonly MonsterDefinition[] All = { MossSlime, AshWolf, Weaver, Wanderer, BasaltGolem, Ashling, AshHerald,
-            PeatCrawler, ReedHag, DrownedGhoul, WispMoth, GlassSentinel, ObsidianSpider, GlassWraith, BlackGlassSovereign, ShadowEcho, LuminousEcho };
+            PeatCrawler, ReedHag, DrownedGhoul, WispMoth, GlassSentinel, ObsidianSpider, GlassWraith, BlackGlassSovereign, ShadowEcho, LuminousEcho,
+            FrostLynx, RimeWarden, FrozenRevenant, RimeSerpent, RiftShard, CrimsonFrostColossus };
         public static MonsterDefinition? Get(int id) => Array.Find(All, m => m.Id == id);
     }
 

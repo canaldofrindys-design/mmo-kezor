@@ -19,6 +19,7 @@ namespace Kezor.Client
         {
             MapDefinition.SwampId => KezorLook.Hex("#7affc8"),
             MapDefinition.CryptId => KezorLook.Hex("#a77bff"),
+            MapDefinition.EscarpId => KezorLook.Hex("#ff7080"),
             _ => KezorLook.Hex("#ffd36a"),
         };
 

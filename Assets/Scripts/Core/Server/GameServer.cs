@@ -24,6 +24,8 @@ namespace Kezor.Core.Server
         public float EventFirstDelay = 180f;
         public float EventInterval = 900f;
         public float EventDuration = 300f;
+        /// <summary>Fenda da Geada Rubra (Escarpa): primeira abertura, intervalo entre aberturas e tempo para fechar (segundos).</summary>
+        public float RiftFirstDelay = 900f, RiftInterval = 2400f, RiftDuration = 600f;
         /// <summary>Exige conta (REGISTER/AUTH) para criar e jogar. Todo servidor de verdade (dedicado e o deste PC) liga isto;
         /// desligado só nos testes automáticos, que criam heróis direto.</summary>
         public bool RequireAccounts;
@@ -623,6 +625,7 @@ namespace Kezor.Core.Server
             TickWars();
             TickGround();
             TickEvent(dt);
+            TickRift(dt);
 
             if (_opt.AutosaveSeconds > 0)
             {
@@ -863,6 +866,7 @@ namespace Kezor.Core.Server
                 _ground[g.Id] = g;
             }
 
+            CountRiftKill(m, owner);
             if (m.Def.Boss) OnBossKilled(m, owner);
             if (m.Temporary) _monsters.Remove(m.Id);
             else m.RespawnTimer = m.Def.RespawnSeconds;

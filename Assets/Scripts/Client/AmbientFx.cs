@@ -21,6 +21,10 @@ namespace Kezor.Client
                 case MapDefinition.SwampId:
                     fx._follow = Cloud(go.transform, "Vagalumes", KezorLook.Hex("#b8f07a"), 70, new Vector3(46, 3, 46), 0.09f, 0.6f, true);
                     break;
+                case MapDefinition.EscarpId:   // neve caindo em volta da câmera
+                    fx._follow = Cloud(go.transform, "Neve", KezorLook.Hex("#e8f0ff"), 160, new Vector3(40, 6, 40), 0.06f, 0.5f, false);
+                    { var snow = fx._follow.main; snow.gravityModifier = 0.04f; }
+                    break;
                 case MapDefinition.CryptId:
                     fx._follow = Cloud(go.transform, "Poeira", KezorLook.Hex("#a8a0ff"), 40, new Vector3(34, 4, 34), 0.05f, 0.25f, false);
                     break;
