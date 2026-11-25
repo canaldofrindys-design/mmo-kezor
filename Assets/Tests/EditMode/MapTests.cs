@@ -49,6 +49,54 @@ namespace Kezor.Tests
         }
 
         [Test]
+        public void TownLayoutLeavesStreetsAndPlazasFree()
+        {
+            var m = MapDefinition.Get(MapDefinition.ValeId);
+            float cx = m.SafeX, cz = m.SafeZ;
+            var problems = new List<string>();
+            // obstáculos de cada casa (o servidor guarda todos juntos; refaz por casa para checar sobreposição entre casas)
+            var houseCircles = new List<(int house, float x, float z, float r)>();
+            for (int i = 0; i < m.Houses.Count; i++)
+            {
+                var h = m.Houses[i];
+                double yaw = (-h.Angle - 90f) * System.Math.PI / 180.0, cs = System.Math.Cos(yaw), sn = System.Math.Sin(yaw);
+                foreach (var (bx, by, br) in MapDefinition.HouseFootprint(h.Kind))
+                {
+                    float lx = bx * h.Scale, lz = -by * h.Scale;
+                    houseCircles.Add((i, h.X + (float)(lx * cs + lz * sn), h.Z + (float)(-lx * sn + lz * cs), br * h.Scale));
+                }
+            }
+            bool OnStreet(float x, float z, float r, out string where)
+            {
+                float d = MathK.Dist(x, z, cx, cz);
+                where = "";
+                if (d - r < MapDefinition.PlazaRadius) { where = "praça"; return true; }
+                if (System.Math.Abs(x - cx) < MapDefinition.AvenueHalfWidth + r || System.Math.Abs(z - cz) < MapDefinition.AvenueHalfWidth + r) { where = "avenida"; return true; }
+                if (System.Math.Abs(d - MapDefinition.RingRoadRadius) < MapDefinition.RingHalfWidth + r) { where = "rua interna"; return true; }
+                if (System.Math.Abs(d - MapDefinition.OuterRingRadius) < MapDefinition.RingHalfWidth + r) { where = "rua externa"; return true; }
+                foreach (var sq in m.Squares) if (MathK.Dist(x, z, sq.X, sq.Z) < sq.R + r) { where = "pracinha"; return true; }
+                if (d + r > m.WallRadius - m.WallHalfThickness - 0.5f) { where = "muralha"; return true; }
+                return false;
+            }
+            foreach (var c in houseCircles)
+                if (OnStreet(c.x, c.z, c.r - 0.3f, out var w)) problems.Add($"casa {m.Houses[c.house].Kind} #{c.house} invade {w}");
+            for (int a = 0; a < houseCircles.Count; a++)
+                for (int b = a + 1; b < houseCircles.Count; b++)
+                    if (houseCircles[a].house != houseCircles[b].house && MathK.Dist(houseCircles[a].x, houseCircles[a].z, houseCircles[b].x, houseCircles[b].z) < houseCircles[a].r + houseCircles[b].r + 1.2f)
+                        problems.Add($"casas #{houseCircles[a].house} e #{houseCircles[b].house} coladas");
+            foreach (var p in m.Props)
+            {
+                if (p.R <= 0) continue;
+                foreach (var c in houseCircles)
+                    if (MathK.Dist(p.X, p.Z, c.x, c.z) < p.R + c.r + 0.3f) { problems.Add($"{p.Kind} dentro da casa #{c.house}"); break; }
+            }
+            foreach (var n in m.Npcs)
+                if (m.IsBlocked(n.X, n.Z)) problems.Add($"NPC {n.Name} preso num obstáculo");
+            Assert.IsEmpty(problems, string.Join("\n", problems));
+            Assert.Greater(m.Houses.Count, 30);
+        }
+
+        [Test]
         public void PortalChecksLevelAndMovesToTheOtherMap()
         {
             var gs = NewServer();
@@ -174,9 +222,9 @@ namespace Kezor.Tests
         public void CityV2IsBigNavigableAndCoherent()
         {
             var m = MapDefinition.Get(MapDefinition.ValeId);
-            Assert.AreEqual(45f, m.WallRadius, 0.01f, "muralha de raio 45 m");
+            Assert.AreEqual(MapDefinition.TownWallRadius, m.WallRadius, 0.01f, "muralha de raio 72 m (vila v3)");
             Assert.Greater(m.Size, 2 * (m.WallRadius + 60), "mapa com bosque em volta da vila");
-            Assert.GreaterOrEqual(m.Houses.Count, 20, "dois anéis de casas");
+            Assert.GreaterOrEqual(m.Houses.Count, 30, "bairros de casas");
             Assert.IsTrue(m.InSafeZone(m.RespawnX, m.RespawnZ));
             Assert.IsFalse(m.IsBlocked(m.RespawnX, m.RespawnZ), "renascer na praça, fora da fonte");
             foreach (var kind in new[] { "Forja2", "Templo", "Estabulo", "BarracaR", "Poste2", "Braseiro2" })
@@ -226,10 +274,17 @@ namespace Kezor.Tests
             var vale = MapDefinition.Get(MapDefinition.ValeId);
             System.Collections.Generic.IDictionary<string, object?> Save(Character ch) =>
                 (System.Collections.Generic.IDictionary<string, object?>)MiniJson.Read(MiniJson.Write(SaveData.CharacterToJson(ch, includeVault: false)))!;
-            // em qualquer lugar livre (inclusive no bosque, ou save antigo sem versão da planta): fica exatamente onde saiu
+            // save antigo (sem versão, ou planta v2 de 260 m): o mesmo lugar em relação à vila, deslocado pelo centro novo
+            float shift = MapDefinition.ValeCenter - MapDefinition.ValeCenterV2;
             var c = new Character(1, "Andarilho", CharacterClass.Warden) { MapId = MapDefinition.ValeId, X = 91, Z = 67 };
             var j = Save(c); j.Remove("mapv");
             var back = SaveData.CharacterFromJson(j, 2);
+            Assert.AreEqual(91 + shift, back.X, 0.01f); Assert.AreEqual(67 + shift, back.Z, 0.01f);
+            j = Save(c); j["mapv"] = 2;
+            back = SaveData.CharacterFromJson(j, 2);
+            Assert.AreEqual(91 + shift, back.X, 0.01f); Assert.AreEqual(67 + shift, back.Z, 0.01f);
+            // save da planta atual em lugar livre: fica exatamente onde saiu
+            back = SaveData.CharacterFromJson(Save(c), 2);
             Assert.AreEqual(91, back.X, 0.01f); Assert.AreEqual(67, back.Z, 0.01f);
             c.X = vale.SafeX + 1; c.Z = vale.SafeZ - 25;
             back = SaveData.CharacterFromJson(Save(c), 3);

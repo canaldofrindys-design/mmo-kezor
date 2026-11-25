@@ -76,6 +76,12 @@ namespace Kezor.Core.Server
         {
             var map = Kezor.Core.World.MapDefinition.Get(c.MapId);
             if (map.Id != c.MapId) { c.MapId = map.Id; c.X = map.RespawnX; c.Z = map.RespawnZ; return; }   // mapa que não existe mais
+            // Vale v2 (mapa de 260 m) → v3 (340 m): o mesmo lugar em relação à vila fica deslocado pelo centro novo
+            if (map.Id == Kezor.Core.World.MapDefinition.ValeId && savedLayout > 0 && savedLayout < 3)
+            {
+                float shift = Kezor.Core.World.MapDefinition.ValeCenter - Kezor.Core.World.MapDefinition.ValeCenterV2;
+                c.X += shift; c.Z += shift;
+            }
             c.X = map.ClampCoord(c.X); c.Z = map.ClampCoord(c.Z);
             if (!map.IsBlocked(c.X, c.Z)) return;
             for (float r = 0.5f; r <= 30f; r += 0.5f)                        // anel a anel, o lugar livre mais perto

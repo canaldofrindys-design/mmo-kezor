@@ -36,8 +36,12 @@ namespace Kezor.Client
             float c = _map.SafeX;
             float d = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
             if (d < TownWallRadius + 1f)
-            {   // dentro da vila: quatro ruas retas, a rua circular e a praça
-                return Mathf.Abs(x - c) < 2.7f || Mathf.Abs(z - _map.SafeZ) < 2.7f || Mathf.Abs(d - MapDefinition.RingRoadRadius) < 2.2f || d < MapDefinition.PlazaRadius;
+            {   // dentro da vila: quatro avenidas, duas ruas circulares, a praça e as pracinhas dos bairros
+                if (Mathf.Abs(x - c) < MapDefinition.AvenueHalfWidth || Mathf.Abs(z - _map.SafeZ) < MapDefinition.AvenueHalfWidth) return true;
+                if (Mathf.Abs(d - MapDefinition.RingRoadRadius) < MapDefinition.RingHalfWidth || Mathf.Abs(d - MapDefinition.OuterRingRadius) < MapDefinition.RingHalfWidth) return true;
+                if (d < MapDefinition.PlazaRadius) return true;
+                foreach (var sq in _map.Squares) if ((x - sq.X) * (x - sq.X) + (z - sq.Z) * (z - sq.Z) < sq.R * sq.R) return true;
+                return false;
             }
             float wob = Mathf.Sin(z * 0.11f) * 1.5f, wob2 = Mathf.Sin(x * 0.09f) * 1.5f;
             return Mathf.Abs(x - c - wob) < 2.2f || Mathf.Abs(z - _map.SafeZ - wob2) < 2.2f;
@@ -80,6 +84,7 @@ namespace Kezor.Client
             BuildPortals(root.transform);
             if (map.Id != MapDefinition.CryptId) GroundScatter.Build(root.transform, map);   // grama, flores, pedrinhas, poças
             AmbientFx.Build(root.transform, map);                                            // vagalumes, poeira
+            if (map.Id == MapDefinition.ValeId) TownAmbience.Build(root.transform, map);    // fonte, forja, mercado, grilos, coruja
             return root;
         }
 
@@ -140,7 +145,16 @@ namespace Kezor.Client
             {
                 var pf = Env(string.IsNullOrEmpty(h.Kind) ? "Casa2A" : h.Kind) ?? Env("CasaEnxaimel");
                 if (pf == null) continue;
-                Slice(new Vector3(h.X, 0, h.Z)).Add(pf, Matrix4x4.TRS(new Vector3(h.X, 0, h.Z), Quaternion.Euler(0, -h.Angle - 90f, 0), Vector3.one * h.Scale), Color.white);
+                var hp = new Vector3(h.X, 0, h.Z); var hr = Quaternion.Euler(0, -h.Angle - 90f, 0);
+                Slice(hp).Add(pf, Matrix4x4.TRS(hp, hr, Vector3.one * h.Scale), Color.white);
+                // vida: lampião aceso na porta de cada casa e fumaça em metade das chaminés
+                bool tall = h.Kind is "Sobrado2" or "Casa3B" or "Taverna3" or "Casarao3";
+                bool big = h.Kind is "Taverna3" or "Casarao3";
+                float front = big ? 3.4f : h.Kind is "Casa3A" or "Casa3C" ? 3.1f : 2.8f;
+                LocalLights.Add(hp + hr * (new Vector3(1.6f, 1.9f, front) * h.Scale), new Color(1f, 0.64f, 0.32f), big ? 8f : 5.5f);
+                int hash = Mathf.Abs(Mathf.RoundToInt(h.X * 7.3f + h.Z * 3.1f));
+                if (big || hash % 2 == 0)
+                    AmbientFx.Smoke(parent, hp + hr * (new Vector3(1.5f, tall ? 8.6f : 6.2f, -0.9f) * h.Scale), big ? 3f : 2.2f);
             }
             // fonte da praça (gema gira)
             var fonte = ModelLibrary.Instantiate("Environment/Fonte2", "Fonte de Brasas", parent) ?? ModelLibrary.Instantiate("Environment/FonteDeBrasas", "Fonte de Brasas", parent);
@@ -183,7 +197,7 @@ namespace Kezor.Client
             var leafPfs = new[] { Env("Arvore2A") ?? Env("ArvoreCopa"), Env("Arvore2B") ?? Env("ArvoreCopa") };
             var deadPf = Env("ArvoreMorta");
             var trunk = KezorLook.Hex("#4a3627");
-            int count = Mathf.RoundToInt(900f * (_map.Size * _map.Size) / (160f * 160f));
+            int count = Mathf.RoundToInt(700f * (_map.Size * _map.Size) / (160f * 160f));
             for (int k = 0; k < count; k++)
             {
                 float x = (float)rnd.NextDouble() * _map.Size, z = (float)rnd.NextDouble() * _map.Size;
@@ -200,7 +214,7 @@ namespace Kezor.Client
                 var p = new Vector3(x, y - 0.1f, z);
                 float s = (0.7f + (float)rnd.NextDouble() * 0.8f) * TreeScale;
                 double kind = rnd.NextDouble();
-                float far = Mathf.InverseLerp(55f, 110f, dTown);
+                float far = Mathf.InverseLerp(85f, 150f, dTown);
                 var rot = Quaternion.Euler(0, (float)rnd.NextDouble() * 360f, 0);
                 b.SetTRS(p, rot, Vector3.one * s);
                 var cool = Color.Lerp(Color.white, new Color(0.66f, 0.7f, 0.8f), far);

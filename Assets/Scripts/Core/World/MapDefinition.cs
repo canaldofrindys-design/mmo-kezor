@@ -88,21 +88,30 @@ namespace Kezor.Core.World
         /// <summary>Raio do corpo de personagens e monstros para a colisão.</summary>
         public const float BodyRadius = 0.35f;
         /// <summary>
-        /// Vila de Brasalume v2: muralha de raio 45 m (área ~3,5× a anterior) com praça da fonte (renascer), anel de ruas,
-        /// distritos (mercado, forja, templo, estábulo), dois anéis de casas e postes ao longo das ruas. Prédios em
-        /// tamanho real (o herói tem 1,8 m); colisão e posições vêm daqui para servidor e cliente.
+        /// Vila de Brasalume v3: cidade murada de raio 72 m (área ~2,6× a v2) com praça da fonte (renascer), quatro avenidas
+        /// largas, duas ruas circulares, quatro bairros com praça própria (mercado, forja, templo, estábulo), casas espaçadas
+        /// com quintal e postes ao longo das ruas. Prédios em tamanho real (o herói tem 1,8 m).
         /// </summary>
         public const float TownScale = 1.0f;
         /// <summary>Raio da praça calçada em volta da fonte.</summary>
-        public const float PlazaRadius = 11f;
+        public const float PlazaRadius = 16f;
         /// <summary>Raio da bacia da Fonte de Brasas (obstáculo).</summary>
         public const float FountainRadius = 4.0f;
-        /// <summary>Rua circular que liga os distritos.</summary>
-        public const float RingRoadRadius = 20f;
+        /// <summary>Rua circular interna (liga as avenidas perto do centro) e externa (passa pelos bairros).</summary>
+        public const float RingRoadRadius = 32f, OuterRingRadius = 54f;
+        /// <summary>Meia largura das quatro avenidas (do centro aos portões) e das ruas circulares.</summary>
+        public const float AvenueHalfWidth = 3.5f, RingHalfWidth = 2.6f;
         /// <summary>Braseiros ladeando os portões, por dentro da muralha: recuo da muralha e afastamento do eixo da rua.</summary>
-        public const float BrazierInset = 4f, BrazierSide = 5.5f, BrazierRadius = 0.5f;
-        /// <summary>Centro do Vale (o mapa tem 260 m).</summary>
-        public const float ValeCenter = 130f;
+        public const float BrazierInset = 4.5f, BrazierSide = 6.5f, BrazierRadius = 0.5f;
+        /// <summary>Centro do Vale (o mapa tem 340 m).</summary>
+        public const float ValeCenter = 170f;
+        /// <summary>Centro do Vale na planta v2 (mapa de 260 m), para trazer posições salvas antigas para a planta nova.</summary>
+        public const float ValeCenterV2 = 130f;
+        /// <summary>Raio da muralha da vila.</summary>
+        public const float TownWallRadius = 72f;
+
+        /// <summary>Pracinhas calçadas dos bairros (centro e raio). O cliente pinta o calçamento.</summary>
+        public readonly List<(float X, float Z, float R)> Squares = new List<(float, float, float)>();
 
         /// <summary>Peças de cenário da vila (o cliente desenha; as com R &gt; 0 também bloqueiam).</summary>
         public readonly List<TownProp> Props = new List<TownProp>();
@@ -185,11 +194,41 @@ namespace Kezor.Core.World
             if (block > 0) Obstacles.Add(new Obstacle(x, z, block * scale));
         }
 
-        private void House(string kind, float deg, float r, float scale = 1f)
+        /// <summary>
+        /// Planta de cada modelo de casa em círculos (x, y do Blender: frente = -Y; raio), já em metros na escala 1.
+        /// Prédios compostos (casa em L, taverna, casarão) usam mais de um círculo para a colisão seguir a forma.
+        /// </summary>
+        public static (float X, float Y, float R)[] HouseFootprint(string kind) => kind switch
+        {
+            "Casa3A" => new[] { (0f, 0f, 3.3f), (4.6f, 1.6f, 2.3f) },
+            "Casa3B" => new[] { (0f, 0f, 3.0f), (3.6f, 0f, 1.6f) },
+            "Casa3C" => new[] { (-1.6f, -0.6f, 3.0f), (1.6f, -0.6f, 3.0f) },
+            "Taverna3" => new[] { (-2.1f, -0.6f, 3.6f), (2.1f, -0.6f, 3.6f) },
+            "Casarao3" => new[] { (-2.3f, -0.6f, 3.8f), (2.3f, -0.6f, 3.8f), (6.6f, 1.0f, 2.4f) },
+            _ => new[] { (0f, 0f, 2.7f) },
+        };
+
+        /// <summary>Raio que cobre o modelo inteiro a partir do centro (grama, flores e minimapa evitam essa área).</summary>
+        public static float HouseExtent(string kind)
+        {
+            float m = 0;
+            foreach (var (x, y, r) in HouseFootprint(kind)) m = Math.Max(m, (float)Math.Sqrt(x * x + y * y) + r);
+            return m + 0.6f;
+        }
+
+        private void House(string kind, float deg, float r, float scale = 1f, float? facing = null)
         {
             var (x, z) = Polar(deg, r);
-            Houses.Add(new TownHouse { X = x, Z = z, Angle = deg, Scale = scale, Kind = kind });
-            Obstacles.Add(new Obstacle(x, z, 2.7f * scale));
+            // Angle = direção polar que olha para o centro; com `facing` (direção da frente, graus) a casa olha para a rua
+            float angle = facing.HasValue ? facing.Value - 180f : deg;
+            Houses.Add(new TownHouse { X = x, Z = z, Angle = angle, Scale = scale, Kind = kind });
+            // o cliente gira o modelo em Y por (-Angle - 90); Blender (x, y) vira Unity local (x, -y)
+            double yaw = (-angle - 90f) * Math.PI / 180.0, cs = Math.Cos(yaw), sn = Math.Sin(yaw);
+            foreach (var (bx, by, br) in HouseFootprint(kind))
+            {
+                float lx = bx * scale, lz = -by * scale;
+                Obstacles.Add(new Obstacle(x + (float)(lx * cs + lz * sn), z + (float)(-lx * sn + lz * cs), br * scale));
+            }
         }
 
         private void Npc(int id, string name, string role, float deg, float r, string greeting = "")
@@ -198,12 +237,21 @@ namespace Kezor.Core.World
             Npcs.Add(new NpcDefinition { Id = id, Name = name, Role = role, X = x, Z = z, Greeting = greeting });
         }
 
+        private void Square(float deg, float r, float radius) { var (x, z) = Polar(deg, r); Squares.Add((x, z, radius)); }
+
+        /// <summary>Peça solta num ponto absoluto (deslocado do centro do bairro).</summary>
+        private void PropAt(string kind, float x, float z, float yaw, float scale = 1f, float block = 0f)
+        {
+            Props.Add(new TownProp { Kind = kind, X = x, Z = z, Yaw = yaw, Scale = scale, R = block * scale });
+            if (block > 0) Obstacles.Add(new Obstacle(x, z, block * scale));
+        }
+
         private void AddTown()
         {
             HasWall = true;
-            WallRadius = 45f; WallHalfThickness = 0.95f;   // Muralha2: 1,8 m de espessura
-            GateHalfAngle = 5.1f;                          // vão do portão: ~8 m sob o arco
-            TowerAngle = 9.3f; TowerRadius = 2.3f;         // Torre2 com escala 1,1 de cada lado do arco
+            WallRadius = TownWallRadius; WallHalfThickness = 0.95f;   // Muralha2: 1,8 m de espessura
+            GateHalfAngle = 3.3f;                                      // vão do portão: ~8 m sob o arco
+            TowerAngle = 5.9f; TowerRadius = 2.3f;                     // Torre2 com escala 1,1 de cada lado do arco
             for (int g = 0; g < 4; g++)
                 for (int s = -1; s <= 1; s += 2)
                 {
@@ -212,53 +260,95 @@ namespace Kezor.Core.World
                 }
             Obstacles.Add(new Obstacle(SafeX, SafeZ, FountainRadius));   // Fonte de Brasas na praça (ponto de renascer)
 
-            // ---- casas: anel interno (entre a praça e a rua circular) e anel externo (perto da muralha), fora das ruas
-            string[] kinds = { "Casa2A", "Casa2B", "Casa2C", "Sobrado2" };
+            string[] kinds = { "Casa3A", "Casa2A", "Casa3C", "Casa2B", "Casa3B", "Casa2C", "Sobrado2" };
             int k = 0;
-            foreach (var deg in new[] { 18f, 72f, 108f, 162f, 198f, 252f, 288f, 342f })
-                House(kinds[k++ % 4], deg, 15.5f, 0.95f);
-            foreach (var (deg, r) in new (float, float)[]
+
+            // ---- praça central: bancos e vasos em volta da fonte, estandartes do arauto, postes, baú da Ilsa
+            foreach (var deg in new[] { 45f, 135f, 225f, 315f })
             {
-                (20, 34), (37, 38.5f), (55, 37), (71, 34), (109, 34), (126, 38.5f), (152, 37.5f), (165, 33.5f),
-                (196, 34), (212, 38.5f), (240, 38), (256, 34), (287, 34), (302, 38.5f), (328, 37.5f), (344, 34),
-            })
-                House(kinds[k++ % 4], deg, r, r > 36 ? 1.1f : 1f);
-
-            // ---- distritos
-            // mercado (nordeste): barracas de feira, caixotes e barris
-            Prop("BarracaR", 45, 15.2f, 1f, 1.3f);
-            Prop("BarracaB", 32, 25f, 1f, 1.3f);
-            Prop("BarracaY", 58, 25f, 1f, 1.3f);
-            Prop("BarracaR", 45, 29f, 1f, 1.3f);
-            Prop("Caixote", 40, 17.5f, 1f, 0.45f); Prop("Barril", 50, 17.5f, 1f, 0.4f); Prop("Caixote", 28, 28.5f, 1f, 0.45f);
-            Prop("Barril", 62, 28.5f, 1f, 0.4f); Prop("Carroca", 45, 33f, 1f, 1.4f, FaceCenter(45) + 90f);
-            // forja (sudeste)
-            Prop("Forja2", 315, 21f, 1.1f, 2.7f);
-            Prop("Barril", 305, 18f, 1f, 0.4f); Prop("Caixote", 325, 18f, 1f, 0.45f); Prop("Braseiro2", 330, 24.5f, 1f, 0.5f);
-            // templo (noroeste) com jardim
-            Prop("Templo", 135, 28f, 1f, 4.4f);
-            Prop("Arvore2A", 122, 29f, 1f, 0.6f); Prop("Arvore2B", 148, 29f, 1f, 0.6f); Prop("Vaso", 128, 23.5f); Prop("Vaso", 142, 23.5f);
-            Prop("Banco", 135, 21.5f, 1f, 0f);
-            // estábulo (sudoeste), cercado, carroça e poço
-            Prop("Estabulo", 225, 28f, 1f, 3.3f);
-            Prop("Cerca", 214, 24.5f, 1f, 0f, FaceCenter(214) + 90f); Prop("Cerca", 236, 24.5f, 1f, 0f, FaceCenter(236) + 90f);
-            Prop("Carroca", 245, 24f, 1f, 1.4f, FaceCenter(245) + 60f); Prop("Poco", 205, 25f, 1f, 1.2f);
-            Prop("Caixote", 232, 22f, 1f, 0.45f); Prop("Barril", 218, 22f, 1f, 0.4f);
-
-            // ---- praça: bancos, vasos, estandartes e o baú da Ilsa
-            foreach (var deg in new[] { 45f, 135f, 225f, 315f }) { Prop("Banco", deg, 8.2f); Prop("Vaso", deg + 12, 8.6f); Prop("Vaso", deg - 12, 8.6f); }
-            Prop("Estandarte", 104, 10f, 1f, 0.3f); Prop("Estandarte", 76, 10f, 1f, 0.3f);
+                Prop("Banco", deg, 9.5f); Prop("Vaso", deg + 9, 10f); Prop("Vaso", deg - 9, 10f);
+                Prop("Poste2", deg, PlazaRadius - 1.2f, 1f, 0.3f, FaceCenter(deg) + 180f);
+            }
+            Prop("Estandarte", 101, 12.5f, 1f, 0.3f); Prop("Estandarte", 79, 12.5f, 1f, 0.3f);
             Obstacles.Add(new Obstacle(VaultChestX, VaultChestZ, 0.7f));   // baú da Ilsa (o cliente desenha em BuildVaultChest)
 
-            // ---- postes de lanterna ao longo das quatro ruas e em volta da praça; braseiros nos portões
+            // ---- casas ao longo das avenidas, entre a praça e a rua interna (frente para a avenida)
+            for (int g = 0; g < 4; g++)
+            {
+                float ga = g * 90f;
+                foreach (var side in new[] { -1f, 1f })
+                {
+                    float off = (float)(Math.Atan2(10.5, 22.0) * 180.0 / Math.PI);   // 10,5 m ao lado do eixo
+                    // a taverna fica na avenida leste, a primeira coisa que se vê ao chegar dos portais
+                    string kind = g == 0 && side > 0 ? "Taverna3" : new[] { "Casa3C", "Casa2A", "Casa3B", "Casa2C", "Sobrado2", "Casa2B", "Casa3C" }[k++ % 7];
+                    House(kind, ga + side * off, 24.4f, 1f, ga + 90f + (side > 0 ? 180f : 0f));
+                }
+            }
+
+            // ---- bairros (cada um com pracinha calçada no meio da rua externa)
+            // Mercado (nordeste): seis barracas em volta da pracinha, caixotes, barris e carroças
+            float mR = OuterRingRadius - 12f; Square(45, mR, 9f);
+            var (mx, mz) = Polar(45, mR);
+            for (int i = 0; i < 6; i++)
+            {
+                double a = (i * 60 + 15) * Math.PI / 180;
+                float bx = mx + (float)Math.Cos(a) * 8.5f, bz = mz + (float)Math.Sin(a) * 8.5f;
+                float yaw = (float)(Math.Atan2(mx - bx, mz - bz) * 180.0 / Math.PI);           // balcão virado para a pracinha
+                PropAt(i % 3 == 0 ? "BarracaR" : i % 3 == 1 ? "BarracaB" : "BarracaY", bx, bz, yaw, 1f, 1.3f);
+                double a2 = a + 0.42;
+                PropAt(i % 2 == 0 ? "Caixote" : "Barril", mx + (float)Math.Cos(a2) * 9.6f, mz + (float)Math.Sin(a2) * 9.6f, yaw, 1f, 0.45f);
+            }
+            Prop("Carroca", 36, mR + 13f, 1f, 1.4f, FaceCenter(36) + 90f); Prop("Carroca", 56, mR + 12f, 1f, 1.4f, FaceCenter(56) + 70f);
+            Prop("Poco", 45, mR, 1f, 1.2f);
+            Prop("Braseiro2", 30, mR - 4f, 1f, 0.5f); Prop("Braseiro2", 60, mR - 4f, 1f, 0.5f);
+
+            // Forja (sudeste): forja grande, braseiros, pilhas de caixotes e barris, carroça de minério
+            float fR = OuterRingRadius - 10f; Square(315, fR, 8f);
+            Prop("Forja2", 315, fR + 3.5f, 1.25f, 2.9f);
+            Prop("Braseiro2", 305, fR - 2f, 1f, 0.5f); Prop("Braseiro2", 325, fR - 2f, 1f, 0.5f);
+            Prop("Barril", 300, fR + 5f, 1f, 0.4f); Prop("Barril", 302, fR + 6.5f, 1f, 0.4f); Prop("Caixote", 330, fR + 5f, 1f, 0.45f);
+            Prop("Caixote", 328, fR + 6.7f, 1f, 0.45f);
+            Prop("Estandarte", 308, fR - 7.5f, 1f, 0.3f); Prop("Estandarte", 322, fR - 7.5f, 1f, 0.3f);
+
+            // Templo (noroeste): templo ao fundo, jardim com árvores, vasos, bancos e o poço sagrado
+            float tR = OuterRingRadius - 8f; Square(135, tR, 8f);
+            Prop("Templo", 135, tR + 7f, 1.15f, 5.0f);
+            Prop("Arvore2A", 121, tR + 4f, 1.1f, 0.6f); Prop("Arvore2B", 149, tR + 4f, 1.1f, 0.6f);
+            Prop("Vaso", 129, tR + 1f); Prop("Vaso", 141, tR + 1f); Prop("Vaso", 126, tR - 3f); Prop("Vaso", 144, tR - 3f);
+            Prop("Banco", 128, tR - 5f); Prop("Banco", 142, tR - 5f);
+            Prop("Braseiro2", 131, tR + 3.5f, 1f, 0.5f); Prop("Braseiro2", 139, tR + 3.5f, 1f, 0.5f);
+
+            // Estábulo (sudoeste): estábulo, cercado do pasto, carroças, poço, feno (caixotes) e cochos (barris)
+            float sR = OuterRingRadius - 8f; Square(225, sR, 8f);
+            Prop("Estabulo", 225, sR + 7f, 1.1f, 3.6f);
+            foreach (var dd in new[] { 209f, 213f, 217f, 233f, 237f, 241f }) Prop("Cerca", dd, sR + 2f, 1f, 0f, FaceCenter(dd) + 90f);
+            Prop("Carroca", 240, sR - 4f, 1f, 1.4f, FaceCenter(240) - 60f);
+            Prop("Poco", 225, sR - 3f, 1f, 1.2f);
+            Prop("Caixote", 214, sR + 5f, 1f, 0.45f); Prop("Caixote", 215.5f, sR + 6.2f, 1f, 0.45f); Prop("Barril", 236, sR + 5f, 1f, 0.4f);
+
+            // ---- bairro residencial: anel de casas perto da muralha (fora dos bairros), cada uma com quintal
+            foreach (var g in new[] { 0f, 90f, 180f, 270f })
+                foreach (var d in new[] { 14f, 27f, 63f, 76f })
+                {
+                    float deg = g + d;
+                    House(kinds[k++ % kinds.Length], deg, 63f, 1f);
+                    Prop(k % 2 == 0 ? "Arvore2A" : "Arvore2B", deg, 69.2f, 1.05f, 0.6f);           // árvore do quintal, atrás
+                    Prop("Vaso", deg - 3.6f, 59.2f); Prop("Cerca", deg + 4.2f, 58.8f, 1f, 0f, FaceCenter(deg + 4.2f) + 90f);
+                }
+            // casas entre a rua interna e a externa, nas diagonais livres dos bairros (frente para a rua interna)
+            foreach (var g in new[] { 0f, 90f, 180f, 270f })
+                foreach (var d in new[] { 20f, 70f })
+                    House(g + d == 200f ? "Casarao3" : kinds[k++ % kinds.Length], g + d, 41f, 1f);
+
+            // ---- postes ao longo das avenidas (lados alternados) e da rua externa; braseiros nos portões
             for (int g = 0; g < 4; g++)
             {
                 int side = 1;
-                foreach (var r in new[] { 13f, 21f, 28f, 35f })
+                foreach (var r in new[] { 20f, 29f, 38f, 47f, 56f, 65f })
                 {
                     double a = g * Math.PI / 2;
                     float ux = (float)Math.Cos(a), uz = (float)Math.Sin(a);
-                    float x = SafeX + ux * r - uz * 3.4f * side, z = SafeZ + uz * r + ux * 3.4f * side;
+                    float x = SafeX + ux * r - uz * (AvenueHalfWidth + 1.1f) * side, z = SafeZ + uz * r + ux * (AvenueHalfWidth + 1.1f) * side;
                     float dx = side * uz, dz = -side * ux;   // braço da lanterna virado para a rua
                     Props.Add(new TownProp { Kind = "Poste2", X = x, Z = z, Yaw = (float)(Math.Atan2(dx, dz) * 180.0 / Math.PI), Scale = 1f, R = 0.3f });
                     Obstacles.Add(new Obstacle(x, z, 0.3f));
@@ -273,9 +363,25 @@ namespace Kezor.Core.World
                     Obstacles.Add(new Obstacle(x, z, BrazierRadius));
                 }
             }
-            // árvores nos cantos dos jardins perto da muralha
-            foreach (var (deg, r) in new (float, float)[] { (28, 42), (62, 42), (118, 42), (152, 42.5f), (208, 42), (242, 42.5f), (298, 42), (332, 42) })
-                Prop((int)deg % 2 == 0 ? "Arvore2A" : "Arvore2B", deg, r, 1.1f, 0.6f);
+            foreach (var deg in new[] { 20f, 70f, 110f, 160f, 200f, 250f, 290f, 340f })
+                Prop("Poste2", deg, OuterRingRadius + RingHalfWidth + 1.1f, 1f, 0.3f, FaceCenter(deg));
+            // ---- vida: placas nos cruzamentos, canteiros na praça, mesas da taverna, feno, lenha, bigorna, varais, arbustos
+            foreach (var deg in new[] { 0f, 90f, 180f, 270f })
+                Prop("Placa", deg + 14f, PlazaRadius + 1.6f, 1f, 0.25f, FaceCenter(deg));
+            foreach (var deg in new[] { 22f, 158f, 202f, 338f }) Prop("Canteiro", deg, 13.2f, 1f, 0.6f, FaceCenter(deg) + 90f);
+            Prop("MesaTaverna", 33.9f, 26.5f, 1f, 0.8f, 0f); Prop("MesaTaverna", 39.4f, 23.3f, 1f, 0.8f, 12f);   // quintal da taverna
+            Prop("Bigorna", 309, fR + 0.5f, 1f, 0.5f); Prop("Lenha", 333, fR + 1.5f, 1f, 0.9f, FaceCenter(333) + 90f);
+            Prop("CaixotePilha", 50, mR + 11.5f, 1f, 0.9f); Prop("CaixotePilha", 40, mR - 10.5f, 1f, 0.9f);
+            Prop("Feno", 212, sR + 8.5f, 1f, 1.0f); Prop("Feno", 238, sR + 8.5f, 1f, 1.0f); Prop("Feno", 241, sR + 6f, 0.8f, 0.8f);
+            Prop("Lenha", 230, sR - 6.5f, 1f, 0.9f, FaceCenter(230) + 90f);
+            foreach (var g in new[] { 0f, 90f, 180f, 270f })
+            {
+                Prop("Varal", g + 45f, 66f, 1f, 0f, FaceCenter(g + 45f) + 90f);
+                foreach (var d in new[] { 20.5f, 69.5f }) Prop("Arbusto", g + d, 59f, 1f, 0.5f);
+            }
+            // bancos à beira da rua interna, para dar vida às esquinas
+            foreach (var deg in new[] { 30f, 60f, 120f, 150f, 210f, 240f, 300f, 330f })
+                Prop("Banco", deg, RingRoadRadius + RingHalfWidth + 1.4f);
         }
 
         /// <summary>
@@ -285,48 +391,52 @@ namespace Kezor.Core.World
         public static MapDefinition Brasalume()
         {
             const float C = ValeCenter;
-            var m = new MapDefinition { Id = 1, Name = "Vale de Brasalume", Size = 2 * C, SafeX = C, SafeZ = C, SafeRadius = 44f, RespawnX = C, RespawnZ = C - 6.5f };
+            var m = new MapDefinition { Id = 1, Name = "Vale de Brasalume", Size = 2 * C, SafeX = C, SafeZ = C, SafeRadius = TownWallRadius - 1f, RespawnX = C, RespawnZ = C - 7f };
             m.AddTown();
             void G(MonsterDefinition d, float x, float z, float r, int n) => m.Spawns.Add(new SpawnGroup { Monster = d, X = C + x, Z = C + z, Radius = r, Count = n });
             // Anel próximo (fora dos quatro portões)
-            G(MonsterCatalog.MossSlime, 0, 64, 7, 6);
-            G(MonsterCatalog.MossSlime, 66, 0, 7, 6);
-            G(MonsterCatalog.MossSlime, -64, 0, 7, 5);
-            G(MonsterCatalog.AshWolf, 0, -64, 8, 5);
-            G(MonsterCatalog.AshWolf, 52, 52, 8, 5);
+            G(MonsterCatalog.MossSlime, 0, 100, 8, 6);
+            G(MonsterCatalog.MossSlime, 100, -42, 8, 6);
+            G(MonsterCatalog.MossSlime, -100, 0, 8, 5);
+            G(MonsterCatalog.AshWolf, 0, -100, 9, 5);
+            G(MonsterCatalog.AshWolf, 76, 76, 9, 5);
             // Anel médio
-            G(MonsterCatalog.Weaver, -58, 58, 9, 6);
-            G(MonsterCatalog.Weaver, 58, -58, 9, 6);
-            G(MonsterCatalog.Wanderer, -62, -62, 10, 6);
-            G(MonsterCatalog.Wanderer, 78, 78, 10, 5);
+            G(MonsterCatalog.Weaver, -84, 84, 10, 6);
+            G(MonsterCatalog.Weaver, 84, -84, 10, 6);
+            G(MonsterCatalog.Wanderer, -90, -90, 11, 6);
+            G(MonsterCatalog.Wanderer, 108, 108, 11, 5);
             // Fundo do bosque
-            G(MonsterCatalog.BasaltGolem, -92, 92, 8, 3);
-            G(MonsterCatalog.BasaltGolem, 92, -92, 8, 3);
-            // NPCs: serviços perto da praça e nos distritos; guardas nos portões; moradores
-            m.Npc(1, "Mercadora Tália", "shop", 45, 15.9f);   // atrás do balcão da barraca
-            m.Npc(2, "Ferreiro Bram", "forge", 315, 16.8f);
-            m.Npc(3, "Sentinela Orvo", "guard", 265, 40f, "As cinzas rondam o portão sul. Fique atento aos avisos de invasão!");
-            m.Npc(4, "Ilsa, a Guardiã", "vault", 293, 10.2f);
-            m.Npc(5, "Hadrik, o Arauto das Guildas", "guild", 90, 10.4f);
-            m.Npc(6, "Sentinela Brena", "guard", 85, 40f, "O portão norte dá para a mata dos lodos. Nada de pressa por lá.");
-            m.Npc(7, "Sentinela Caio", "guard", 355, 40f, "Os portais ficam logo depois do portão leste: verde para o pântano, violeta para a cripta.");
-            m.Npc(8, "Sentinela Mírian", "guard", 175, 40f, "Do portão oeste se vê a fumaça das tecelãs. Vá em grupo.");
-            m.Npc(9, "Irmã Vesna", "deco", 135, 22.2f, "O lume do templo nunca se apaga. Que ele guie seus passos, viajante.");
-            m.Npc(10, "Cavalariço Doran", "deco", 225, 23.2f, "Lagartos de basalto aguentam qualquer estrada. A Tália vende os filhotes.");
-            m.Npc(11, "Velha Moira", "deco", 160, 9.6f, "Na minha época a fonte era só uma brasa num buraco. Veja como cresceu!");
-            m.Npc(12, "Mestre Talo, o Escriba", "deco", 20, 22.5f, "Cada runa tem seu humor. A da Aurora é gentil; a do Eclipse, nem tanto.");
-            m.Npc(13, "Pequeno Bento", "deco", 250, 9.2f, "Você já viu um golem de basalto? Dizem que moram depois das torres!");
+            G(MonsterCatalog.BasaltGolem, -120, 120, 9, 3);
+            G(MonsterCatalog.BasaltGolem, 120, -120, 9, 3);
+            // NPCs: cada um no seu lugar (serviços na praça e nos bairros, guardas nos portões, moradores pela cidade)
+            float mR = OuterRingRadius - 12f, fR = OuterRingRadius - 10f, tR = OuterRingRadius - 8f, sR = OuterRingRadius - 8f;
+            {   // no balcão da barraca sudoeste do mercado, de frente para quem vem da praça
+                var (mx, mz) = m.Polar(45, mR); double a = 195 * Math.PI / 180;
+                m.Npcs.Add(new NpcDefinition { Id = 1, Name = "Mercadora Tália", Role = "shop", X = mx + (float)Math.Cos(a) * 6f, Z = mz + (float)Math.Sin(a) * 6f });
+            }
+            m.Npc(2, "Ferreiro Bram", "forge", 315, fR - 0.5f);                 // na frente da forja
+            m.Npc(3, "Sentinela Orvo", "guard", 270 - 7.5f, TownWallRadius - 6f, "As cinzas rondam o portão sul. Fique atento aos avisos de invasão!");
+            m.Npc(4, "Ilsa, a Guardiã", "vault", 293, 12.8f);
+            m.Npc(5, "Hadrik, o Arauto das Guildas", "guild", 90, 12.6f);
+            m.Npc(6, "Sentinela Brena", "guard", 90 - 7.5f, TownWallRadius - 6f, "O portão norte dá para a mata dos lodos. Nada de pressa por lá.");
+            m.Npc(7, "Sentinela Caio", "guard", 360 - 7.5f, TownWallRadius - 6f, "Os portais ficam logo depois do portão leste: verde para o pântano, violeta para a cripta.");
+            m.Npc(8, "Sentinela Mírian", "guard", 180 - 7.5f, TownWallRadius - 6f, "Do portão oeste se vê a fumaça das tecelãs. Vá em grupo.");
+            m.Npc(9, "Irmã Vesna", "deco", 135, tR - 0.5f, "O lume do templo nunca se apaga. Que ele guie seus passos, viajante.");
+            m.Npc(10, "Cavalariço Doran", "deco", 220, sR + 0.5f, "Lagartos de basalto aguentam qualquer estrada. A Tália vende os filhotes.");
+            m.Npc(11, "Velha Moira", "deco", 160, 11.2f, "Na minha época a fonte era só uma brasa num buraco. Veja como cresceu!");
+            m.Npc(12, "Mestre Talo, o Escriba", "deco", 127, tR - 2.5f, "Cada runa tem seu humor. A da Aurora é gentil; a do Eclipse, nem tanto.");
+            m.Npc(13, "Pequeno Bento", "deco", 250, 11f, "Você já viu um golem de basalto? Dizem que moram depois das torres!");
             // Portais fora do portão leste, longe da muralha (o cliente desenha o arco de pedra com o vórtice da cor do destino)
-            m.Portals.Add(new Portal { X = C + 58, Z = C - 12, TargetMap = SwampId, TargetX = 20, TargetZ = 70, Label = "Pântano de Turfa Negra (nível 20+)" });
-            m.Portals.Add(new Portal { X = C + 58, Z = C + 12, TargetMap = CryptId, TargetX = 20, TargetZ = 60, Label = "Cripta de Vidro Negro (nível 45+)" });
+            m.Portals.Add(new Portal { X = C + 92, Z = C - 12, TargetMap = SwampId, TargetX = 20, TargetZ = 70, Label = "Pântano de Turfa Negra (nível 20+)" });
+            m.Portals.Add(new Portal { X = C + 92, Z = C + 12, TargetMap = CryptId, TargetX = 20, TargetZ = 60, Label = "Cripta de Vidro Negro (nível 45+)" });
             m.WarpCode = "VALE";
-            m.LayoutVersion = 2;   // v2: vila de raio 45 num Vale de 260 m
+            m.LayoutVersion = 3;   // v3: cidade de raio 72 num Vale de 340 m (posições v2 são deslocadas pelo centro novo)
             return m;
         }
 
         public const int ValeId = 1, SwampId = 2, CryptId = 3;
-        /// <summary>Baú visível na praça do Vale, ao lado da Ilsa (polar 300°, 10 m do centro).</summary>
-        public static readonly float VaultChestX = ValeCenter + (float)Math.Cos(300 * Math.PI / 180) * 10f, VaultChestZ = ValeCenter + (float)Math.Sin(300 * Math.PI / 180) * 10f;
+        /// <summary>Baú visível na praça do Vale, ao lado da Ilsa (polar 300°, 12,5 m do centro).</summary>
+        public static readonly float VaultChestX = ValeCenter + (float)Math.Cos(300 * Math.PI / 180) * 12.5f, VaultChestZ = ValeCenter + (float)Math.Sin(300 * Math.PI / 180) * 12.5f;
 
         /// <summary>
         /// Pântano de Turfa Negra (nível 20-45): charco plano, poças fundas de turfa (não dá para atravessar),
@@ -351,7 +461,7 @@ namespace Kezor.Core.World
                 (34, 72, 4.5f), (58, 66, 6f), (60, 92, 5f), (82, 56, 5.5f), (86, 84, 7f), (108, 92, 6f), (110, 48, 5f), (50, 30, 4f), (92, 30, 4.5f), (64, 118, 5f),
             };
             foreach (var (x, z, r) in pools) m.Obstacles.Add(new Obstacle(x, z, r));
-            m.Portals.Add(new Portal { X = 12, Z = 70, TargetMap = ValeId, TargetX = ValeCenter + 54, TargetZ = ValeCenter - 17, Label = "Vale de Brasalume" });
+            m.Portals.Add(new Portal { X = 12, Z = 70, TargetMap = ValeId, TargetX = ValeCenter + 86, TargetZ = ValeCenter - 20, Label = "Vale de Brasalume" });
             return m;
         }
 
@@ -380,7 +490,7 @@ namespace Kezor.Core.World
             // Pilares de cristal (obstáculos)
             foreach (var (x, z) in new (float, float)[] { (55, 49), (69, 49), (55, 71), (69, 71), (97, 47), (109, 47), (97, 73), (109, 73) })
                 m.Obstacles.Add(new Obstacle(x, z, 0.9f));
-            m.Portals.Add(new Portal { X = 13, Z = 60, TargetMap = ValeId, TargetX = ValeCenter + 54, TargetZ = ValeCenter + 17, Label = "Vale de Brasalume" });
+            m.Portals.Add(new Portal { X = 13, Z = 60, TargetMap = ValeId, TargetX = ValeCenter + 86, TargetZ = ValeCenter + 20, Label = "Vale de Brasalume" });
             return m;
         }
 

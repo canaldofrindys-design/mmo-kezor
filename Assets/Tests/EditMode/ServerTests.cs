@@ -315,7 +315,7 @@ namespace Kezor.Tests
             Thread.CurrentThread.CurrentCulture = new CultureInfo("pt-BR");
             try
             {
-                var gs = new GameServer(new SystemRandom(5), options: new ServerOptions { EventFirstDelay = 99999 });
+                var gs = new GameServer(new SystemRandom(5), options: new ServerOptions { EventFirstDelay = 99999, ViewRange = 200f });   // a vila v3 (raio 72) é maior que a AOI de 60 m
                 var conn = new LoopbackConnection(gs);
                 var st = new ClientState();
                 conn.Send("CREATE Viewer ARC");
@@ -343,7 +343,7 @@ namespace Kezor.Tests
         [Test]
         public void TcpEndToEnd()
         {
-            var gs = new GameServer(new SystemRandom(9), options: new ServerOptions { EventFirstDelay = 99999 });
+            var gs = new GameServer(new SystemRandom(9), options: new ServerOptions { EventFirstDelay = 99999, ViewRange = 200f });   // a vila v3 (raio 72) é maior que a AOI de 60 m
             using var host = new TcpServerHost(gs, 0);
             host.Start();
             using var conn = new TcpClientConnection("127.0.0.1", host.Port);

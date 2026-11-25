@@ -49,8 +49,10 @@ namespace Kezor.Client
             float d = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
             if (d < TownWallRadius + 1f)
             {
-                float r = Mathf.Max(Soft(Mathf.Abs(x - c), 2.7f), Soft(Mathf.Abs(z - _map.SafeZ), 2.7f));
-                r = Mathf.Max(r, Soft(Mathf.Abs(d - MapDefinition.RingRoadRadius), 2.2f));
+                float r = Mathf.Max(Soft(Mathf.Abs(x - c), MapDefinition.AvenueHalfWidth), Soft(Mathf.Abs(z - _map.SafeZ), MapDefinition.AvenueHalfWidth));
+                r = Mathf.Max(r, Soft(Mathf.Abs(d - MapDefinition.RingRoadRadius), MapDefinition.RingHalfWidth));
+                r = Mathf.Max(r, Soft(Mathf.Abs(d - MapDefinition.OuterRingRadius), MapDefinition.RingHalfWidth));
+                foreach (var sq in _map.Squares) r = Mathf.Max(r, Soft(Vector2.Distance(new Vector2(x, z), new Vector2(sq.X, sq.Z)), sq.R, 0.6f));
                 return Mathf.Max(r, Soft(d, MapDefinition.PlazaRadius, 0.6f));
             }
             float wob = Mathf.Sin(z * 0.11f) * 1.5f, wob2 = Mathf.Sin(x * 0.09f) * 1.5f;
@@ -72,7 +74,7 @@ namespace Kezor.Client
             float road = RoadAmount(x, z);
             var grassNear = Color.Lerp(KezorLook.Hex("#4f6b34"), KezorLook.Hex("#5e7a3a"), jit);
             var grassDeep = Color.Lerp(KezorLook.Hex("#2f4a35"), KezorLook.Hex("#3a5238"), jit);
-            float far = Mathf.InverseLerp(55f, 110f, dTown);
+            float far = Mathf.InverseLerp(85f, 150f, dTown);
             var grass = Color.Lerp(grassNear, grassDeep, far);
             // manchas de musgo/grama alta mais escura e de terra seca
             float patch = Mathf.PerlinNoise(x * 0.07f + 13f, z * 0.07f + 4f);
@@ -90,7 +92,7 @@ namespace Kezor.Client
             }
             // fora da vila: estradas de terra, encostas e montanhas de cascalho/rocha, cantos queimados dos golens
             float C = MapDefinition.ValeCenter;
-            float ash = Mathf.Max(0, 1f - Mathf.Min(Vector2.Distance(new Vector2(x, z), new Vector2(C - 92, C + 92)), Vector2.Distance(new Vector2(x, z), new Vector2(C + 92, C - 92))) / 22f);
+            float ash = Mathf.Max(0, 1f - Mathf.Min(Vector2.Distance(new Vector2(x, z), new Vector2(C - 120, C + 120)), Vector2.Distance(new Vector2(x, z), new Vector2(C + 120, C - 120))) / 24f);
             float rock = Mathf.Max(Mathf.InverseLerp(3.5f, 6f, h), Mathf.InverseLerp(0.45f, 0.75f, slope));
             float wDirt = Mathf.Max(road, Smooth(0.62f, 0.8f, patch) * 0.6f);
             float wGravel = Mathf.Max(rock, ash * 0.8f);

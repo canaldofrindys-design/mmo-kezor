@@ -51,6 +51,61 @@ namespace Kezor.Client
             return ps;
         }
 
+        /// <summary>Fumaça de chaminé: bolinhas cinza low-poly (malha, opacas) que sobem, crescem e somem.</summary>
+        public static ParticleSystem Smoke(Transform parent, Vector3 pos, float rate = 2.2f)
+        {
+            var ps = MakePs(parent, "Fumaça", pos);
+            var main = ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(3.5f, 5.5f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.45f, 0.8f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.22f, 0.36f);
+            main.startColor = new ParticleSystem.MinMaxGradient(KezorLook.Hex("#7a7670"), KezorLook.Hex("#9a958c"));
+            main.startRotation3D = true;
+            main.gravityModifier = -0.01f;
+            main.maxParticles = 24;
+            var em = ps.emission; em.rateOverTime = rate;
+            var shape = ps.shape; shape.shapeType = ParticleSystemShapeType.Cone; shape.angle = 8f; shape.radius = 0.12f;
+            shape.rotation = new Vector3(-90, 0, 0);
+            var vel = ps.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.World;
+            vel.x = new ParticleSystem.MinMaxCurve(0.15f, 0.35f); vel.y = new ParticleSystem.MinMaxCurve(0f, 0f); vel.z = new ParticleSystem.MinMaxCurve(0.05f, 0.15f);
+            var noise = ps.noise; noise.enabled = true; noise.strength = 0.25f; noise.frequency = 0.4f;
+            var sol = ps.sizeOverLifetime; sol.enabled = true;
+            sol.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0, 0.4f), new Keyframe(0.35f, 1.4f), new Keyframe(1f, 0f)));
+            var r = ps.GetComponent<ParticleSystemRenderer>();
+            r.renderMode = ParticleSystemRenderMode.Mesh;
+            r.mesh = PuffMesh;
+            ps.Play();
+            return ps;
+        }
+
+        private static Mesh? _puff;
+        /// <summary>Icosaedro de faces chapadas (estilo low-poly) para a fumaça.</summary>
+        private static Mesh PuffMesh
+        {
+            get
+            {
+                if (_puff != null) return _puff;
+                float t = (1f + Mathf.Sqrt(5f)) / 2f;
+                var v = new[]
+                {
+                    new Vector3(-1, t, 0), new Vector3(1, t, 0), new Vector3(-1, -t, 0), new Vector3(1, -t, 0),
+                    new Vector3(0, -1, t), new Vector3(0, 1, t), new Vector3(0, -1, -t), new Vector3(0, 1, -t),
+                    new Vector3(t, 0, -1), new Vector3(t, 0, 1), new Vector3(-t, 0, -1), new Vector3(-t, 0, 1),
+                };
+                int[] f =
+                {
+                    0,11,5, 0,5,1, 0,1,7, 0,7,10, 0,10,11, 1,5,9, 5,11,4, 11,10,2, 10,7,6, 7,1,8,
+                    3,9,4, 3,4,2, 3,2,6, 3,6,8, 3,8,9, 4,9,5, 2,4,11, 6,2,10, 8,6,7, 9,8,1,
+                };
+                var verts = new Vector3[f.Length]; var tris = new int[f.Length]; var cols = new Color[f.Length];
+                for (int i = 0; i < f.Length; i++) { verts[i] = v[f[i]].normalized * 0.5f; tris[i] = i; cols[i] = Color.white; }
+                _puff = new Mesh { name = "Puff", vertices = verts, triangles = tris, colors = cols };
+                _puff.RecalculateNormals();
+                _puff.RecalculateBounds();
+                return _puff;
+            }
+        }
+
         private static Color Emis(Color c) { c.a = 0f; return c; }
 
         private static ParticleSystem MakePs(Transform parent, string name, Vector3 pos)

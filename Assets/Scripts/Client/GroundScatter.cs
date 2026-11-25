@@ -195,7 +195,7 @@ namespace Kezor.Client
 
         private bool Blocked(MapDefinition map, float x, float z, float pad)
         {
-            foreach (var h in map.Houses) if ((h.X - x) * (h.X - x) + (h.Z - z) * (h.Z - z) < (3.6f * h.Scale + pad) * (3.6f * h.Scale + pad)) return true;
+            foreach (var h in map.Houses) { float hr = MapDefinition.HouseExtent(h.Kind) * h.Scale + pad; if ((h.X - x) * (h.X - x) + (h.Z - z) * (h.Z - z) < hr * hr) return true; }
             foreach (var p in map.Props) if ((p.X - x) * (p.X - x) + (p.Z - z) * (p.Z - z) < (1.2f + pad) * (1.2f + pad)) return true;
             foreach (var o in map.Obstacles) if ((o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) < (o.R + pad) * (o.R + pad)) return true;
             return false;
