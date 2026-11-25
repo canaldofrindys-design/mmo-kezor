@@ -17,6 +17,8 @@ namespace Kezor.Core.Server
         public bool AllowGm;
         /// <summary>Contas com comandos GM (como os GMs de um servidor online). O servidor deste PC marca a conta do dono.</summary>
         public readonly HashSet<string> GmAccounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Registro do servidor (entradas, saídas, GM, trocas). Null = sem registro. O servidor dedicado escreve no console.</summary>
+        public Action<string>? Log;
         public float SnapshotInterval = 0.1f;
         public float ViewRange = 60f;   // AOI: a câmera mais alta mostra mais chão
         public float EventFirstDelay = 180f;
@@ -338,6 +340,7 @@ namespace Kezor.Core.Server
             var a = new Account { Name = name, PasswordHash = PasswordHasher.Hash(pass, _opt.PasswordIterations) };
             _accounts.Save(a);
             s.Account = a;
+            LogLine($"conta criada: {a.Name} (sessão {s.Id})");
             return $"OK conta {a.Name} criada";
         }
 
@@ -350,6 +353,7 @@ namespace Kezor.Core.Server
             if (_sessions.Values.Any(o => o != s && o.Account != null && string.Equals(o.Account.Name, a.Name, StringComparison.OrdinalIgnoreCase)))
                 return "ERR esta conta já está conectada";
             s.Account = a;
+            LogLine($"login: {a.Name} (sessão {s.Id})");
             return "OK " + CharList(a);
         }
 
@@ -404,6 +408,7 @@ namespace Kezor.Core.Server
             c.AccountName = s.Account.Name;
             c.Vault = s.Account.Vault;          // baú da conta, o mesmo para todos os personagens
             EnterWorld(s, c, keepPosition: true);
+            LogLine($"entrou: {c.Name} nv {c.Level} (conta {s.Account.Name}) · {OnlineCount} online");
             return $"OK bem-vindo, {c.Name}";
         }
 

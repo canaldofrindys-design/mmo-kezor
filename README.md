@@ -80,6 +80,7 @@ Se ninguém mandar nada por 60 s (cabo puxado, jogo travado) o servidor derruba 
 cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma conta só pode estar conectada uma vez.
 
 ## Servidor dedicado
+- **Online 24h num VPS**: duplo clique em `Tools/Publicar-Servidor.bat` (monta, envia e instala; guia completo em `docs/SERVIDOR-ONLINE.md`).
 - **Sem Unity** (recomendado para deixar ligado): `cd Build && dotnet run --project Headless -- 55901 --gm-account SuaConta`
   (`--gm-account` dá GM a uma conta e pode repetir; `--gm` dá GM para todos, só para teste). Todo jogador entra com conta e cria até
   5 personagens. Os saves ficam em JSON na pasta `data/` (mude com `--data <pasta>`). Nome, canal e limite: `--name`, `--channel`, `--max`.

@@ -546,7 +546,7 @@ namespace Kezor.Client.UI
         // ------------------------------------------------------------------ chat
         private static string ChannelColor(string ch) => ch switch
         {
-            "err" => "#ff7a7a", "fail" => "#ffb36a", "sys" => "#ffd36a", "party" => "#8fe08f", "guild" => "#8fd0ff", "whisper" => "#f0a0e0", "ok" => "#bcd4ff", _ => "#f0eadc",
+            "err" => "#ff7a7a", "fail" => "#ffb36a", "sys" => "#ffd36a", "party" => "#8fe08f", "guild" => "#8fd0ff", "whisper" => "#f0a0e0", "notice" => "#ffcf5a", "ok" => "#bcd4ff", _ => "#f0eadc",
         };
 
         private bool InTab(string ch) => _chatTab switch

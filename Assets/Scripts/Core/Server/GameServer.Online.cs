@@ -32,6 +32,7 @@ namespace Kezor.Core.Server
             _shops.Remove(s.Id);
             SaveCharacter(s);
             s.Character = null;
+            LogLine($"saiu: {gone.Name} (conta {s.Account?.Name ?? "-"}) · {OnlineCount} online");
             s.ClearIntent();
             s.PendingUtility = -1;
             s.VaultOpen = false;
@@ -49,6 +50,27 @@ namespace Kezor.Core.Server
             if (s.Character != null && s.Character.IsDead) return "ERR espere renascer";
             LeaveWorld(s);
             return "OK " + CharList(s.Account);
+        }
+
+        /// <summary>Escreve no registro do servidor (se houver).</summary>
+        private void LogLine(string text) { try { _opt.Log?.Invoke(text); } catch { } }
+
+        /// <summary>Aviso do servidor para todos os jogadores online (console do servidor ou GM).</summary>
+        public string Announce(string text)
+        {
+            text = Clean(text.Trim());
+            if (text.Length == 0) return "aviso vazio";
+            if (text.Length > 160) text = text.Substring(0, 160);
+            Broadcast("@EV CHAT;notice;Aviso;" + text);
+            LogLine("aviso: " + text);
+            return $"aviso enviado para {OnlineCount} jogador(es)";
+        }
+
+        /// <summary>Lista para o console do servidor: quem está online, nível, mapa e conta.</summary>
+        public string AdminOnline()
+        {
+            var list = Online.Select(o => $"{o.Character!.Name} nv{o.Character.Level} mapa {o.Character.MapId} conta {o.Account?.Name ?? "-"}").ToList();
+            return list.Count == 0 ? "ninguém online" : $"{list.Count} online: " + string.Join(" · ", list);
         }
 
         /// <summary>W nome texto: mensagem privada para um jogador online (em qualquer mapa).</summary>
