@@ -40,8 +40,12 @@ namespace Kezor.Tests
             Assert.AreEqual("cinzas", list[1].Id, "id gerado do nome");
 
             var all = ServerList.WithBuiltins(list);
-            Assert.AreEqual(ServerKind.Local, all[0].Kind);
-            Assert.AreEqual(ServerKind.Lan, all[1].Kind);
+            Assert.AreEqual(ServerKind.Host, all[0].Kind, "o servidor deste PC vem primeiro");
+            Assert.AreEqual("127.0.0.1", all[0].Host);
+            Assert.AreEqual(Protocol.DefaultPort, all[0].Channels.Single().Port);
+            Assert.IsFalse(all.Any(s => s.Channels.Any(c => c.Port == 0)), "não existe mais modo solo (porta 0)");
+            Assert.AreEqual(ServerKind.Direct, all[1].Kind, "depois, entrar pelo IP de um amigo");
+            Assert.AreEqual(ServerKind.Remote, all[2].Kind);
             Assert.AreEqual(5, all.Count);
 
             Assert.AreEqual(0, ServerList.Parse("{ isto não é json", out var bad).Count);

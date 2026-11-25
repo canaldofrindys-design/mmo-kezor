@@ -16,13 +16,13 @@ namespace Kezor.Core.Net
         string Error { get; }
         void Send(string line);
         bool TryReceive(out string line);
-        /// <summary>Chamado todo frame pelo cliente (o modo local avança o servidor aqui).</summary>
+        /// <summary>Chamado todo frame pelo cliente.</summary>
         void Update(float dt);
     }
 
     /// <summary>
-    /// Servidor embutido no próprio cliente (modo "Jogar offline/local"). Usa exatamente o mesmo GameServer
-    /// do servidor dedicado; a única diferença é que não há socket no meio.
+    /// Conexão em memória com um GameServer, sem socket. Só para testes automáticos: o jogo não tem modo solo e sempre
+    /// entra pela rede (<see cref="TcpClientConnection"/>), inclusive no servidor deste PC.
     /// </summary>
     public sealed class LoopbackConnection : IClientConnection
     {

@@ -202,8 +202,16 @@ Ilsa, a Guardiã (praça do Vale): 120 espaços com empilhamento e até 2 bilhõ
 O baú é da **conta**: os 3 personagens veem o mesmo. Itens vinculados não entram.
 
 ## Contas
-Até 3 personagens por conta. Senha guardada só como hash PBKDF2-SHA256. No servidor dedicado é obrigatório entrar na conta;
-no modo local e na LAN joga-se como convidado.
+Até 5 personagens por conta. Senha guardada só como hash PBKDF2-SHA256. Entrar na conta é obrigatório em todo servidor
+(o jogo é só multiplayer; não há modo solo nem convidado). Uma conta só pode estar conectada uma vez.
+
+## Multiplayer
+- Todos os jogadores do canal dividem o mesmo mundo: se veem (snapshot a 10 Hz dentro do raio de visão), conversam,
+  fazem grupo, trocam, montam guilda e lutam PvP fora da vila.
+- Chat: normal (perto), `/p` grupo, `/g` guilda, `/w Nome texto` sussurro (qualquer mapa), `/online` lista quem está jogando.
+- `SELECT` volta para a seleção de personagem sem desconectar (salva, sai do grupo, cancela troca/loja, avisa os outros).
+- `PING` a cada 10 s; o servidor derruba conexões mudas por 60 s e salva o herói (a conta fica livre para entrar de novo).
+- GM por conta (`--gm-account` no dedicado; no "Servidor deste PC" a conta do dono).
 
 ## Troca entre jogadores
 Até 4 m de distância, até 12 itens e ouro de cada lado. Passo 1: travar; passo 2: confirmar. Qualquer mudança destrava os dois.
@@ -280,7 +288,7 @@ Saves antigos são reempacotados ao carregar; o que não couber na mochila vai p
 
 ## Login com lista de servidores
 - Fluxo: **servidor → conta → seleção em fileira**. O fundo é a vila à noite, com a câmera passeando baixo e devagar.
-- Lista: **Local** (servidor embutido, conta automática), **Hospedar LAN** (porta configurável) e os servidores do
+- Lista: **Servidor deste PC** (abre um servidor de verdade aqui ou entra no que já estiver aberto na porta), **Entrar por IP** e os servidores do
   `servers.json`. O jogo procura primeiro em `persistentDataPath/kezor/servers.json` e depois no `StreamingAssets/servers.json`
   que vem com o jogo. Cada servidor tem nome, endereço, região e canais (um canal = uma porta). Entradas inválidas são ignoradas.
 - **STATUS** (funciona sem login): `OK status nome;canal;online;máximo;versão`. O cliente faz um ping TCP em cada canal a cada

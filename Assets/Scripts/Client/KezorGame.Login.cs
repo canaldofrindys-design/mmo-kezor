@@ -6,8 +6,8 @@ namespace Kezor.Client
 {
     /// <summary>
     /// Login com conta no servidor dedicado: entrar/registrar (senha só vai ao servidor, que guarda o hash PBKDF2),
-    /// depois a tela de personagens (até 3 por conta, criar escolhendo a classe, e jogar). Os modos local e LAN
-    /// continuam entrando direto como convidado.
+    /// depois a tela de personagens (até 5 por conta, criar escolhendo a classe, e jogar). Vale para qualquer servidor,
+    /// inclusive o deste PC: não existe modo solo nem convidado.
     /// </summary>
     public sealed partial class KezorGame
     {
@@ -28,12 +28,14 @@ namespace Kezor.Client
                 Send($"REGISTER {acc} {_password}", r =>
                 {
                     if (r.StartsWith("ERR")) { _loginError = r.Substring(4); Disconnect(); return; }
+                    GrantHostGm(acc);
                     RequestCharList();
                 });
             else
                 Send($"AUTH {acc} {_password}", r =>
                 {
                     if (r.StartsWith("ERR")) { _loginError = r.Substring(4); Disconnect(); return; }
+                    GrantHostGm(acc);
                     ParseCharList(r);
                 });
             _password = "";   // não fica guardada no cliente
@@ -45,29 +47,6 @@ namespace Kezor.Client
             public string Name = "", Guild = ""; public int Cls, Level, Rebirths, Rank = -1; public string Look = "";
         }
         internal readonly List<CharSummary> _charRows = new List<CharSummary>();
-
-        /// <summary>Saves dos modos local e LAN ficam neste computador (persistentDataPath/kezor/&lt;modo&gt;).</summary>
-        private static Kezor.Core.Server.JsonFileRepository LocalRepo(string mode)
-        {
-            var dir = System.IO.Path.Combine(Application.persistentDataPath, "kezor", mode);
-            System.IO.Directory.CreateDirectory(dir);
-            return new Kezor.Core.Server.JsonFileRepository(dir);
-        }
-
-        /// <summary>Local/LAN: entra (ou cria) a conta automática deste computador e abre a seleção.</summary>
-        private void SendLocalAccountLogin()
-        {
-            const string acc = "jogadorlocal", pass = "kezor-local";
-            Send($"AUTH {acc} {pass}", r =>
-            {
-                if (r.StartsWith("OK")) { ParseCharList(r); return; }
-                Send($"REGISTER {acc} {pass}", r2 =>
-                {
-                    if (r2.StartsWith("ERR")) { _loginError = r2.Substring(4); Disconnect(); return; }
-                    RequestCharList();
-                });
-            });
-        }
 
         internal void RequestCharList()
         {

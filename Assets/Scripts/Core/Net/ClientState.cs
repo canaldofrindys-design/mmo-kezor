@@ -131,7 +131,7 @@ namespace Kezor.Core.Net
                 LastReply = line;
                 if (line.StartsWith("ERR ")) AddLog("err", line.Substring(4));
                 else if (line.StartsWith("FAIL ")) AddLog("fail", line.Substring(5));
-                else if (line.StartsWith("OK ") && line.Length > 3 && !line.StartsWith("OK chars")) AddLog("ok", line.Substring(3)); // a lista de personagens vai para a tela de seleção
+                else if (line.StartsWith("OK ") && line.Length > 3 && !line.StartsWith("OK chars") && line != "OK pong") AddLog("ok", line.Substring(3)); // a lista de personagens vai para a tela de seleção
                 return;
             }
             int sp = line.IndexOf(' ');

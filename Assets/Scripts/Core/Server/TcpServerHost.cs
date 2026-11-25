@@ -19,10 +19,14 @@ namespace Kezor.Core.Server
         private readonly TcpListener _listener;
         private readonly ConcurrentQueue<(int session, string line)> _inbox = new ConcurrentQueue<(int, string)>();
         private readonly ConcurrentDictionary<int, StreamWriter> _writers = new ConcurrentDictionary<int, StreamWriter>();
+        private readonly ConcurrentDictionary<int, TcpClient> _clients = new ConcurrentDictionary<int, TcpClient>();
+        private readonly ConcurrentDictionary<int, long> _lastSeen = new ConcurrentDictionary<int, long>();   // ticks UTC da última linha recebida
         private readonly ConcurrentQueue<int> _connects = new ConcurrentQueue<int>();
         private readonly ConcurrentQueue<int> _disconnects = new ConcurrentQueue<int>();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private int _nextSession = 1000; // sessões TCP começam em 1001 (a 1 é do cliente local no modo host)
+        private int _nextSession = 1000; // sessões TCP começam em 1001
+        /// <summary>Conexão sem mandar nada por tanto tempo é derrubada (o cliente manda PING a cada poucos segundos). 0 = nunca.</summary>
+        public float IdleTimeoutSeconds = 60f;
         public const int MaxLineLength = 512;
         public const int MaxMessagesPerSecond = 60;
 
@@ -61,6 +65,8 @@ namespace Kezor.Core.Server
                 var reader = new StreamReader(stream, Encoding.UTF8);
                 var writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = false, NewLine = "\n" };
                 _writers[id] = writer;
+                _clients[id] = client;
+                _lastSeen[id] = DateTime.UtcNow.Ticks;
                 _connects.Enqueue(id);
                 int count = 0; var window = DateTime.UtcNow;
                 try
@@ -69,6 +75,7 @@ namespace Kezor.Core.Server
                     while (!_cts.IsCancellationRequested && (line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
                     {
                         if (line.Length > MaxLineLength) break; // proteção contra abuso
+                        _lastSeen[id] = DateTime.UtcNow.Ticks;
                         if ((DateTime.UtcNow - window).TotalSeconds >= 1) { window = DateTime.UtcNow; count = 0; }
                         if (++count > MaxMessagesPerSecond) continue; // flood: descarta
                         _inbox.Enqueue((id, line));
@@ -76,6 +83,8 @@ namespace Kezor.Core.Server
                 }
                 catch { /* conexão caiu */ }
                 _writers.TryRemove(id, out _);
+                _clients.TryRemove(id, out _);
+                _lastSeen.TryRemove(id, out _);
                 _disconnects.Enqueue(id);
             }
         }
@@ -91,6 +100,7 @@ namespace Kezor.Core.Server
             while (maxMessages-- > 0 && _inbox.TryDequeue(out var msg))
                 Write(msg.session, _game.Handle(msg.session, msg.line));
             while (_disconnects.TryDequeue(out var id)) _game.Disconnect(id);
+            DropIdle();
             Flush();
         }
 
@@ -105,6 +115,20 @@ namespace Kezor.Core.Server
             }
         }
 
+        /// <summary>Derruba conexões mudas (cabo puxado, jogo travado): o herói é salvo e a conta fica livre para entrar de novo.</summary>
+        private void DropIdle()
+        {
+            if (IdleTimeoutSeconds <= 0) return;
+            long limit = DateTime.UtcNow.Ticks - (long)(IdleTimeoutSeconds * TimeSpan.TicksPerSecond);
+            foreach (var kv in _lastSeen)
+                if (kv.Value < limit && _clients.TryGetValue(kv.Key, out var c))
+                {
+                    _lastSeen.TryRemove(kv.Key, out _);
+                    Write(kv.Key, "@EV SYS;Desconectado por inatividade.");
+                    try { c.Close(); } catch { }   // o ClientLoop percebe e enfileira a desconexão
+                }
+        }
+
         private void Write(int session, string line, bool flush = true)
         {
             if (!_writers.TryGetValue(session, out var w)) return;
@@ -115,6 +139,8 @@ namespace Kezor.Core.Server
         {
             _cts.Cancel();
             _listener.Stop();
+            foreach (var c in _clients.Values) { try { c.Close(); } catch { } }   // derruba os jogadores (o servidor já salvou)
+            _clients.Clear();
         }
     }
 }

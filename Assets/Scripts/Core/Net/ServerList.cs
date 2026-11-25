@@ -9,7 +9,9 @@ using Kezor.Core.Server;
 
 namespace Kezor.Core.Net
 {
-    public enum ServerKind { Local, Lan, Remote }
+    /// <summary>Host = servidor neste PC (o jogo abre se ainda não houver um rodando); Direct = digitar IP e porta de um
+    /// amigo; Remote = servidor do servers.json.</summary>
+    public enum ServerKind { Host, Direct, Remote }
 
     public sealed class ChannelEntry
     {
@@ -30,7 +32,8 @@ namespace Kezor.Core.Net
     /// { "servers": [ { "id": "brasalume", "name": "Brasalume", "host": "jogo.exemplo.com", "region": "BR",
     ///                  "channels": [ { "name": "Canal 1", "port": 55901 }, { "name": "Canal 2", "port": 55902 } ] } ] }
     /// Sem "channels", usa "port" (ou a porta padrão) como canal único. Entradas sem nome/endereço ou com porta inválida
-    /// são ignoradas. As entradas "Local" (servidor embutido) e "LAN" (hospedar) entram sempre no topo.
+    /// são ignoradas. A entrada "Servidor deste PC" entra sempre no topo. Não existe modo solo: todo jogador entra num servidor
+    /// com conta e senha, e todos os jogadores do canal dividem o mesmo mundo.
     /// </summary>
     public static class ServerList
     {
@@ -68,13 +71,15 @@ namespace Kezor.Core.Net
             return list;
         }
 
-        /// <summary>Local e LAN no topo, depois os servidores do arquivo.</summary>
-        public static List<ServerEntry> WithBuiltins(IEnumerable<ServerEntry> remote, int lanPort = Protocol.DefaultPort)
+        public const string HostId = "este-pc", DirectId = "por-ip";
+
+        /// <summary>"Servidor deste PC" (127.0.0.1 na porta dada) e "Entrar por IP" no topo, depois os servidores do arquivo.</summary>
+        public static List<ServerEntry> WithBuiltins(IEnumerable<ServerEntry> remote, int hostPort = Protocol.DefaultPort)
         {
             var all = new List<ServerEntry>
             {
-                new ServerEntry { Id = "local", Name = "Local", Host = "", Region = "este computador", Kind = ServerKind.Local, Channels = { new ChannelEntry { Name = "Solo", Port = 0 } } },
-                new ServerEntry { Id = "lan", Name = "Hospedar LAN", Host = "", Region = "sua rede", Kind = ServerKind.Lan, Channels = { new ChannelEntry { Name = "Porta " + lanPort, Port = lanPort } } },
+                new ServerEntry { Id = HostId, Name = "Servidor deste PC", Host = "127.0.0.1", Region = "você e sua rede", Kind = ServerKind.Host, Channels = { new ChannelEntry { Name = "Canal 1", Port = hostPort } } },
+                new ServerEntry { Id = DirectId, Name = "Entrar por IP", Host = "", Region = "servidor de um amigo", Kind = ServerKind.Direct, Channels = { new ChannelEntry { Name = "Canal 1", Port = Protocol.DefaultPort } } },
             };
             all.AddRange(remote);
             return all;

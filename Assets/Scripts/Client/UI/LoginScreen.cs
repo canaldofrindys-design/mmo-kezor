@@ -10,21 +10,23 @@ namespace Kezor.Client.UI
 {
     /// <summary>
     /// Login com lista de servidores: fundo 3D cinematográfico (a câmera passeia pela vila à noite), logotipo e um painel
-    /// pequeno com Local, Hospedar LAN e os servidores do servers.json (canais, status por ping TCP com o comando
-    /// STATUS, população e latência). Fluxo: servidor → conta → seleção em fileira. Lembra o último servidor, canal e
-    /// conta (nunca a senha). Menu com Opções, Créditos (licenças das fontes OFL) e Sair.
+    /// pequeno com o "Servidor deste PC" e os servidores do servers.json (canais, status por ping TCP com o comando
+    /// STATUS, população e latência). Só multiplayer: servidor → conta e senha → seleção em fileira → mundo com os outros
+    /// jogadores. Lembra o último servidor, canal e conta (nunca a senha). Menu com Opções, Créditos e Sair.
     /// </summary>
     public sealed class LoginScreen
     {
-        public const string PrefServer = "kz.lastServer", PrefChannel = "kz.lastChannel", PrefAccount = "kz.lastAccount";
+        public const string PrefServer = "kz.lastServer", PrefChannel = "kz.lastChannel", PrefAccount = "kz.lastAccount", PrefHostPort = "kz.hostPort",
+                            PrefDirectHost = "kz.directHost", PrefDirectPort = "kz.directPort";
         private const float StatusEvery = 15f;
 
         private readonly UiRoot _ui;
         private KezorGame G => _ui.Game;
         public readonly VisualElement Root;
         private readonly VisualElement _serverPanel, _list, _channels, _lanRow, _accountPanel, _menu, _credits;
-        private readonly Label _serverError, _accError, _accTitle, _accSub;
-        private readonly TextField _lanPort, _account, _password;
+        private readonly Label _serverError, _accError, _accTitle, _accSub, _hostHint;
+        private readonly TextField _lanPort, _account, _password, _ipHost, _ipPort;
+        private readonly VisualElement _ipRow;
         private readonly Toggle _register;
         private readonly Button _continue, _login;
         private List<ServerEntry> _servers = new List<ServerEntry>();
@@ -55,8 +57,13 @@ namespace Kezor.Client.UI
             _list = Kz.El("login__list", _serverPanel, pick: true);
             _channels = Kz.El("login__channels", _serverPanel, pick: true);
             _lanRow = Kz.El("win-row login__lan", _serverPanel, pick: true);
-            Kz.Text("Porta para os outros entrarem", "kz-text-2", _lanRow);
+            Kz.Text("Porta", "kz-text-2", _lanRow);
             _lanPort = Field(_lanRow, 6, Protocol.DefaultPort.ToString()); _lanPort.style.width = 90;
+            _ipRow = Kz.El("win-row login__lan", _serverPanel, pick: true);
+            Kz.Text("IP", "kz-text-2", _ipRow);
+            _ipHost = Field(_ipRow, 64, "192.168.0.10"); _ipHost.style.width = 170;
+            _ipPort = Field(_ipRow, 6, Protocol.DefaultPort.ToString()); _ipPort.style.width = 80;
+            _hostHint = Kz.Text("", "kz-text-3", _serverPanel);
             _serverError = Kz.Text("", "entry__error", _serverPanel);
             _continue = Kz.Btn("Continuar", Continue, "kz-btn kz-btn--primary entry__enter", _serverPanel);
 
@@ -92,7 +99,9 @@ namespace Kezor.Client.UI
             Kz.Text($"Kezor {Protocol.GameVersion}  ·  fantasia sombria low poly  ·  servidor autoritativo", "entry__footer", Root);
 
             _account.value = PlayerPrefs.GetString(PrefAccount, "");
-            _lanPort.value = G._port;
+            _lanPort.value = PlayerPrefs.GetString(PrefHostPort, Protocol.DefaultPort.ToString());
+            _ipHost.value = PlayerPrefs.GetString(PrefDirectHost, "");
+            _ipPort.value = PlayerPrefs.GetString(PrefDirectPort, Protocol.DefaultPort.ToString());
             LoadServers();
             Root.RegisterCallback<KeyDownEvent>(e =>
             {
@@ -151,7 +160,7 @@ namespace Kezor.Client.UI
                 row.RegisterCallback<ClickEvent>(e => { Select(idx); if (e.clickCount >= 2) Continue(); });
                 _rows.Add((row, dot, pop, ping));
             }
-            var last = PlayerPrefs.GetString(PrefServer, "local");
+            var last = PlayerPrefs.GetString(PrefServer, ServerList.HostId);
             _sel = Mathf.Max(0, _servers.FindIndex(x => x.Id == last));
             _chan = Mathf.Clamp(PlayerPrefs.GetInt(PrefChannel, 0), 0, _servers[_sel].Channels.Count - 1);
             BuildChannels();
@@ -178,20 +187,25 @@ namespace Kezor.Client.UI
             }
         }
 
-        private static string Key(ServerEntry s, ChannelEntry c) => s.Host + ":" + c.Port;
+        private string Key(ServerEntry s, ChannelEntry c) => s.Host + ":" + (s.Kind == ServerKind.Host ? HostPortValue() : c.Port);
+
+        private int DirectPortValue() => int.TryParse(_ipPort.value.Trim(), out var p) && p > 0 && p < 65536 ? p : -1;
+
+        private int HostPortValue() => int.TryParse(_lanPort.value.Trim(), out var p) && p > 0 && p < 65536 ? p : Protocol.DefaultPort;
 
         private void RefreshAll(bool force)
         {
             foreach (var s in _servers)
             {
-                if (s.Kind != ServerKind.Remote) continue;
+                if (s.Kind == ServerKind.Host && G.Hosting) continue;   // o nosso: os números vêm direto do servidor
+                if (s.Kind == ServerKind.Direct) continue;
                 foreach (var c in s.Channels)
                 {
                     var key = Key(s, c);
                     if (!_probes.TryGetValue(key, out var p)) _probes[key] = p = new Probe();
                     if (p.Task != null && !p.Task.IsCompleted) continue;
                     if (!force && Time.unscaledTime - p.At < StatusEvery) continue;
-                    string host = s.Host; int port = c.Port;
+                    string host = s.Host; int port = s.Kind == ServerKind.Host ? HostPortValue() : c.Port;
                     p.Task = Task.Run(() => ServerStatusProbe.Probe(host, port, 1500));
                     p.At = Time.unscaledTime;
                 }
@@ -223,21 +237,28 @@ namespace Kezor.Client.UI
             var s = _servers[_sel];
             G._loginError = "";
             PlayerPrefs.SetString(PrefServer, s.Id); PlayerPrefs.SetInt(PrefChannel, _chan); PlayerPrefs.Save();
-            switch (s.Kind)
-            {
-                case ServerKind.Local: G._mode = ConnectMode.Local; G.StartGame(); break;
-                case ServerKind.Lan:
-                    G._mode = ConnectMode.Host; G._port = _lanPort.value.Trim();
-                    G.StartGame();
-                    break;
-                default:
-                    var st = StatusOf(s, _chan);
-                    if (st != null && st.Online && st.Load == "lotado") { G._loginError = "Este canal está lotado. Escolha outro."; return; }
-                    _accountStep = true;
-                    _password.value = "";
-                    _password.schedule.Execute(() => (_account.value == "" ? _account : _password).Focus()).StartingIn(30);
-                    break;
+            if (s.Kind == ServerKind.Host)
+            {   // abre o servidor aqui (ou usa o que já está aberto nesta porta) e entra nele com conta, como os outros
+                int port = HostPortValue();
+                if (!G.EnsureHost(port, out _, out var err)) { G._loginError = err; return; }
+                G._port = port.ToString();
+                PlayerPrefs.SetString(PrefHostPort, port.ToString());
             }
+            else if (s.Kind == ServerKind.Direct)
+            {
+                var ip = _ipHost.value.Trim();
+                if (ip.Length == 0 || ip.Contains(" ")) { G._loginError = "Digite o IP do servidor (ex.: 192.168.0.10)."; return; }
+                if (DirectPortValue() < 0) { G._loginError = "Porta inválida."; return; }
+                PlayerPrefs.SetString(PrefDirectHost, ip); PlayerPrefs.SetString(PrefDirectPort, DirectPortValue().ToString());
+            }
+            else
+            {
+                var st = StatusOf(s, _chan);
+                if (st != null && st.Online && st.Load == "lotado") { G._loginError = "Este canal está lotado. Escolha outro."; return; }
+            }
+            _accountStep = true;
+            _password.value = "";
+            _password.schedule.Execute(() => (_account.value == "" ? _account : _password).Focus()).StartingIn(30);
         }
 
         private void Login()
@@ -247,8 +268,9 @@ namespace Kezor.Client.UI
             if (_account.value.Trim().Length < 3) { G._loginError = "Digite a conta."; return; }
             if (_password.value.Length == 0) { G._loginError = "Digite a senha."; return; }
             PlayerPrefs.SetString(PrefAccount, _account.value.Trim()); PlayerPrefs.Save();   // a senha nunca é salva
-            G._mode = ConnectMode.Online;
-            G._host = s.Host; G._port = c.Port.ToString();
+            G._host = s.Kind == ServerKind.Direct ? _ipHost.value.Trim() : s.Host;
+            G._port = (s.Kind == ServerKind.Host ? HostPortValue() : s.Kind == ServerKind.Direct ? DirectPortValue() : c.Port).ToString();
+            G._serverLabel = s.Kind == ServerKind.Host ? "Servidor deste PC" : s.Kind == ServerKind.Direct ? $"{G._host}:{G._port}" : $"{s.Name} · {c.Name}";
             G._account = _account.value.Trim(); G._password = _password.value; G._registering = _register.value;
             _password.value = "";
             G.StartGame();
@@ -261,6 +283,26 @@ namespace Kezor.Client.UI
 #else
             Application.Quit();
 #endif
+        }
+
+        private string? _ips;
+        /// <summary>Endereços deste PC na rede (para os amigos digitarem no servers.json ou no "Conectar").</summary>
+        private string HostHint()
+        {
+            if (_ips == null)
+            {
+                try
+                {
+                    var list = new List<string>();
+                    foreach (var a in System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName()))
+                        if (a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(a)) list.Add(a.ToString());
+                    _ips = list.Count > 0 ? string.Join(", ", list) : "";
+                }
+                catch { _ips = ""; }
+            }
+            var who = _ips != "" ? $"Amigos na sua rede entram pelo IP <b>{_ips}</b> e porta {HostPortValue()}." : "Amigos na sua rede entram pelo seu IP e por esta porta.";
+            return "Todo mundo entra com conta e senha, inclusive você. Na primeira vez marque \"Criar conta nova\". " + who +
+                   " Para testar sozinho com 2 heróis, abra uma segunda janela do jogo e entre aqui também.";
         }
 
         // ------------------------------------------------------------------ quadro
@@ -282,13 +324,25 @@ namespace Kezor.Client.UI
                 var (row, dot, pop, ping) = _rows[i];
                 var s = _servers[i];
                 row.SetClass("login__row--on", i == _sel);
-                if (s.Kind != ServerKind.Remote)
+                if (s.Kind == ServerKind.Host && G.Hosting)
                 {
                     dot.SetClass("login__dot--on", true); dot.SetClass("login__dot--off", false); dot.SetClass("login__dot--busy", false);
-                    pop.Set(s.Kind == ServerKind.Local ? "solo" : "você hospeda"); ping.Set("");
+                    pop.Set($"{G.HostPlayers} online"); ping.Set("aberto");
+                    continue;
+                }
+                if (s.Kind == ServerKind.Direct)
+                {
+                    dot.SetClass("login__dot--on", false); dot.SetClass("login__dot--off", false); dot.SetClass("login__dot--busy", false);
+                    pop.Set(""); ping.Set("");
                     continue;
                 }
                 var st = StatusOf(s);
+                if (s.Kind == ServerKind.Host && (st == null || !st.Online))
+                {   // ainda fechado: abre quando o jogador entrar
+                    dot.SetClass("login__dot--on", false); dot.SetClass("login__dot--off", false); dot.SetClass("login__dot--busy", true);
+                    pop.Set("abre ao entrar"); ping.Set("");
+                    continue;
+                }
                 bool probing = Probing(s) && st == null;
                 dot.SetClass("login__dot--on", st != null && st.Online && st.Load == "livre");
                 dot.SetClass("login__dot--busy", st != null && st.Online && st.Load != "livre");
@@ -302,15 +356,23 @@ namespace Kezor.Client.UI
                 var st = StatusOf(sel, i);
                 _chanBtns[i].text = sel.Channels[i].Name + (st == null ? "" : st.Online ? $"  {st.Players}/{st.MaxPlayers}" : "  offline");
             }
-            _lanRow.Show(sel.Kind == ServerKind.Lan);
-            _continue.text = G._connecting ? "Conectando..." : sel.Kind == ServerKind.Local ? "Jogar neste computador" : sel.Kind == ServerKind.Lan ? "Hospedar e jogar" : "Continuar";
+            _lanRow.Show(sel.Kind == ServerKind.Host);
+            _ipRow.Show(sel.Kind == ServerKind.Direct);
+            _lanPort.SetEnabled(!G.Hosting);
+            _hostHint.Show(sel.Kind != ServerKind.Remote);
+            if (sel.Kind == ServerKind.Host) _hostHint.Set(HostHint());
+            else if (sel.Kind == ServerKind.Direct) _hostHint.Set("Digite o IP e a porta que o seu amigo vê na tela dele em \"Servidor deste PC\". Fora da mesma rede, ele precisa liberar a porta no roteador.");
+            _continue.text = G._connecting ? "Conectando..." : "Continuar";
             _continue.SetEnabled(!G._connecting);
             string err = G._loginError != "" ? G._loginError : _listError;
             _serverError.Set(err != "" ? $"<color=#ff7a6a>{err}</color>" : "");
             var ch = sel.Channels[Mathf.Clamp(_chan, 0, sel.Channels.Count - 1)];
             _accTitle.Set(sel.Name);
             var cs = StatusOf(sel, _chan);
-            _accSub.Set($"{ch.Name} · {sel.Host}:{ch.Port}" + (cs != null && cs.Online ? $" · {cs.Players}/{cs.MaxPlayers} online · {cs.LatencyMs} ms" : ""));
+            _accSub.Set(sel.Kind == ServerKind.Direct ? $"{_ipHost.value.Trim()}:{_ipPort.value.Trim()}"
+                : sel.Kind == ServerKind.Host
+                ? $"127.0.0.1:{HostPortValue()} · {(G.Hosting ? G.HostPlayers + " online · hospedado por este jogo" : "aberto em outra janela")}"
+                : $"{ch.Name} · {sel.Host}:{ch.Port}" + (cs != null && cs.Online ? $" · {cs.Players}/{cs.MaxPlayers} online · {cs.LatencyMs} ms" : ""));
             _accError.Set(G._loginError != "" ? $"<color=#ff7a6a>{G._loginError}</color>" : "");
             _login.text = G._connecting ? "Conectando..." : _register.value ? "Criar conta e entrar" : "Entrar";
             _login.SetEnabled(!G._connecting);
