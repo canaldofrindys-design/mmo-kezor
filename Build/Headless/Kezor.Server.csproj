@@ -1,4 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><LangVersion>9.0</LangVersion><Nullable>enable</Nullable></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><LangVersion>9.0</LangVersion><Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization></PropertyGroup>
   <ItemGroup><ProjectReference Include="../Core/Kezor.Core.csproj" /></ItemGroup>
+  <!-- Banco de dados do servidor dedicado: SQLite (padrão, um arquivo) ou MySQL/MariaDB -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
+  </ItemGroup>
 </Project>

@@ -17,9 +17,9 @@ namespace Kezor.Client.UI
             if (Cache.TryGetValue(map.Id, out var cached) && cached != null) return cached;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
             var px = new Color[size * size];
-            bool crypt = map.Id == MapDefinition.CryptId, swamp = map.Id == MapDefinition.SwampId;
-            Color baseLow = crypt ? new Color(0.03f, 0.03f, 0.05f) : swamp ? new Color(0.13f, 0.16f, 0.11f) : new Color(0.15f, 0.24f, 0.13f);
-            Color baseHigh = crypt ? new Color(0.06f, 0.06f, 0.09f) : swamp ? new Color(0.24f, 0.26f, 0.17f) : new Color(0.3f, 0.36f, 0.2f);
+            bool crypt = map.Id == MapDefinition.CryptId, swamp = map.Id == MapDefinition.SwampId, frost = map.Id == MapDefinition.EscarpId;
+            Color baseLow = frost ? new Color(0.45f, 0.5f, 0.58f) : crypt ? new Color(0.03f, 0.03f, 0.05f) : swamp ? new Color(0.13f, 0.16f, 0.11f) : new Color(0.15f, 0.24f, 0.13f);
+            Color baseHigh = frost ? new Color(0.78f, 0.82f, 0.88f) : crypt ? new Color(0.06f, 0.06f, 0.09f) : swamp ? new Color(0.24f, 0.26f, 0.17f) : new Color(0.3f, 0.36f, 0.2f);
             float step = map.Size / size;
 
             // faixa de alturas para o sombreado
@@ -51,7 +51,7 @@ namespace Kezor.Client.UI
                     }
                     foreach (var f in map.Floors)
                         if (wx >= f.X0 && wx <= f.X1 && wz >= f.Z0 && wz <= f.Z1) { c = new Color(0.25f, 0.23f, 0.31f); break; }
-                    if (swamp)
+                    if (swamp || frost)
                         foreach (var o in map.Obstacles)
                             if ((wx - o.X) * (wx - o.X) + (wz - o.Z) * (wz - o.Z) < o.R * o.R) { c = new Color(0.05f, 0.08f, 0.07f); break; }
                     foreach (var house in map.Houses)

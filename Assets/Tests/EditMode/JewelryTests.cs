@@ -86,8 +86,8 @@ namespace Kezor.Tests
             Assert.Greater(ItemDatabase.BasaltRing.ShopPrice, 0);
             Assert.Greater(ItemDatabase.LumeAmulet.ShopPrice, 0);
             Assert.AreEqual(0, ItemDatabase.RunicAshAmulet.ShopPrice);
-            Assert.AreEqual(4, ItemDatabase.All.Count(d => d.Kind == ItemKind.Ring));
-            Assert.AreEqual(2, ItemDatabase.All.Count(d => d.Kind == ItemKind.Amulet));
+            Assert.AreEqual(5, ItemDatabase.All.Count(d => d.Kind == ItemKind.Ring));
+            Assert.AreEqual(3, ItemDatabase.All.Count(d => d.Kind == ItemKind.Amulet));
 
             // salvar e carregar mantém os dois dedos e o amuleto
             var c = Hero();

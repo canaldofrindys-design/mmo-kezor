@@ -1,0 +1,28 @@
+# Serviço do servidor Kezor no Linux (systemd). Instalado pelo instalar-servidor.sh.
+# Liga sozinho quando o VPS liga e reinicia sozinho se o servidor cair.
+[Unit]
+Description=Servidor Kezor (MMO)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kezor
+Group=kezor
+WorkingDirectory=/opt/kezor
+EnvironmentFile=/etc/kezor/kezor.env
+ExecStart=/opt/kezor/bin/Kezor.Server --data /opt/kezor/data
+Restart=always
+RestartSec=5
+# dá tempo de salvar todo mundo ao parar
+TimeoutStopSec=30
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/kezor
+
+[Install]
+WantedBy=multi-user.target

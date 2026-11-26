@@ -102,6 +102,18 @@ namespace Kezor.Core.Server
             while (_disconnects.TryDequeue(out var id)) _game.Disconnect(id);
             DropIdle();
             Flush();
+            DropKicked();
+        }
+
+        /// <summary>Expulsos ou banidos por um GM: a mensagem já foi enviada no Flush; agora a conexão é fechada.</summary>
+        private void DropKicked()
+        {
+            while (_game.TryTakeKick(out var id))
+            {
+                _lastSeen.TryRemove(id, out _);
+                if (_clients.TryGetValue(id, out var c)) { try { c.Close(); } catch { } }   // o ClientLoop enfileira a desconexão
+                else _game.Disconnect(id);
+            }
         }
 
         /// <summary>Envia as mensagens empurradas (snapshots, eventos) de todas as sessões.</summary>

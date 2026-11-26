@@ -4,8 +4,8 @@ ARPG online isométrico de **fantasia sombria low poly**, feito em **Unity (C#)*
 Mecânicas clássicas do gênero (atributos por ponto, renascimento, refino +0~+15 com runas, forja com chance de falha,
 itens Ascendentes, combos, PvP, grupo, evento de invasão), com **mundo, classes, itens, monstros e arte 100% originais**.
 
-> Este *vertical slice* tem 3 mapas (Vale de Brasalume com a vila e o Bosque Cinzento, Pântano de Turfa Negra e a masmorra Cripta de Vidro Negro), 7 classes, 17 monstros (incluindo 2 ecos invocáveis),
-> ~35 itens, 4 runas, 2 receitas de forja e 1 evento. Tudo é gerado por código (malhas low poly procedurais), sem assets externos.
+> Este *vertical slice* tem 4 mapas (Vale de Brasalume com a vila e o Bosque Cinzento, Pântano de Turfa Negra, a masmorra Cripta de Vidro Negro e a Escarpa da Geada Rubra, nível 80+), 7 classes, 23 monstros (incluindo 2 ecos invocáveis),
+> ~45 itens, 4 runas, 2 receitas de forja e 2 eventos (Invasão das Cinzas no Vale e Fenda da Geada Rubra na Escarpa, com prêmio para quem mais causou dano). Tudo é gerado por código (malhas low poly procedurais), sem assets externos.
 
 ## Como jogar no Unity
 1. Abra a pasta `C:\MuProtoUnity` no **Unity Hub** (Add ▸ Add project from disk). Testado para Unity **2021.3 LTS ou mais novo** (inclusive Unity 6).
@@ -80,14 +80,18 @@ Se ninguém mandar nada por 60 s (cabo puxado, jogo travado) o servidor derruba 
 cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma conta só pode estar conectada uma vez.
 
 ## Servidor dedicado
+- **Online 24h num VPS**: duplo clique em `Tools/Publicar-Servidor.bat` (monta, envia e instala; guia completo em `docs/SERVIDOR-ONLINE.md`).
+- **Moderação**: contas GM usam `/gm kick|ban|unban|mute|unmute|info|goto|bring|aviso` no chat; tudo vai para o registro diário do servidor (veja "Moderação (GM) e registros" em `docs/SERVIDOR-ONLINE.md`).
 - **Sem Unity** (recomendado para deixar ligado): `cd Build && dotnet run --project Headless -- 55901 --gm-account SuaConta`
   (`--gm-account` dá GM a uma conta e pode repetir; `--gm` dá GM para todos, só para teste). Todo jogador entra com conta e cria até
-  5 personagens. Os saves ficam em JSON na pasta `data/` (mude com `--data <pasta>`). Nome, canal e limite: `--name`, `--channel`, `--max`.
+  5 personagens. Os saves ficam num **banco SQL**: SQLite em `data/kezor.db` (padrão) ou MySQL/MariaDB com
+  `--db "mysql:Server=...;Database=kezor;User ID=...;Password=..."` (`--db json` volta para arquivos). Saves `.json` antigos da pasta
+  `data/` são importados sozinhos na primeira vez. Nome, canal e limite: `--name`, `--channel`, `--max`.
 - **No Unity**: menu **Kezor ▸ Criar cena do servidor dedicado** (usa `ServerBootstrap`) e gere um build *Dedicated Server*.
 - Dá para testar na mão com `telnet`/`nc localhost 55901` e digitar `HELP`.
 
 ## Testes
-- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (144 testes: multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
+- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (161 testes: moderação por GM pela rede (expulsar, banir, desbanir, silenciar, ir até / trazer), Escarpa e evento da Fenda (ondas, Colosso, prêmio por dano), banco SQL (SQLite e MySQL: contas, heróis, guildas, ranking, reinício do servidor, importação dos JSON, backup), multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
 - No Unity: **Window ▸ General ▸ Test Runner ▸ EditMode**.
 - `Build/ClientCheck` compila o cliente fora do Unity (referências do UnityEngine via NuGet) para pegar erros cedo.
 

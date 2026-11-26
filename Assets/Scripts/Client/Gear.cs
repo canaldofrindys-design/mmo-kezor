@@ -26,6 +26,9 @@ namespace Kezor.Client
             { 53, "Arma_LancaRecruta" }, { 54, "Arma_LancaVanguarda" }, { 55, "Arma_AlabardaBastiao" }, { 44, "Arma_HasteJuramentoSolar" },
             { 56, "Arma_TomoEcoMenor" }, { 57, "Arma_SinoPrataVelada" }, { 58, "Arma_GrimorioMilEcos" }, { 45, "Arma_SinoSilencioEterno" },
             { 59, "Arma_ManoplasCouroCru" }, { 60, "Arma_ManoplasFerroFundido" }, { 61, "Arma_PunhosMagma" }, { 46, "Arma_NucleoBrasaViva" },
+            // Geada Rubra (Colosso da Escarpa): modelos existentes, recoloridos em vermelho-gelo (WeaponTints)
+            { 70, "Arma_MontanteTempestade" }, { 71, "Arma_CajadoOraculo" }, { 72, "Arma_ArcoVentoNorte" }, { 73, "Arma_EspadaMarePrismatica" },
+            { 74, "Arma_AlabardaBastiao" }, { 75, "Arma_GrimorioMilEcos" }, { 76, "Arma_PunhosMagma" },
         };
 
         internal static readonly Dictionary<int, string> ExtraModels = new Dictionary<int, string>
@@ -111,11 +114,13 @@ namespace Kezor.Client
                 {
                     bool bow = w.Def.Kind == ItemKind.Bow;                       // arco fica na mão esquerda
                     var rs = Attach(rig, "Equip/" + wm, bow ? rig.ArmL : rig.ArmR, out var piece);
+                    TintWeapon(rs, w.Id);
                     fx.Decorate(rs, w.Level, w.Ascended);
                     if (w.Def.Epic && piece != null) fx.Epic(piece, rs, EpicColors.TryGetValue(w.Id, out var ec) ? ec : Color.white, (bow ? rig.ArmL : rig.ArmR) ?? rig.Body);
                     if (w.Def.Kind == ItemKind.Gauntlet)
                     {   // manoplas: o par vai nas duas mãos (modelo _L na esquerda)
                         var ls = Attach(rig, "Equip/" + wm + "_L", rig.ArmL, out var lp);
+                        TintWeapon(ls, w.Id);
                         fx.Decorate(ls, w.Level, w.Ascended);
                         if (w.Def.Epic && lp != null) fx.Epic(lp, ls, EpicColors.TryGetValue(w.Id, out var ec2) ? ec2 : Color.white, rig.ArmL ?? rig.Body);
                     }
@@ -178,6 +183,25 @@ namespace Kezor.Client
                        && hb.min.z <= b.min.z + b.size.z * 0.15f && hb.max.z >= b.max.z - b.size.z * 0.15f && hb.max.y >= b.max.y - b.size.y * 0.05f
                        && hb.min.y <= b.min.y + b.size.y * 0.35f;
             if (covers) head.enabled = false;
+        }
+
+        /// <summary>Armas que reaproveitam um modelo com outra cor (Geada Rubra: vermelho com reflexo de gelo).</summary>
+        internal static readonly Dictionary<int, Color> WeaponTints = new Dictionary<int, Color>
+        {
+            { 70, new Color(1.25f, 0.62f, 0.7f) }, { 71, new Color(1.25f, 0.62f, 0.7f) }, { 72, new Color(1.25f, 0.62f, 0.7f) }, { 73, new Color(1.25f, 0.62f, 0.7f) },
+            { 74, new Color(1.25f, 0.62f, 0.7f) }, { 75, new Color(1.25f, 0.62f, 0.7f) }, { 76, new Color(1.25f, 0.62f, 0.7f) },
+        };
+
+        private static void TintWeapon(List<Renderer> rs, int itemId)
+        {
+            if (!WeaponTints.TryGetValue(itemId, out var tint)) return;
+            var mpb = new MaterialPropertyBlock();
+            foreach (var r in rs)
+            {
+                r.GetPropertyBlock(mpb);
+                mpb.SetColor(KezorLook.TintId, tint);
+                r.SetPropertyBlock(mpb);
+            }
         }
 
         /// <summary>Pendura a malha "Piece" do modelo na parte (posição local zero = pivô da articulação).</summary>

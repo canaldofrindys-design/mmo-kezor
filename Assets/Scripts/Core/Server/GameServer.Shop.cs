@@ -115,6 +115,7 @@ namespace Kezor.Core.Server
             shop.Listings.RemoveAt(idx);
             buyer.Inventory.Touch(); owner.Inventory.Touch();
             Sys(os, $"{buyer.Name} comprou {item.DisplayName} por {price:N0} de ouro.");
+            LogLine($"loja: {buyer.Name} comprou {item.DisplayName} de {owner.Name} por {price:N0}");
             if (shop.Listings.Count == 0) { shop.Open = false; Sys(os, "Tudo vendido: a loja fechou."); }
             SendShop(s, os, owner);
             SaveCharacter(s); SaveCharacter(os);

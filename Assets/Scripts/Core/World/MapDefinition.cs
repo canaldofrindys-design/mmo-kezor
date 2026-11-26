@@ -434,7 +434,7 @@ namespace Kezor.Core.World
             return m;
         }
 
-        public const int ValeId = 1, SwampId = 2, CryptId = 3;
+        public const int ValeId = 1, SwampId = 2, CryptId = 3, EscarpId = 4;
         /// <summary>Baú visível na praça do Vale, ao lado da Ilsa (polar 300°, 12,5 m do centro).</summary>
         public static readonly float VaultChestX = ValeCenter + (float)Math.Cos(300 * Math.PI / 180) * 12.5f, VaultChestZ = ValeCenter + (float)Math.Sin(300 * Math.PI / 180) * 12.5f;
 
@@ -462,6 +462,7 @@ namespace Kezor.Core.World
             };
             foreach (var (x, z, r) in pools) m.Obstacles.Add(new Obstacle(x, z, r));
             m.Portals.Add(new Portal { X = 12, Z = 70, TargetMap = ValeId, TargetX = ValeCenter + 86, TargetZ = ValeCenter - 20, Label = "Vale de Brasalume" });
+            m.Portals.Add(new Portal { X = 127, Z = 70, TargetMap = EscarpId, TargetX = 22, TargetZ = 75, Label = "Escarpa da Geada Rubra (nível 80+)" });
             return m;
         }
 
@@ -494,11 +495,39 @@ namespace Kezor.Core.World
             return m;
         }
 
+        /// <summary>Onde a Fenda da Geada Rubra se abre (evento): no planalto central da Escarpa.</summary>
+        public const float RiftX = 92f, RiftZ = 75f;
+
+        /// <summary>
+        /// Escarpa da Geada Rubra (nível 80-120): planalto gelado e aberto, com agulhas de gelo (obstáculos) e fendas
+        /// fundas (não dá para atravessar). Chega-se pelo portal leste do Pântano (e volta-se por ele) ou por /warp. No centro abre-se a Fenda.
+        /// </summary>
+        public static MapDefinition Escarpment()
+        {
+            var m = new MapDefinition { Id = EscarpId, Name = "Escarpa da Geada Rubra", Size = 150, SafeRadius = -1, RespawnX = 18, RespawnZ = 75,
+                                        MinLevel = 80, WarpCost = 250_000, WarpCode = "ESCARPA" };
+            void G(MonsterDefinition d, float x, float z, float r, int n) => m.Spawns.Add(new SpawnGroup { Monster = d, X = x, Z = z, Radius = r, Count = n });
+            G(MonsterCatalog.FrostLynx, 44, 44, 9, 6);
+            G(MonsterCatalog.FrostLynx, 46, 108, 9, 6);
+            G(MonsterCatalog.RimeWarden, 70, 30, 8, 4);
+            G(MonsterCatalog.RimeWarden, 72, 122, 8, 4);
+            G(MonsterCatalog.FrozenRevenant, 118, 46, 9, 6);
+            G(MonsterCatalog.FrozenRevenant, 118, 106, 9, 6);
+            G(MonsterCatalog.RimeSerpent, 134, 76, 8, 5);
+            // Fendas fundas (círculos grandes) e agulhas de gelo (pequenas): posições fixas, o cliente desenha as mesmas
+            foreach (var (x, z, r) in new (float, float, float)[] { (60, 76, 6f), (80, 52, 5f), (82, 100, 5.5f), (104, 76, 4f), (34, 92, 4f), (30, 56, 3.5f), (100, 132, 5f), (100, 20, 5f) })
+                m.Obstacles.Add(new Obstacle(x, z, r));
+            foreach (var (x, z) in new (float, float)[] { (52, 60), (54, 92), (66, 46), (66, 104), (88, 64), (88, 88), (110, 62), (110, 90), (126, 60), (126, 92), (38, 30), (38, 120) })
+                m.Obstacles.Add(new Obstacle(x, z, 1.2f));
+            m.Portals.Add(new Portal { X = 10, Z = 75, TargetMap = SwampId, TargetX = 119, TargetZ = 70, Label = "Pântano" });
+            return m;
+        }
+
         private static Dictionary<int, MapDefinition>? _all;
         /// <summary>Todos os mapas do jogo por id (instâncias novas a cada servidor via <see cref="CreateAll"/>).</summary>
         public static Dictionary<int, MapDefinition> CreateAll() => new Dictionary<int, MapDefinition>
         {
-            { ValeId, Brasalume() }, { SwampId, Swamp() }, { CryptId, Crypt() },
+            { ValeId, Brasalume() }, { SwampId, Swamp() }, { CryptId, Crypt() }, { EscarpId, Escarpment() },
         };
 
         /// <summary>Catálogo compartilhado (somente leitura) para o cliente desenhar e consultar.</summary>

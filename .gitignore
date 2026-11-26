@@ -31,3 +31,7 @@ Build/**/obj/
 .env
 *.env
 credentials*.json
+
+# Servidor online (gerado pelo Publicar-Servidor)
+Build/Publish/
+Tools/servidor-online.txt

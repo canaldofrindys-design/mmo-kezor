@@ -39,7 +39,8 @@ namespace Kezor.Core.World
             if (rng.RollPerMil(RuneChancePerMil)) drops.Add(RandomRune(rng));
             if (rng.RollPerMil(PotionChancePerMil))
             {
-                var p = m.Level >= 20 && rng.Roll(50) ? ItemDatabase.GreaterHealthPotion : (rng.Roll(60) ? ItemDatabase.HealthPotion : ItemDatabase.ManaPotion);
+                var p = m.Level >= 70 && rng.Roll(50) ? (rng.Roll(65) ? ItemDatabase.SupremeHealthPotion : ItemDatabase.GreaterManaPotion)
+                      : m.Level >= 20 && rng.Roll(50) ? ItemDatabase.GreaterHealthPotion : (rng.Roll(60) ? ItemDatabase.HealthPotion : ItemDatabase.ManaPotion);
                 drops.Add(new Item(p) { Quantity = rng.Next(1, 4) });
             }
             int itemChance = m.Boss ? 1000 : ItemChancePerMil;
