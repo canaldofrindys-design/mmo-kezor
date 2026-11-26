@@ -14,6 +14,8 @@ from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
 
 ROOT = r'C:\MuProtoUnity\Assets\Resources'
+# Blender (Z para cima, frente -Y) -> FBX Y para cima: (x, y, z) -> (x, z, -y)
+C_YUP = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))
 BONE_ORDER = ['Body', 'Chest', 'Head', 'ArmL', 'ForeArmL', 'HandL', 'ArmR', 'ForeArmR', 'HandR',
               'LegL', 'ShinL', 'FootL', 'LegR', 'ShinR', 'FootR']                       # = KezorAnim.BoneNames
 ALLOWED = {
@@ -342,18 +344,18 @@ def export_parts(set_name, parts, wbody, piv, textures=True):
         transfer_weights(wbody, mesh, ALLOWED[piece])
         for g in list(mesh.vertex_groups):
             mesh.vertex_groups.remove(g)
+        # pivô na origem e malha já em Y-up (como o prebake do kezor_export): no FBX a "Piece" fica
+        # sozinha, no topo, com rotação zero, e o Gear.Attach só a encaixa na articulação
         p = Vector(piv[piece])
         me.transform(Matrix.Translation(-p))
-        root = bpy.data.objects.new('__a5_root', None)
-        bpy.context.scene.collection.objects.link(root)
-        mesh.parent = root
-        mesh.location = p
+        me.transform(C_YUP)
+        mesh.parent = None
+        mesh.matrix_world = C_YUP.inverted()
         bpy.context.view_layer.update()
         path = os.path.join(ROOT, 'Models', 'Equip', '%s_%s.fbx' % (set_name, piece))
         for x in bpy.context.view_layer.objects:
             x.select_set(False)
         mesh.select_set(True)
-        root.select_set(True)
         bpy.context.view_layer.objects.active = mesh
         bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={'MESH', 'EMPTY'},
                                  global_scale=1.0, apply_unit_scale=True, apply_scale_options='FBX_SCALE_ALL',
@@ -363,7 +365,6 @@ def export_parts(set_name, parts, wbody, piv, textures=True):
                                  colors_type='SRGB')
         report.append((piece, len(me.polygons), os.path.getsize(path)))
         bpy.data.objects.remove(mesh, do_unlink=True)
-        bpy.data.objects.remove(root, do_unlink=True)
     return report
 
 
