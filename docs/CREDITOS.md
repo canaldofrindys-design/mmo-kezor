@@ -6,8 +6,9 @@ que também deve aparecer na tela de créditos do jogo.
 | Uso no jogo | Modelo | Autor | Licença | Fonte |
 |---|---|---|---|---|
 | Set Rúnica (Guardião): elmo, armadura, luvas, calças e botas | Modular Medieval Armor | jhonjpanesso | CC BY 4.0 | https://sketchfab.com/3d-models/f4156f249ea34c19afb57519f6b032af |
+| Set Bastião (Comandante): elmo, armadura, luvas, calças e botas | Judgement Armor | GarrettMarshallArt | CC BY 4.0 | https://sketchfab.com/3d-models/5551916126a44228b4b2a8125af0128b |
 
-Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo do Guardião, divisão nas peças
+Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças
 do jogo e texturas juntadas em atlas.
 
 ## Animações

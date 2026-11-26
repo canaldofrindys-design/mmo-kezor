@@ -76,7 +76,13 @@ def decode_body(body, name='KZB_Pesos'):
     return o
 
 
-def transfer_weights(src, dst, allowed):
+# piece -> função(co, pesos[(osso, peso)]) -> pesos; ex.: o tabardo do Bastião acompanha as coxas
+WEIGHT_MIX = {}
+# piece -> altura mínima (m) dos vértices do corpo que a peça esconde (saia longa não esconde as pernas)
+HIDE_ZMIN = {}
+
+
+def transfer_weights(src, dst, allowed, mix=None):
     for g in list(dst.vertex_groups):
         dst.vertex_groups.remove(g)
     for g in src.vertex_groups:
@@ -90,10 +96,10 @@ def transfer_weights(src, dst, allowed):
     m.layers_vgroup_select_dst = 'NAME'
     with bpy.context.temp_override(object=dst, active_object=dst, selected_objects=[dst]):
         bpy.ops.object.modifier_apply(modifier=m.name)
-    encode_uv(dst, allowed)
+    encode_uv(dst, allowed, mix)
 
 
-def encode_uv(o, allowed):
+def encode_uv(o, allowed, mix=None):
     me = o.data
     gi = {g.index: g.name for g in o.vertex_groups}
     per_v = []
@@ -101,6 +107,8 @@ def encode_uv(o, allowed):
         w = [(gi[g.group], g.weight) for g in v.groups if g.weight > 1e-4 and gi[g.group] in allowed]
         if not w:
             w = [(allowed[0], 1.0)]
+        if mix is not None:
+            w = [x for x in mix(v.co, w) if x[1] > 1e-4]
         w.sort(key=lambda t: -t[1])
         w = w[:4]
         tot = sum(x for _, x in w) or 1.0
@@ -160,26 +168,35 @@ def _save(arr, path, srgb):
     bpy.data.images.remove(img)
 
 
+def atlas_cell(slot, n):
+    """Retângulo (u0, v0, du, dv) do material slot no atlas: 1-2 materiais em faixas, 3-4 em grade 2x2."""
+    if n <= 2:
+        return 0.0, (n - 1 - slot) / n, 1.0, 1.0 / n
+    col, row = slot % 2, slot // 2
+    return col * 0.5, (1 - row) * 0.5, 0.5, 0.5
+
+
 def write_maps(mats, out_name, size=2048):
-    """Junta as texturas de 1 ou 2 materiais (um em cima do outro) e grava _Base, _Normal e _Mask."""
+    """Junta as texturas de 1 a 4 materiais (faixas ou grade 2x2) e grava _Base, _Normal e _Mask."""
     n = len(mats)
-    cell_h = size // n
     base = np.zeros((size, size, 4), np.float32)
     nor = np.zeros((size, size, 4), np.float32)
     mask = np.zeros((size, size, 4), np.float32)
     for i, m in enumerate(mats):
-        y0 = (n - 1 - i) * cell_h          # material 0 em cima (v alto)
-        b = _resize(_px(_tex(m, 'baseColor')), size, cell_h)
-        nn = _resize(_px(_tex(m, 'normal')), size, cell_h)
-        mr = _resize(_px(_tex(m, 'metallicRoughness')), size, cell_h)
-        base[y0:y0 + cell_h] = b
-        nor[y0:y0 + cell_h] = nn
+        u0, v0, du, dv = atlas_cell(i, n)
+        cw, ch = int(size * du), int(size * dv)
+        x0, y0 = int(size * u0), int(size * v0)      # pixels do Blender: linha 0 = v baixo
+        b = _resize(_px(_tex(m, 'baseColor')), cw, ch)
+        nn = _resize(_px(_tex(m, 'normal')), cw, ch)
+        mr = _resize(_px(_tex(m, 'metallicRoughness')), cw, ch)
+        base[y0:y0 + ch, x0:x0 + cw] = b
+        nor[y0:y0 + ch, x0:x0 + cw] = nn
         mk = np.empty_like(mr)
         mk[..., 0] = mr[..., 2]            # metal (glTF B)
         mk[..., 1] = mr[..., 0]            # oclusão (R)
         mk[..., 2] = 1.0 - mr[..., 1]      # lisura = 1 - rugosidade (G)
         mk[..., 3] = 1.0
-        mask[y0:y0 + cell_h] = mk
+        mask[y0:y0 + ch, x0:x0 + cw] = mk
     base[..., 3] = nor[..., 3] = 1.0
     d = os.path.join(ROOT, 'Textures', 'Equip')
     os.makedirs(d, exist_ok=True)
@@ -193,6 +210,7 @@ def remap_uv(o, slot, n):
     """Leva a UV da peça para a faixa do atlas (traz ilhas deslocadas de volta para 0..1 por face)."""
     me = o.data
     uv = me.uv_layers[0].data
+    u0, v0, cu, cv = atlas_cell(slot, n)
     for p in me.polygons:
         us = [uv[li].uv.x for li in p.loop_indices]
         vs = [uv[li].uv.y for li in p.loop_indices]
@@ -201,7 +219,7 @@ def remap_uv(o, slot, n):
         for li in p.loop_indices:
             u = min(1.0, max(0.0, uv[li].uv.x - du))
             v = min(1.0, max(0.0, uv[li].uv.y - dv))
-            uv[li].uv = (u, (n - 1 - slot + v) / n)
+            uv[li].uv = (u0 + u * cu, v0 + v * cv)
 
 
 # ---------------------------------------------------------------- peças
@@ -314,6 +332,37 @@ def pivots_from_model():
             'CalcaL': g('LegL'), 'CalcaR': g('LegR'), 'BotaL': g('LegL'), 'BotaR': g('LegR')}
 
 
+def emissive_colors(mesh, objs, mats):
+    """Cor por canto: branco opaco, ou a cor da textura emissiva do material com alfa baixo onde ela acende.
+    A UV já está no atlas; volta para a UV do material pela célula de cada um."""
+    me = mesh.data
+    n = len(mats)
+    out = [1.0] * (len(me.loops) * 4)
+    cells = []
+    for i, m in enumerate(mats):
+        img = _tex(m, 'emissive')
+        cells.append((atlas_cell(i, n), _px(img) if img is not None else None))
+    if all(c[1] is None for c in cells):
+        return out
+    uv = me.uv_layers[0].data
+    for li in range(len(me.loops)):
+        u, v = uv[li].uv
+        for (u0, v0, du, dv), px in cells:
+            if px is None or not (u0 - 1e-6 <= u <= u0 + du + 1e-6 and v0 - 1e-6 <= v <= v0 + dv + 1e-6):
+                continue
+            h, w = px.shape[:2]
+            x = min(w - 1, int((u - u0) / du * w)); y = min(h - 1, int((v - v0) / dv * h))
+            e = px[y, x, :3]
+            lum = float(max(e))
+            if lum > 0.2:
+                k = min(1.0, (lum - 0.2) / 0.5)
+                o = li * 4
+                out[o:o + 3] = [float(c) / max(lum, 1e-4) for c in e]
+                out[o + 3] = 1.0 - 0.9 * k          # < 0,5 acende no Kezor/LowPoly
+            break
+    return out
+
+
 def export_parts(set_name, parts, wbody, piv, textures=True):
     mat = bpy.data.materials.get('KZ_EquipMaps') or bpy.data.materials.new('KZ_EquipMaps')
     done_tex = set()
@@ -340,8 +389,8 @@ def export_parts(set_name, parts, wbody, piv, textures=True):
         for a in list(me.color_attributes):
             me.color_attributes.remove(a)
         col = me.color_attributes.new('Col', 'BYTE_COLOR', 'CORNER')
-        col.data.foreach_set('color', [1.0, 1.0, 1.0, 1.0] * len(me.loops))
-        transfer_weights(wbody, mesh, ALLOWED[piece])
+        col.data.foreach_set('color', emissive_colors(mesh, objs, mats))
+        transfer_weights(wbody, mesh, ALLOWED[piece], WEIGHT_MIX.get(piece))
         for g in list(mesh.vertex_groups):
             mesh.vertex_groups.remove(g)
         # pivô na origem e malha já em Y-up (como o prebake do kezor_export): no FBX a "Piece" fica
@@ -389,6 +438,8 @@ def write_hide(set_name, model, parts, body_objs, reach=0.12):
         for v in bm.verts:
             best, bd = None, 9.0
             for piece, t in trees.items():
+                if v.co.z < HIDE_ZMIN.get(piece, -9.0):
+                    continue
                 hits = 0
                 for d in (v.normal, (v.normal + up).normalized(), (v.normal - up).normalized()):
                     if t.ray_cast(v.co + d * 0.001, d, reach)[0] is not None:
