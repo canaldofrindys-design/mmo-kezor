@@ -47,8 +47,8 @@ namespace Kezor.Tests
             float x0 = c.X;
             gs.Handle(1, $"MOVE {Protocol.F(x0 + 50)} {Protocol.F(c.Z)}");
             Run(gs, 1f);
-            Assert.AreEqual(x0 + c.MoveSpeed, c.X, 0.4f);   // anda só "velocidade × tempo", não teleporta
-            Run(gs, 20f);
+            Assert.AreEqual(x0 + GameServer.TownWalkSpeed, c.X, 0.4f);   // na vila caminha: só "velocidade × tempo", não teleporta
+            Run(gs, 40f);
             Assert.AreEqual(x0 + 50, c.X, 0.1f);
             StringAssert.StartsWith("ERR", gs.Handle(1, "MOVE abc 1"));
             StringAssert.StartsWith("ERR", gs.Handle(1, "MOVE NaN 1"));
@@ -98,7 +98,7 @@ namespace Kezor.Tests
                 c.X = map.SafeX + ux * (map.WallRadius + 6f); c.Z = map.SafeZ + uz * (map.WallRadius + 6f);
                 float tx = map.SafeX + ux * (MapDefinition.FountainRadius + 1.5f), tz = map.SafeZ + uz * (MapDefinition.FountainRadius + 1.5f);
                 gs.Handle(1, $"MOVE {Protocol.F(tx)} {Protocol.F(tz)}");
-                Run(gs, (map.WallRadius + 2f) / c.MoveSpeed + 0.5f);
+                Run(gs, (map.WallRadius + 2f) / GameServer.TownWalkSpeed + 0.5f);   // dentro da vila caminha
                 Assert.AreEqual(0f, MathK.Dist(c.X, c.Z, tx, tz), 0.2f, $"portão {g}");
             }
         }

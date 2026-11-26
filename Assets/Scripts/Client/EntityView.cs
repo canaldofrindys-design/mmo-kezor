@@ -125,6 +125,7 @@ namespace Kezor.Client
             // Asas só levantam voo fora da vila/zonas seguras; dentro delas o herói pousa e anda no chão.
             var here = transform.position; var map = WorldBuilder.Current;
             bool safe = map != null && map.InSafeZone(here.x, here.z);
+            _inTown = safe;
             _fly = Mathf.Lerp(_fly, Rig.Flying && !Rig.Seated && !safe ? 1f : 0f, 1f - Mathf.Exp(-3f * dt));
             _walk += dt * (moving ? Mathf.Clamp(_speed * 1.9f, 4f, 13f) : 0f);
             _attackT += dt;
@@ -277,6 +278,7 @@ namespace Kezor.Client
         // ================================================================ animações do Blender (KezorAnim)
         private KezorAnim? _clips;
         private float _gait, _idleT, _flyT;
+        private bool _inTown;
         private string _atkClip = "Slash1";
         private Vector3 _hip;
         private readonly Quaternion[] _qa = new Quaternion[KezorAnim.Count], _qb = new Quaternion[KezorAnim.Count], _qc = new Quaternion[KezorAnim.Count];
@@ -294,7 +296,7 @@ namespace Kezor.Client
             var A = _clips!;
             float sx = Rig.MirrorX, sc = Rig.BoneScale;
             float spd = _speed / Mathf.Max(0.3f, sc);
-            float runW = Smooth01(1.6f, 3.4f, spd);
+            float runW = _inTown && !Rig.Seated ? 0f : Smooth01(2.6f, 3.8f, spd);   // na vila só caminha
             float sw = A.Stride.TryGetValue("Walk", out var a1) ? a1 : 1f, sr = A.Stride.TryGetValue("Run", out var a2) ? a2 : 3.1f;
             _gait += dt * spd / Mathf.Lerp(sw, sr, runW);
             _idleT += dt; _flyT += dt;

@@ -683,13 +683,18 @@ namespace Kezor.Core.Server
             else s.Path = null;
             float sx = wx - c.X, sz = wz - c.Z, sd = (float)Math.Sqrt(sx * sx + sz * sz);
             if (sd < 0.0001f) return true;
-            float step = Math.Min(c.MoveSpeed * dt, routed ? sd : Math.Max(0f, d - stopAt));
+            // dentro da vila e das zonas seguras o herói caminha (sem montaria); fora delas, corre
+            float speed = !c.Mounted && map.InSafeZone(c.X, c.Z) ? Math.Min(c.MoveSpeed, TownWalkSpeed) : c.MoveSpeed;
+            float step = Math.Min(speed * dt, routed ? sd : Math.Max(0f, d - stopAt));
             float x = c.X, z = c.Z;
             if (!map.TryStep(ref x, ref z, sx / sd, sz / sd, step)) { s.Path = null; return true; } // encurralado: para
             if (Math.Abs(x - c.X) + Math.Abs(z - c.Z) > 0.0001f) c.Facing = (float)(Math.Atan2(x - c.X, z - c.Z) * 180.0 / Math.PI);
             c.X = x; c.Z = z;
             return !routed && d - step <= stopAt + 0.001f;
         }
+
+        /// <summary>Velocidade de caminhada na vila (m/s).</summary>
+        public const float TownWalkSpeed = 2.2f;
 
         /// <summary>Portais: pisar no círculo leva ao outro mapa (nível mínimo do destino; 2 s de espera após chegar).</summary>
         private void CheckPortals(Session s, Character c)
