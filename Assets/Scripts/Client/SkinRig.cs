@@ -254,6 +254,43 @@ namespace Kezor.Client
             return any;
         }
 
+        /// <summary>
+        /// Malhas do corpo/roupa em que o antebraço ou a mão encostava no quadril vieram com faces ligando o braço à coxa
+        /// (pesos duros: um vértice no braço, o vizinho na perna). Ao andar essas faces esticam como uma tira presa ao braço.
+        /// Abaixo das axilas o braço nunca se liga ao tronco: essas faces saem da malha.
+        /// </summary>
+        private static void CutArmBridges(Mesh mesh, BoneWeight[] bw, Matrix4x4 toBody, float s)
+        {
+            int n = bw.Length;
+            var arm = new bool[n];
+            static bool IsArm(int b) => b >= KezorAnim.ArmL && b <= KezorAnim.HandR;
+            for (int i = 0; i < n; i++)
+            {
+                var w = bw[i];
+                float a = (IsArm(w.boneIndex0) ? w.weight0 : 0) + (IsArm(w.boneIndex1) ? w.weight1 : 0)
+                        + (IsArm(w.boneIndex2) ? w.weight2 : 0) + (IsArm(w.boneIndex3) ? w.weight3 : 0);
+                arm[i] = a > 0.5f;
+            }
+            var keep = new List<int>();
+            for (int sub = 0; sub < mesh.subMeshCount; sub++)
+            {
+                var tris = mesh.GetTriangles(sub);
+                keep.Clear();
+                bool cut = false;
+                for (int t = 0; t + 2 < tris.Length; t += 3)
+                {
+                    int a = tris[t], b = tris[t + 1], c = tris[t + 2];
+                    if (arm[a] != arm[b] || arm[b] != arm[c])
+                    {
+                        float h = (toBody.MultiplyPoint3x4(_v[a]).y + toBody.MultiplyPoint3x4(_v[b]).y + toBody.MultiplyPoint3x4(_v[c]).y) / (3f * s);
+                        if (h < 1.12f) { cut = true; continue; }
+                    }
+                    keep.Add(a); keep.Add(b); keep.Add(c);
+                }
+                if (cut) mesh.SetTriangles(keep, sub, false);
+            }
+        }
+
         private static void Convert(Rig rig, MeshFilter mf, MeshRenderer mr, string part, Transform[] bones, Transform body, float s, float sx)
         {
             var src = mf.sharedMesh;
@@ -287,6 +324,7 @@ namespace Kezor.Client
                 bw[i] = new BoneWeight { boneIndex0 = b0, weight0 = w0 / sum, boneIndex1 = b1, weight1 = w1 / sum, boneIndex2 = b2, weight2 = w2 / sum };
             }
             mesh.boneWeights = bw;
+            if (painted && (part == "Body" || part == "Full")) CutArmBridges(mesh, bw, toBody, s);
             var bind = new Matrix4x4[bones.Length];
             for (int i = 0; i < bones.Length; i++) bind[i] = bones[i].worldToLocalMatrix * mf.transform.localToWorldMatrix;
             mesh.bindposes = bind;

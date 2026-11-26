@@ -172,6 +172,8 @@ CHOICE = {'Walk': (29, 135, 1.10), 'Run': (57, 89, 1.20)}
 # abertura extra dos braços (graus): o ator do mocap é magro; nos heróis (ombros largos, armadura) o braço
 # colado ao corpo atravessa o tronco e a roupa
 ABDUCT = {'Walk': 10.0, 'Run': 13.0}
+# clipes feitos à mão (kezor_anim) que também abrem os braços; aplicado uma vez (linha "abduct <clipe> <graus>")
+ABDUCT_EXTRA = {'Idle': 9.0}
 ARM_CHAIN = {'L': ('ArmL', 'ForeArmL', 'HandL'), 'R': ('ArmR', 'ForeArmR', 'HandR')}
 
 
@@ -210,18 +212,41 @@ def main(heroi, walk_bvh, run_bvh):
         fr, stride, _ = finalize(fr, dur)
         fr = abduct(fr, ABDUCT[name])
         new[name] = (clip_lines(name, fr, dur), stride * fac)
+    src = open(heroi, encoding='utf-8').read().split('\n')
+    done = {l.split()[1] for l in src if l.startswith('abduct ')}
+    extra = {}
+    for name, deg in ABDUCT_EXTRA.items():
+        if name in done:
+            continue
+        fr, cur, dur, loop = [], False, 0.0, 1
+        for l in src:
+            if l.startswith('clip '):
+                t = l.split(); cur = t[1] == name
+                if cur: dur, loop = float(t[4]), int(t[3])
+                continue
+            if cur and l.startswith('f '):
+                v = list(map(float, l.split()[1:]))
+                rs = [R.from_quat([v[4 + i * 4], v[5 + i * 4], v[6 + i * 4], v[3 + i * 4]]) for i in range(15)]
+                fr.append((np.array(v[:3]), rs))
+        if fr:
+            L = clip_lines(name, abduct(fr, deg), dur)
+            L[0] = 'clip %s %d %d %.4f' % (name, len(fr), loop, dur)
+            extra[name] = L
     out, skip = [], False
-    for l in open(heroi, encoding='utf-8').read().split('\n'):
+    for l in src:
         if l.startswith('stride ') and l.split()[1] in new:
             n = l.split()[1]; out.append('stride %s %.4f' % (n, new[n][1])); continue
         if l.startswith('clip '):
             n = l.split()[1]
-            skip = n in new
+            skip = n in new or n in extra
             if skip:
-                out.extend(new[n][0]); continue
+                out.extend(new[n][0] if n in new else extra[n]); continue
         if skip and l.startswith('f '):
             continue
         out.append(l)
+    i = max(k for k, l in enumerate(out) if l.startswith('stride ') or l.startswith('rest ') or l.startswith('abduct ')) + 1
+    for name in extra:
+        out.insert(i, 'abduct %s %.1f' % (name, ABDUCT_EXTRA[name]))
     open(heroi, 'w', encoding='utf-8', newline='\n').write('\n'.join(out))
 
 
