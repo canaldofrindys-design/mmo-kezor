@@ -235,6 +235,7 @@ namespace Kezor.Client
             hub.localScale = Vector3.one * 1.3f;                                    // asas mais imponentes
             Object.Destroy(go);
             rig.WingL = hub.Find("WingL"); rig.WingR = hub.Find("WingR");
+            rig.Flying = !rig.Seated;
             var rs = new List<Renderer>(hub.GetComponentsInChildren<Renderer>());
             rig.Renderers.AddRange(rs);
             fx.Decorate(rs, level, false, sparks: false);

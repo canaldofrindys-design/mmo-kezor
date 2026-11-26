@@ -20,6 +20,8 @@ namespace Kezor.Client
         /// <summary>Montado: pernas do cavaleiro dobradas e paradas; quem anda é a montaria (ExtraLegs).</summary>
         public bool Seated;
         public Transform? WingL, WingR;
+        /// <summary>Herói com asas equipadas: voa baixo (flutua, inclina para a frente, bate e plana as asas).</summary>
+        public bool Flying;
         /// <summary>Chamado quando o personagem golpeia (rastro da arma épica).</summary>
         public System.Action? OnAttack;
     }

@@ -96,20 +96,26 @@ namespace Kezor.Client
                 return;
             }
             bool moving = _speed > 0.4f;
-            _walk += dt * (moving ? Mathf.Clamp(_speed * 1.8f, 4f, 12f) : 0f);
-            float swing = moving ? Mathf.Sin(_walk) * 35f : 0f;
-            if (Rig.Seated)
-            {   // montado: pernas abertas em volta da sela, sem passada
-                if (Rig.LegL != null) Rig.LegL.localRotation = Quaternion.Euler(-72f, 0, 28f);
-                if (Rig.LegR != null) Rig.LegR.localRotation = Quaternion.Euler(-72f, 0, -28f);
-            }
-            else
+            float run = Mathf.Clamp01((_speed - 0.4f) / 4.5f);                 // 0 parado .. 1 correndo
+            _move = Mathf.Lerp(_move, moving ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
+            _fly = Mathf.Lerp(_fly, Rig.Flying && !Rig.Seated ? 1f : 0f, 1f - Mathf.Exp(-3f * dt));
+            _walk += dt * (moving ? Mathf.Clamp(_speed * 1.9f, 4f, 13f) : 0f);
+            _attackT += dt;
+            bool humanoid = Rig.ArmR != null && Rig.LegL != null && !Rig.Bouncy && !Rig.Hover;
+
+            if (humanoid)
             {
-                if (Rig.LegL != null) Rig.LegL.localRotation = Quaternion.Euler(swing, 0, 0);
-                if (Rig.LegR != null) Rig.LegR.localRotation = Quaternion.Euler(-swing, 0, 0);
+                AnimateHumanoid(dt, t, run);
+                _hitT += dt;
+                SetFlash(_hitT < 0.15f ? 0.65f * (1f - _hitT / 0.15f) : 0f);
+                return;
             }
+
+            float swing = moving ? Mathf.Sin(_walk) * 35f : 0f;
+            if (Rig.LegL != null) Rig.LegL.localRotation = Quaternion.Euler(swing, 0, 0);
+            if (Rig.LegR != null) Rig.LegR.localRotation = Quaternion.Euler(-swing, 0, 0);
             if (Rig.WingL != null && Rig.WingR != null)
-            {   // asas: batida lenta parado, mais forte andando
+            {   // asas de monstro (mariposa): batida lenta parado, mais forte andando
                 float f = Mathf.Sin(t * (moving ? 7f : 2.4f)) * (moving ? 26f : 10f);
                 Rig.WingL.localRotation = Quaternion.Euler(0, -18f, f + 6f);
                 Rig.WingR.localRotation = Quaternion.Euler(0, 18f, -f - 6f);
@@ -122,13 +128,10 @@ namespace Kezor.Client
                 var e = leg.localRotation.eulerAngles;
                 leg.localRotation = Quaternion.Euler(s, e.y, e.z);
             }
-
-            _attackT += dt;
             float atk = _attackT < 0.35f ? Mathf.Sin(_attackT / 0.35f * Mathf.PI) : 0f;
             float idleArm = Mathf.Sin(t * 2f) * 3f;
             if (Rig.ArmR != null) Rig.ArmR.localRotation = Quaternion.Euler(-swing * 0.6f - atk * 110f + idleArm, 0, 0);
             if (Rig.ArmL != null) Rig.ArmL.localRotation = Quaternion.Euler(swing * 0.6f - atk * 20f - idleArm, 0, 0);
-
             var bodyPos = Vector3.zero;
             var bodyScale = Vector3.one;
             if (Rig.Bouncy)
@@ -138,7 +141,7 @@ namespace Kezor.Client
                 bodyScale = new Vector3(1f + (1 - k) * 0.12f, 1f - (1 - k) * 0.15f + atk * 0.3f, 1f + (1 - k) * 0.12f);
             }
             else if (Rig.Hover) bodyPos.y = 0.4f + Mathf.Sin(t * 1.6f) * 0.15f;
-            else if (moving) bodyPos.y = Mathf.Abs(Mathf.Sin(_walk)) * (Rig.Seated ? 0.1f : 0.06f);
+            else if (moving) bodyPos.y = Mathf.Abs(Mathf.Sin(_walk)) * 0.06f;
             bodyPos.z = atk * 0.25f;
             Rig.Body.localPosition = Rig.BodyBase + bodyPos;
             if (Rig.Bouncy) Rig.Body.localScale = bodyScale * _baseScale;
@@ -146,6 +149,96 @@ namespace Kezor.Client
             _hitT += dt;
             float flash = _hitT < 0.15f ? 0.65f * (1f - _hitT / 0.15f) : 0f;
             SetFlash(flash);
+        }
+
+        private float _move, _fly, _glide;
+
+        /// <summary>
+        /// Herói, NPC e humanoides (estilo MMO clássico): respiração parado, corrida com o tronco inclinado e braços em
+        /// contraposição, golpe em três tempos (prepara, corta, volta) com giro do tronco e avanço; com asas, voo baixo:
+        /// flutua ~0,7 m, o corpo deita para a frente conforme a velocidade, pernas soltas para trás, braços abertos e
+        /// as asas alternam batidas fortes e planeio.
+        /// </summary>
+        private void AnimateHumanoid(float dt, float t, float run)
+        {
+            float mv = _move, fl = _fly;
+            float ph = _walk;
+            // ---- golpe: 0..0,12 prepara (braço sobe atrás), 0,12..0,28 corta, 0,28..0,5 volta
+            float a = _attackT, wind = 0f, strike = 0f;
+            if (a < 0.12f) wind = Mathf.SmoothStep(0, 1, a / 0.12f);
+            else if (a < 0.28f) { wind = 1f - (a - 0.12f) / 0.16f; strike = Mathf.Sin((a - 0.12f) / 0.16f * Mathf.PI * 0.5f); }
+            else if (a < 0.5f) strike = 1f - Mathf.SmoothStep(0, 1, (a - 0.28f) / 0.22f);
+            float atkAny = Mathf.Max(wind, strike);
+
+            // ---- chão: passada, contraposição, respiração
+            float stride = Mathf.Lerp(28f, 46f, run) * mv * (1f - fl);
+            float legS = Mathf.Sin(ph) * stride;
+            float breathe = Mathf.Sin(t * 1.9f);
+            float armSwing = -Mathf.Sin(ph) * Mathf.Lerp(22f, 40f, run) * mv * (1f - fl);
+            float lean = (Mathf.Lerp(4f, 11f, run) * mv) * (1f - fl);
+            float bob = Mathf.Abs(Mathf.Sin(ph)) * Mathf.Lerp(0.04f, 0.09f, run) * mv * (1f - fl);
+
+            // ---- voo
+            _glide += dt * (mv > 0.5f ? 1f : 0.45f);
+            float cyc = Mathf.Repeat(_glide, 2.2f);                        // ciclo: 2 batidas fortes e planeio
+            bool flapping = mv < 0.5f || cyc < 1.0f;
+            float flapF = flapping ? Mathf.Sin(t * (mv > 0.5f ? 11f : 4.2f)) : Mathf.Sin(t * 1.3f) * 0.15f;
+            float flyLean = Mathf.Lerp(6f, 38f, run * mv);                  // deita mais quanto mais rápido
+            float hover = 0.7f + Mathf.Sin(t * 2.1f) * 0.08f + (flapping ? Mathf.Max(0f, flapF) * 0.05f : 0f);
+
+            float pitch = (lean * (1f - fl) + flyLean * fl) * (Rig.Seated ? 0.3f : 1f);
+            float twist = (wind * -22f + strike * 18f);
+            var rot = Quaternion.Euler(pitch + strike * 6f, twist, Mathf.Sin(ph) * 2.5f * mv * (1f - fl));
+            var pivot = new Vector3(0, 1.0f, 0);                             // gira em volta do quadril, não dos pés
+            var pos = Rig.BodyBase + pivot - rot * pivot;
+            pos.y += bob + hover * fl + breathe * 0.006f * (1f - mv);
+            pos += rot * new Vector3(0, 0, strike * 0.22f);                  // avanço no golpe
+            Rig.Body.localPosition = pos;
+            Rig.Body.localRotation = rot;
+
+            for (int i = 0; i < Rig.ExtraLegs.Count; i++)   // montaria: as patas é que andam
+            {
+                var leg = Rig.ExtraLegs[i];
+                float s = mv > 0.1f ? Mathf.Sin(ph + i * 1.7f) * 25f * mv : 0f;
+                var e = leg.localRotation.eulerAngles;
+                leg.localRotation = Quaternion.Euler(s, e.y, e.z);
+            }
+            // pernas
+            if (Rig.Seated)
+            {
+                Rig.LegL!.localRotation = Quaternion.Euler(-72f, 0, 28f);
+                Rig.LegR!.localRotation = Quaternion.Euler(-72f, 0, -28f);
+            }
+            else
+            {
+                float trail = fl * (Mathf.Lerp(8f, 34f, run * mv));          // pernas soltas para trás no voo
+                float dangle = fl * Mathf.Sin(t * 1.7f) * 6f;
+                Rig.LegL!.localRotation = Quaternion.Euler(legS + trail + dangle, 0, fl * 4f);
+                Rig.LegR!.localRotation = Quaternion.Euler(-legS + trail * 0.8f - dangle, 0, -fl * 4f);
+            }
+
+            // braços: contraposição; no voo abertos e para trás; golpe no braço direito
+            float idle = breathe * 2.5f * (1f - mv);
+            float flyArmX = fl * Mathf.Lerp(-10f, 28f, run * mv), flyArmZ = fl * 22f;
+            float baseR = armSwing + idle + flyArmX, rx;
+            if (a < 0.12f) rx = Mathf.Lerp(baseR, -165f, wind);                               // prepara: braço acima da cabeça
+            else if (a < 0.28f) rx = Mathf.Lerp(-165f, -35f, 1f - (1f - (a - 0.12f) / 0.16f) * (1f - (a - 0.12f) / 0.16f));   // corta
+            else if (a < 0.5f) rx = Mathf.Lerp(baseR, -35f, strike);                             // volta
+            else rx = baseR;
+            Rig.ArmR!.localRotation = Quaternion.Euler(rx, 0, -flyArmZ - atkAny * 8f - 3f);
+            Rig.ArmL!.localRotation = Quaternion.Euler(-armSwing - idle + flyArmX - atkAny * 25f, 0, flyArmZ + 3f + atkAny * 10f);
+            if (Rig.Head != null) Rig.Head.localRotation = Quaternion.Euler(-pitch * 0.55f + breathe * 1.2f * (1f - mv), -twist * 0.5f, 0);
+
+            // asas do herói: abertas e firmes; batida forte voando, lenta parado no chão; planeio aberto
+            if (Rig.WingL != null && Rig.WingR != null)
+            {
+                float open = 10f + fl * 8f;
+                float amp = fl > 0.5f ? (flapping ? (mv > 0.5f ? 34f : 18f) : 4f) : (mv > 0.5f ? 20f : 9f);
+                float f = flapF * amp;
+                float sweep = -12f - fl * mv * 14f;                           // varrida para trás no voo rápido
+                Rig.WingL.localRotation = Quaternion.Euler(fl * 6f, sweep, f + open);
+                Rig.WingR.localRotation = Quaternion.Euler(fl * 6f, -sweep, -f - open);
+            }
         }
 
         private float _baseScale = 1f;
