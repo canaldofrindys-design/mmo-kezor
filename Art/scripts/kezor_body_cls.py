@@ -155,7 +155,7 @@ def _hair_shell_obj(shells):
     return objs
 
 
-def hair_cls(body, style):
+def hair_cls(body, style, line_drop=0.0):
     _region_copy = KZG['_region_copy']
     _smooth = KZG['_smooth']
     gain = {'short': 1.0, 'long': 1.0, 'ponytail': 0.8, 'slick': 0.55, 'shaggy': 1.9, 'mohawk': 1.0}[style]
@@ -167,7 +167,7 @@ def hair_cls(body, style):
             return abs(p.x) < 0.024 + 0.004 * _smooth(1.79, 1.7, p.z) and p.y > -0.035 + 0.25 * max(0.0, 1.76 - p.z) and p.z > 1.68
         front = p.y < -0.02
         if front:
-            line = 1.735 if style != 'shaggy' else 1.715
+            line = (1.735 if style != 'shaggy' else 1.715) - line_drop
             return p.z > line + 0.02 * (abs(p.x) / 0.08) ** 2
         if abs(p.x) > 0.06 and p.z < 1.69 and p.y < 0.03:
             if style in ('long', 'shaggy'):
@@ -191,7 +191,7 @@ def hair_cls(body, style):
     if style == 'long':
         def drape(u, v):
             t = 1 - v
-            half = 96 - 16 * t ** 1.3                       # embaixo fica só atrás dos ombros
+            half = 78 - 8 * t ** 1.3                       # embaixo fica só atrás dos ombros
             az = (180 + half * (2 * u - 1)) * math.pi / 180
             tips = abs(math.sin(math.pi * 9 * u)) ** 0.5     # pontas das mechas na barra
             z = 1.70 - (0.30 + 0.04 * tips) * t
@@ -211,15 +211,16 @@ def hair_cls(body, style):
     return parts
 
 
-def beard(body):
+def beard(body, top=1.652, mouth=1.611):
     _region_copy = KZG['_region_copy']
 
     def keep(p):
-        if not (1.57 < p.z < 1.652 and p.y < 0.01):
+        side = max(0.0, min(1.0, (abs(p.x) - 0.03) / 0.04))
+        if not (1.53 < p.z < top + 0.035 * side and p.y < 0.01):
             return False
-        if abs(p.z - 1.611) < 0.009 and abs(p.x) < 0.03 and p.y < -0.06:
+        if abs(p.z - mouth) < 0.011 and abs(p.x) < 0.032 and p.y < -0.06:
             return False                                              # boca livre
-        if p.z > 1.632 and abs(p.x) < 0.022 and p.y < -0.07:
+        if p.z > top - 0.02 and abs(p.x) < 0.03 and p.y < -0.07:
             return False                                              # buço curto
         return abs(p.x) < 0.09
     return _region_copy(body, 'KZ_Barba', keep, 0.005, lambda p: 0.002 * math.sin(p.x * 300 + p.z * 200), solid=0.004)
