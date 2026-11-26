@@ -169,7 +169,7 @@ namespace Kezor.Client
         /// a viseira. Capuzes e elmos abertos (que não cobrem a cabeça) deixam o rosto à mostra.
         /// </summary>
         /// <summary>Conjuntos de elmo fechado (viseira): os outros (capuz, faixa, gorro) mostram o rosto.</summary>
-        private static readonly HashSet<string> ClosedHelms = new HashSet<string> { "Runica", "Escamas", "Trama", "Bastiao" };
+        private static readonly HashSet<string> ClosedHelms = new HashSet<string> { "Bastiao" };   // Rúnica (v5), Escamas e Trama têm o rosto aberto
 
         private static void HideHeadUnderHelm(Rig rig, List<Renderer>? helm)
         {
