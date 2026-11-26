@@ -173,6 +173,13 @@ namespace Kezor.Client
         /// <summary>Clima de fantasia sombria: sol baixo alaranjado, céu azul-acinzentado, névoa fria.</summary>
         public static void ApplyEnvironment(Camera cam) => ApplyEnvironment(cam, Kezor.Core.World.MapDefinition.ValeId);
 
+        /// <summary>Vale de dia (comando /dia no chat; /noite volta ao luar). Fica salvo entre as sessões.</summary>
+        public static bool Day
+        {
+            get => PlayerPrefs.GetInt("kezor.dia", 0) == 1;
+            set { PlayerPrefs.SetInt("kezor.dia", value ? 1 : 0); PlayerPrefs.Save(); }
+        }
+
         /// <summary>Luz e névoa por mapa: Vale (noite de luar), Pântano (névoa verde baixa) e Cripta (escuro violeta).</summary>
         public static void ApplyEnvironment(Camera cam, int mapId)
         {
@@ -194,7 +201,15 @@ namespace Kezor.Client
                     sunC = new Color(0.78f, 0.84f, 0.95f); sky = new Color(0.5f, 0.58f, 0.7f); ground = new Color(0.3f, 0.32f, 0.38f);
                     fog = new Color(0.36f, 0.42f, 0.52f); fogP = new Vector4(18f, 62f, 0.9f, 0);
                     break;
-                default:   // noite de luar: azul frio vindo de cima, o calor vem dos braseiros, postes e da fonte
+                default:
+                    if (Day)
+                    {   // dia claro: sol quente e alto, céu azul e névoa leve e distante
+                        sun = Quaternion.Euler(52f, -35f, 0) * Vector3.forward;
+                        sunC = new Color(1.0f, 0.93f, 0.8f); sky = new Color(0.56f, 0.68f, 0.86f); ground = new Color(0.27f, 0.24f, 0.19f);
+                        fog = new Color(0.64f, 0.74f, 0.86f); fogP = new Vector4(45f, 130f, 0.55f, 0);
+                        break;
+                    }
+                    // noite de luar: azul frio vindo de cima, o calor vem dos braseiros, postes e da fonte
                     sun = Quaternion.Euler(50f, -35f, 0) * Vector3.forward;
                     sunC = new Color(0.5f, 0.6f, 0.9f) * 0.5f; sky = new Color(0.17f, 0.21f, 0.33f); ground = new Color(0.07f, 0.06f, 0.07f);
                     fog = new Color(0.05f, 0.065f, 0.11f); fogP = new Vector4(34f, 82f, 0.88f, 0);
@@ -207,7 +222,9 @@ namespace Kezor.Client
             Shader.SetGlobalColor("_KezorFogColor", fog);
             Shader.SetGlobalVector("_KezorFogParams", fogP);
             Shader.SetGlobalFloat("_KezorEmissive", 1f);
-            KezorUrp.SetSun(sun, sunC, mapId == Kezor.Core.World.MapDefinition.ValeId ? 0.4f : 0.6f);   // URP: sol com sombra
+            bool valeNight = mapId == Kezor.Core.World.MapDefinition.ValeId && !Day;
+            KezorUrp.SetSun(sun, sunC, valeNight ? 0.4f : 0.6f);   // URP: sol com sombra
+            LocalLights.Strength = mapId == Kezor.Core.World.MapDefinition.ValeId && Day ? 0.5f : 1.7f;   // de dia as tochas quase não aparecem
             // névoa rasteira (x = topo, y = espessura, z = intensidade, w = puxa para o tom do céu)
             Shader.SetGlobalVector("_KezorLowFog", mapId == Kezor.Core.World.MapDefinition.SwampId ? new Vector4(0.7f, 1.1f, 0.75f, 0.25f)
                 : mapId == Kezor.Core.World.MapDefinition.CryptId ? new Vector4(0.35f, 0.7f, 0.5f, 0.45f)

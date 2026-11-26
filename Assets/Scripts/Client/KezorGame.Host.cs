@@ -41,6 +41,7 @@ namespace Kezor.Client
                 game = new GameServer(repo: new JsonFileRepository(HostDataFolder), options: new ServerOptions
                 {
                     RequireAccounts = true, ServerName = "Servidor de " + Environment.UserName, Channel = 1, MaxPlayers = 50,
+                    AllowGm = Application.isEditor,   // testando no editor: comandos /GM liberados (itens, nível, ouro...)
                 });
                 var tcp = new TcpServerHost(game, port);
                 tcp.Start();

@@ -99,6 +99,12 @@ namespace Kezor.Client
         {
             var t = text.Trim();
             if (t.Length == 0) return;
+            if (t == "/dia" || t == "/noite")
+            {   // só visual, neste PC: troca a luz do Vale entre dia e noite de luar
+                KezorLook.Day = t == "/dia";
+                KezorLook.ApplyEnvironment(_cam, _map.Id);
+                return;
+            }
             if (t.StartsWith("/g ")) { Send("GSAY " + t.Substring(3)); return; }
             if (t.StartsWith("/p ")) { Send("SAY " + t); return; }
             if (t.StartsWith("/")) { Send(t.Substring(1)); return; }
