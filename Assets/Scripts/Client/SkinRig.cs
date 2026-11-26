@@ -225,7 +225,8 @@ namespace Kezor.Client
             {
                 var bmin = Vector3.positiveInfinity; var bmax = Vector3.negativeInfinity;
                 foreach (var v in _v) { var q = toBody.MultiplyPoint3x4(v); bmin = Vector3.Min(bmin, q); bmax = Vector3.Max(bmax, q); }
-                if (Mathf.Max(-bmin.x, bmax.x) / s > 0.27f && bmin.y / s < 0.5f) part = "Full";
+                // só o corpo inteiro (vai do pé até a cabeça); armadura com capa longa continua rígida no tronco
+                if (Mathf.Max(-bmin.x, bmax.x) / s > 0.27f && bmin.y / s < 0.5f && bmax.y / s > 1.74f) part = "Full";
             }
             for (int i = 0; i < _v.Count; i++)
             {

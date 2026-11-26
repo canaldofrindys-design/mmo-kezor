@@ -10,7 +10,7 @@ RES = 0.5           # densidade da grade (1 = máxima); o jogo pede ~35 mil tri�
 
 SETS6 = {
     # nome: (aço claro, aço escuro, ouro, runa, capa clara, capa escura, couro)
-    'Runica': ('#a9b4bf', '#1f252c', '#e0ad4f', '#5fe0ff', '#8c1626', '#2a060b', '#3b2a20'),
+    'Runica': ('#c9d2db', '#161a20', '#e0ad4f', '#5fe0ff', '#8c1626', '#2a060b', '#3b2a20'),
 }
 
 
@@ -197,7 +197,7 @@ def tubes_obj(name, tubes, res=1):
 def cuirass():
     """Peitoral (frente) com quilha central e peitorais em relevo; costas separadas; cava do braço recortada."""
     def rx(z):
-        return 0.183 + 0.052 * _sm(1.04, 1.30, z) - 0.07 * _sm(1.38, 1.46, z)
+        return 0.183 + 0.075 * _sm(1.04, 1.32, z) - 0.09 * _sm(1.38, 1.46, z)
 
     def ry(z):
         return 0.112 + 0.022 * _sm(1.04, 1.28, z) - 0.03 * _sm(1.38, 1.46, z)
@@ -326,12 +326,13 @@ def gorget():
 def pauldrons(side):
     """Ombreira grande: cúpula com crista + 3 lâminas que abrem para fora, tudo inclinado para o lado."""
     sgn = 1 if side == 'L' else -1
-    S = Vector((0.285, 0.004, 1.395))
-    tilt = Matrix.Rotation(-18 * D2R, 3, 'Y')        # em coordenadas do lado esquerdo; o espelho vem pelo sgn
+    S = Vector((0.30, 0.004, 1.405))
+    tilt = Matrix.Rotation(-22 * D2R, 3, 'Y')        # em coordenadas do lado esquerdo; o espelho vem pelo sgn
+    SC = HERO_PAULDRON
     out = []
 
     def place(local):
-        return tuple(S + tilt @ Vector(local))
+        return tuple(S + tilt @ (Vector(local) * SC))
 
     def dome(u, v):
         a = _lerp(-62, 242, u)
@@ -370,7 +371,37 @@ def pauldrons(side):
         s = Shell('KZ6_Ombro%s_Lamina%d' % (side, j), lame, 44, 6, sgn=sgn, thick=0.006)
         s.border()
         out.append(s)
+    # pontas douradas saindo da cúpula (silhueta reconhecível de longe)
+    R = 0.152
+    for k, (a, th, L, r0) in enumerate(((90, 0.42, 0.11, 0.022), (90, 0.82, 0.075, 0.017), (35, 0.7, 0.05, 0.013), (145, 0.7, 0.05, 0.013))):
+        sa, ca = math.sin(a * D2R), math.cos(a * D2R)
+        loc = Vector((R * math.sin(th) * sa, -R * 0.92 * math.sin(th) * ca, R * 0.9 * math.cos(th) - 0.035))
+        nrm = Vector((math.sin(th) * sa, -math.sin(th) * ca, math.cos(th))).normalized()
+        axis = (nrm + Vector((0.25, 0, 0.9))).normalized()
+        out.append(spike('KZ6_Ombro%s_Ponta%d' % (side, k), S + tilt @ (loc * SC), tilt @ axis, r0, L, sgn))
     return out
+
+
+HERO_PAULDRON = 1.3
+
+
+def spike(name, base, axis, r0, L, sgn=1, kind='goldplate'):
+    """Ponta cônica levemente curvada para cima (coordenadas do lado esquerdo)."""
+    axis = Vector(axis).normalized()
+    t1 = axis.cross(Vector((0, 1, 0)))
+    if t1.length < 1e-3:
+        t1 = axis.cross(Vector((1, 0, 0)))
+    t1.normalize()
+    t2 = axis.cross(t1).normalized()
+    up = Vector((0, 0, 1))
+
+    def pos(u, v):
+        a = u * 2 * math.pi
+        r = r0 * (1 - v) ** 1.25 + 0.0006
+        p = Vector(base) + axis * (L * v) + up * (0.25 * L * v * v) + (t1 * math.cos(a) + t2 * math.sin(a)) * r
+        return p.x, p.y, p.z
+    sh = Shell(name, pos, 14, 8, sgn=sgn, thick=0.0, kind=kind)
+    return sh
 
 
 def arm(side):
@@ -400,8 +431,8 @@ def arm(side):
         a = _lerp(70, 250, u)
         z = _lerp(1.02, 1.15, v)
         bul = 0.028 * math.sin(v * math.pi) * _g(a - 165, 40)
-        wing = 0.02 * _g(a - 95, 22) * math.sin(v * math.pi)
-        r = 0.07 + bul + wing
+        wing = 0.045 * _g(a - 95, 22) * math.sin(v * math.pi)
+        r = 0.076 + bul + wing
         x, y = ring(cx, cy, r, r, a)
         return x, y, z
     s = Shell('KZ6_Cotovelo' + side, couter, 30, 12, sgn=sgn, thick=0.006)
@@ -411,8 +442,8 @@ def arm(side):
     def vamb(u, v):                                      # braçal com quilha e boca larga no punho
         a = _lerp(-80, 260, u)
         z = _lerp(0.815, 1.04, v)
-        r = 0.058 + 0.008 * v + 0.016 * _sm(0.18, 0.0, v)
-        r += 0.008 * _g(a - 60, 9)
+        r = 0.064 + 0.01 * v + 0.034 * _sm(0.22, 0.0, v)
+        r += 0.012 * _g(a - 60, 9)
         x, y = ring(cx, cy, r, r * 0.97, a)
         return x, y, z
     s = Shell('KZ6_Bracal' + side, vamb, 44, 14, sgn=sgn, thick=0.006)
@@ -424,8 +455,8 @@ def arm(side):
     def hand(u, v):                                      # manopla: casca da mão
         a = _lerp(-180, 180, u)
         z = _lerp(0.655, 0.80, v)
-        rx = 0.034 + 0.006 * _g(v - 0.45, 0.3)
-        ry = 0.058 * (0.75 + 0.25 * _sm(0.0, 0.5, v)) + 0.006 * _sm(0.8, 1.0, v)
+        rx = 0.044 + 0.007 * _g(v - 0.45, 0.3)
+        ry = 0.068 * (0.75 + 0.25 * _sm(0.0, 0.5, v)) + 0.008 * _sm(0.8, 1.0, v)
         x, y = ring(0.307, -0.022 + 0.01 * v, rx, ry, a)
         return x, y, z
     s = Shell('KZ6_Mao' + side, hand, 32, 10, sgn=sgn, thick=0.004, kind='leather')
@@ -434,7 +465,7 @@ def arm(side):
         def hl(u, v, j=j):
             a = _lerp(25, 155, u)
             z = _lerp(0.735 - 0.032 * j, 0.775 - 0.032 * j, v)
-            x, y = ring(0.307, -0.017, 0.044 - 0.002 * j, 0.066, a)
+            x, y = ring(0.307, -0.017, 0.055 - 0.002 * j, 0.077, a)
             return x, y, z
         s = Shell('KZ6_LamMao%s%d' % (side, j), hl, 14, 3, sgn=sgn, thick=0.004)
         s.border(sides='b')
@@ -463,8 +494,8 @@ def leg(side):
         a = _lerp(-75, 120, u)
         z = _lerp(0.455, 0.6, v)
         cup = 0.03 * math.sin(v * math.pi) * _g(a - 5, 45)
-        wing = 0.026 * _g(a - 95, 18) * math.sin(v * math.pi)
-        r = 0.068 + cup + wing
+        wing = 0.05 * _g(a - 95, 18) * math.sin(v * math.pi)
+        r = 0.072 + cup + wing
         x, y = ring(0.118, -0.01, r, r, a)
         return x, y, z
     s = Shell('KZ6_Joelho' + side, poleyn, 32, 12, sgn=sgn, thick=0.006)
@@ -475,7 +506,7 @@ def leg(side):
     def greave(u, v):                                    # greva com quilha, panturrilha e boca alargada
         a = _lerp(-180, 180, u)
         z = _lerp(0.115, 0.475, v)
-        r = 0.058 + 0.016 * _g(z - 0.36, 0.09) + 0.012 * _sm(0.85, 1.0, v)
+        r = 0.062 + 0.016 * _g(z - 0.36, 0.09) + 0.032 * _sm(0.8, 1.0, v)
         ry = r + 0.01 * _g(a, 50) + 0.03 * _g(abs(a) - 180, 70) * _g(z - 0.36, 0.11)
         r += 0.006 * _g(a, 5)
         ry += 0.007 * _g(a, 5)
@@ -581,6 +612,18 @@ def helm():
     s.border()
     out.append(s)
 
+    for sg, nm in ((1, 'L'), (-1, 'R')):                 # asas douradas: 3 penas por lado, varridas para trás
+        for k, (L, wd, lift) in enumerate(((1.0, 0.05, 0.0), (0.8, 0.042, -0.03), (0.6, 0.034, -0.055))):
+            def feather(u, v, L=L, wd=wd, lift=lift):
+                s0 = Vector((0.112, 0.035 + 0.01 * k, 1.665 + lift * 0.4))
+                ln = 0.2 * L
+                spine = s0 + Vector((0.05 * u, ln * 0.75 * u, (ln * 0.75 + lift * 0.3) * u ** 1.3 + lift * u))
+                w = wd * (1 - u) ** 0.65 * (0.6 + 0.4 * math.sin(math.pi * min(1.0, u * 1.6)))
+                p = spine + Vector((0.004, -0.55, 0.85)).normalized() * (w * (v - 0.25))
+                return p.x, p.y, p.z
+            sh = Shell('KZ6_Elmo_Asa%s%d' % (nm, k), feather, 16, 3, sgn=sg, thick=0.005, kind='goldplate')
+            out.append(sh)
+
     def crest(u, v):                                     # crista: lâmina fina no plano do meio
         el = _lerp(0.75, 2.85, u)                        # do alto da testa até a nuca
         h = 0.03 * math.sin(_lerp(0.0, math.pi, u)) ** 0.6 + 0.003
@@ -607,8 +650,37 @@ def build6(set_name='Runica'):
         objs[nm] = s.build()
         for t in tubes_obj(nm + '_T', s.tubes):
             objs[t.name] = t
+    # capa longa (até a canela)
+    cp = long_cape()
+    objs[cp.name] = cp
+    for t in tubes_obj(cp.name + '_T', CAPE_TUBES):
+        objs[t.name] = t
     paint6(objs, set_name)
     return objs
+
+
+CAPE_TUBES = []
+
+
+def long_cape():
+    CAPE_TUBES.clear()
+
+    def pos(u, v):
+        t = 1 - v                                        # 0 = gola, 1 = barra
+        z = 1.42 - 1.12 * t
+        uu = u * 2 - 1
+        half = 0.19 + 0.21 * t ** 0.8
+        x = uu * half
+        y = 0.13 + 0.05 * (1 - uu * uu) * (1 - t) + 0.17 * t ** 1.5 + 0.035 * abs(uu) * t
+        y += 0.018 * t * math.sin(uu * 7.5 + 0.6) + 0.007 * t * math.sin(uu * 17)
+        if v < 0.02:
+            z += 0.014 * math.sin(uu * 7.5 + 0.6)
+        return x, y, z
+    sh = Shell('KZ6_Capa', pos, 30, 36, thick=0.006, kind='cloth', flip=True)
+    sh.border(sides='lrb', r=0.0045)
+    CAPE_TUBES.extend(sh.tubes)
+    sh.tubes = []
+    return sh.build()
 
 
 def paint6(objs, set_name='Runica'):
@@ -648,7 +720,7 @@ def paint6(objs, set_name='Runica'):
             if kind in ('steel', 'goldplate'):
                 base = (st, sd) if kind == 'steel' else (gd, gd_d)
                 edge = min(u * wu, (1 - u) * wu, v * wv, (1 - v) * wv)
-                k = 0.12 + 0.70 * top ** 1.6 + 0.18 * _sm(0.4, 1.8, co.z)
+                k = 0.05 + 0.80 * top ** 2.2 + 0.15 * _sm(0.4, 1.8, co.z)
                 k *= 0.82 + 0.18 * _sm(0.0, 0.03, edge)                  # escurece perto do friso (sujeira)
                 c = mix(base[1], base[0], max(0.0, min(1.0, k)))
                 # brilho do metal escovado: faixas suaves na vertical
@@ -664,6 +736,10 @@ def paint6(objs, set_name='Runica'):
             elif kind == 'gold':
                 c = mix(gd_d, gd, 0.25 + 0.75 * top)
                 c = mix(c, (1.0, 0.93, 0.7), 0.25 * max(0.0, n.z) ** 4)
+            elif kind == 'cloth':
+                c = mix(c2, c1, 0.2 + 0.8 * _sm(0.3, 1.45, co.z) * (0.55 + 0.45 * top))
+                if win[vi] > 0.5:
+                    c = mix(c2, (0, 0, 0), 0.3)
             elif kind == 'rune':
                 c, a = rn, 0.0
             else:
@@ -678,7 +754,7 @@ def groups6(objs):
         return tuple(k for k in objs if any(k.startswith(p) for p in pref))
     return {
         'Armadura': (pick('KZ6_Peito', 'KZ6_Costas', 'KZ6_Faixa', 'KZ6_Cinto', 'KZ6_Fivela', 'KZ6_Escarcela',
-                          'KZ6_Gorjal', 'KZ6_OmbroL', 'KZ6_OmbroR', 'KZ6_Gibao', 'KZ5_Capa'), (0, 0, 0)),
+                          'KZ6_Gorjal', 'KZ6_OmbroL', 'KZ6_OmbroR', 'KZ6_Gibao', 'KZ6_Capa'), (0, 0, 0)),
         'LuvaL': (pick('KZ6_MangaL', 'KZ6_BracoL', 'KZ6_CotoveloL', 'KZ6_BracalL', 'KZ6_MaoL', 'KZ6_LamMaoL'), (0.31, 0, 1.40)),
         'LuvaR': (pick('KZ6_MangaR', 'KZ6_BracoR', 'KZ6_CotoveloR', 'KZ6_BracalR', 'KZ6_MaoR', 'KZ6_LamMaoR'), (-0.31, 0, 1.40)),
         'CalcaL': (pick('KZ6_CoxoteL', 'KZ6_JoelhoL', 'KZ6_MalhaL'), (0.12, 0, 0.92)),
