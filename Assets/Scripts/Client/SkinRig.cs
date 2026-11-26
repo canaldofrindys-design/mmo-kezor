@@ -80,7 +80,7 @@ namespace Kezor.Client
                 if (part == null || mf.sharedMesh == null || !mf.sharedMesh.isReadable) continue;
                 var mr = mf.GetComponent<MeshRenderer>();
                 if (mr == null) continue;
-                Convert(rig, mf, mr, part, bones, body, s);
+                Convert(rig, mf, mr, part, bones, body, s, sx);
             }
 
             rig.Bones = bones;
@@ -148,8 +148,71 @@ namespace Kezor.Client
         }
 
         private static readonly List<Vector3> _v = new List<Vector3>();
+        private static readonly float[] _w = new float[KezorAnim.Count];
 
-        private static void Convert(Rig rig, MeshFilter mf, MeshRenderer mr, string part, Transform[] bones, Transform body, float s)
+        /// <summary>
+        /// Corpo contínuo (cabeça, braços e pernas numa malha só): pesos pela posição, iguais a kezor_hero4.weights_full.
+        /// x e z no esqueleto do Blender (x &gt; 0 = lado esquerdo). Escreve até 4 ossos em bw, já normalizados.
+        /// </summary>
+        public static BoneWeight FullWeights(float x, float z)
+        {
+            System.Array.Clear(_w, 0, _w.Length);
+            float ax = Mathf.Abs(x);
+            bool left = x > 0;
+            float a = 0f;
+            if (z > 0.60f && z < 1.48f)
+            {
+                a = z > 1.30f ? Smooth(0.20f, 0.28f, ax) : (z > 1.05f ? Smooth(0.215f, 0.25f, ax) : Smooth(0.232f, 0.25f, ax));
+                a *= Smooth(0.60f, 0.66f, z);
+            }
+            if (a > 0f)
+            {
+                float f = Smooth(1.13f, 1.03f, z), h = Smooth(0.83f, 0.77f, z);
+                _w[left ? KezorAnim.ArmL : KezorAnim.ArmR] += a * (1 - f);
+                _w[left ? KezorAnim.ForeArmL : KezorAnim.ForeArmR] += a * f * (1 - h);
+                _w[left ? KezorAnim.HandL : KezorAnim.HandR] += a * f * h;
+            }
+            float rest = 1 - a;
+            float hd = Smooth(1.465f, 1.53f, z) * rest;
+            _w[KezorAnim.Head] += hd;
+            float rem = rest - hd;
+            float leg = (z < 0.95f ? Smooth(0.93f, 0.83f, z) : 0f) * rem;
+            if (leg > 0f)
+            {
+                float k = Smooth(0.59f, 0.47f, z), an = Smooth(0.15f, 0.08f, z);
+                float sl = Mathf.Clamp01(0.5f + 0.5f * x / 0.03f);
+                for (int side = 0; side < 2; side++)
+                {
+                    float fr = side == 0 ? sl : 1 - sl;
+                    _w[side == 0 ? KezorAnim.LegL : KezorAnim.LegR] += leg * fr * (1 - k);
+                    _w[side == 0 ? KezorAnim.ShinL : KezorAnim.ShinR] += leg * fr * k * (1 - an);
+                    _w[side == 0 ? KezorAnim.FootL : KezorAnim.FootR] += leg * fr * k * an;
+                }
+            }
+            float tor = rem - leg, c = Smooth(0.98f, 1.14f, z);
+            _w[KezorAnim.Body] += tor * (1 - c);
+            _w[KezorAnim.Chest] += tor * c;
+            // os 4 maiores
+            var bw = new BoneWeight();
+            int[] bi = { 0, 0, 0, 0 }; float[] bv = { 0, 0, 0, 0 };
+            for (int i = 0; i < KezorAnim.Count; i++)
+            {
+                float v = _w[i];
+                if (v <= bv[3]) continue;
+                int j = 3;
+                while (j > 0 && v > bv[j - 1]) { bv[j] = bv[j - 1]; bi[j] = bi[j - 1]; j--; }
+                bv[j] = v; bi[j] = i;
+            }
+            float tot = bv[0] + bv[1] + bv[2] + bv[3];
+            if (tot <= 1e-5f) { bv[0] = 1; tot = 1; }
+            bw.boneIndex0 = bi[0]; bw.weight0 = bv[0] / tot;
+            bw.boneIndex1 = bi[1]; bw.weight1 = bv[1] / tot;
+            bw.boneIndex2 = bi[2]; bw.weight2 = bv[2] / tot;
+            bw.boneIndex3 = bi[3]; bw.weight3 = bv[3] / tot;
+            return bw;
+        }
+
+        private static void Convert(Rig rig, MeshFilter mf, MeshRenderer mr, string part, Transform[] bones, Transform body, float s, float sx)
         {
             var src = mf.sharedMesh;
             var mesh = Object.Instantiate(src);
@@ -157,9 +220,18 @@ namespace Kezor.Client
             src.GetVertices(_v);
             var toBody = body.worldToLocalMatrix * mf.transform.localToWorldMatrix;
             var bw = new BoneWeight[_v.Count];
+            // malha do tronco que cobre braços/pernas/cabeça (corpo contínuo do herói v4): pesos pela posição
+            if (part == "Body")
+            {
+                var bmin = Vector3.positiveInfinity; var bmax = Vector3.negativeInfinity;
+                foreach (var v in _v) { var q = toBody.MultiplyPoint3x4(v); bmin = Vector3.Min(bmin, q); bmax = Vector3.Max(bmax, q); }
+                if (Mathf.Max(-bmin.x, bmax.x) / s > 0.27f && bmin.y / s < 0.5f) part = "Full";
+            }
             for (int i = 0; i < _v.Count; i++)
             {
-                float z = toBody.MultiplyPoint3x4(_v[i]).y / s;
+                var pb = toBody.MultiplyPoint3x4(_v[i]);
+                float z = pb.y / s;
+                if (part == "Full") { bw[i] = FullWeights(pb.x * sx / s, z); continue; }
                 Weights(part, z, out var b0, out var w0, out var b1, out var w1, out var b2, out var w2);
                 // ordena por peso (o Unity espera o maior primeiro) e normaliza
                 if (w1 > w0) { (b0, b1) = (b1, b0); (w0, w1) = (w1, w0); }
