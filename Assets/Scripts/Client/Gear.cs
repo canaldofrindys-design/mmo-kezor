@@ -356,7 +356,10 @@ namespace Kezor.Client
             var go = ModelLibrary.Instantiate(path, path, null);
             if (go == null) return list;
             piece = go.transform.Find("Piece");
-            if (piece == null) { Object.Destroy(go); return list; }
+            if (piece == null)
+                foreach (var t in go.GetComponentsInChildren<Transform>(true))   // FBX com um vazio por cima ("__a5_root/Piece")
+                    if (t.name == "Piece") { piece = t; break; }
+            if (piece == null) { Debug.LogWarning($"[Kezor] '{path}' sem a malha 'Piece'"); Object.Destroy(go); return list; }
             piece.SetParent(part, false);
             piece.localPosition = Vector3.zero;
             piece.localRotation = Quaternion.identity;
