@@ -126,7 +126,9 @@ namespace Kezor.Core.Server
             c.Gold = o.L("gold"); c.Infamy = o.I("infamy"); c.AccountName = o.S("account");
             c.MapId = o.I("map", 1); c.X = o.F("x"); c.Z = o.F("z");
             c.Facing = o.F("yaw");
-            FixPosition(c, o.I("mapv", 1));
+            // (0, 0) = herói que ainda não entrou: nasce na praça. (1, 1) = herói novo que o erro antigo pôs no canto do mapa
+            if (c.X == 1f && c.Z == 1f) { c.X = 0; c.Z = 0; }
+            if (c.X != 0 || c.Z != 0) FixPosition(c, o.I("mapv", 1));
             var overflow = SlotsFromJson(c.Inventory, o.A("inventory"));
             foreach (var e in o.A("equipment").OfType<IDictionary<string, object?>>())
             {

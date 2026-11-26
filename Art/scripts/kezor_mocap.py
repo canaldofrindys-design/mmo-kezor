@@ -169,6 +169,24 @@ def finalize(frames, dur):
 # passada no arquivo = passada medida x fator: um pouco mais longa para a cadência não ficar frenética nas
 # velocidades do jogo (vila 1,8 m/s; fora 5,5-6 m/s), aceitando um leve deslizar do pé
 CHOICE = {'Walk': (29, 135, 1.10), 'Run': (57, 89, 1.20)}
+# abertura extra dos braços (graus): o ator do mocap é magro; nos heróis (ombros largos, armadura) o braço
+# colado ao corpo atravessa o tronco e a roupa
+ABDUCT = {'Walk': 10.0, 'Run': 13.0}
+ARM_CHAIN = {'L': ('ArmL', 'ForeArmL', 'HandL'), 'R': ('ArmR', 'ForeArmR', 'HandR')}
+
+
+def abduct(frames, deg):
+    """Gira o braço inteiro (ombro, cotovelo e mão) para fora em torno do eixo da frente (Y)."""
+    out = []
+    for h, rs in frames:
+        rs = list(rs)
+        for side, sg in (('L', -1), ('R', 1)):     # esquerdo abre com ry(-a), direito com ry(+a)
+            Rr = R.from_rotvec([0, sg * np.radians(deg), 0])
+            for n in ARM_CHAIN[side]:
+                i = OUR.index(n)
+                rs[i] = Rr * rs[i]
+        out.append((h, rs))
+    return out
 
 
 def clip_lines(name, frames, dur):
@@ -190,6 +208,7 @@ def main(heroi, walk_bvh, run_bvh):
         a, T, fac = CHOICE[name]
         fr, _, dur, _ = retarget(path, a, T)
         fr, stride, _ = finalize(fr, dur)
+        fr = abduct(fr, ABDUCT[name])
         new[name] = (clip_lines(name, fr, dur), stride * fac)
     out, skip = [], False
     for l in open(heroi, encoding='utf-8').read().split('\n'):

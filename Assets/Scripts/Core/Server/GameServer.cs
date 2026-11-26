@@ -318,6 +318,8 @@ namespace Kezor.Core.Server
             c.Hp = c.MaxHp;
             if (s.Account != null)
             {   // com conta: o personagem entra na lista e o jogador escolhe com PLAY
+                var home = MapOf(c.MapId);             // já fica salvo na praça da cidade principal (onde nasce)
+                c.X = home.RespawnX + _rng.Range(-2, 2); c.Z = home.RespawnZ + _rng.Range(-2, 2);
                 c.AccountName = s.Account.Name;
                 s.Account.Characters.Add(c.Name);
                 _repo.Save(c);

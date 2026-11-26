@@ -38,6 +38,27 @@ namespace Kezor.Tests
         }
 
         [Test]
+        public void NewCharacterWithAccountSpawnsInTownSquare()
+        {   // criado com conta e salvo antes do PLAY: não pode nascer no canto (0, 0) do mapa
+            var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kz_spawn_" + System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(dir);
+            try
+            {
+                var gs = new GameServer(new SystemRandom(7), new JsonFileRepository(dir),
+                                        new ServerOptions { RequireAccounts = true, PasswordIterations = 10, EventFirstDelay = 99999 });
+                gs.Connect(1);
+                StringAssert.StartsWith("OK", gs.Handle(1, "REGISTER conta1 senha123"));
+                StringAssert.StartsWith("OK", gs.Handle(1, "CREATE Novato ARC"));
+                StringAssert.StartsWith("OK", gs.Handle(1, "PLAY Novato"));
+                var c = gs.GetCharacter(1)!;
+                Assert.IsTrue(gs.Map.InSafeZone(c.X, c.Z));
+                Assert.AreEqual(gs.Map.RespawnX, c.X, 3f);
+                Assert.AreEqual(gs.Map.RespawnZ, c.Z, 3f);
+            }
+            finally { System.IO.Directory.Delete(dir, true); }
+        }
+
+        [Test]
         public void MovementIsServerSideAndSpeedLimited()
         {
             var gs = NewServer();
