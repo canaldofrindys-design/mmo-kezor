@@ -35,3 +35,7 @@ credentials*.json
 # Servidor online (gerado pelo Publicar-Servidor)
 Build/Publish/
 Tools/servidor-online.txt
+
+# Cache do Python
+__pycache__/
+*.pyc
