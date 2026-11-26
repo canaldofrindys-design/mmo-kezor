@@ -41,11 +41,13 @@ class Shell:
         nu, nv = max(3, int(round(nu * RES))), max(2, int(round(nv * RES)))
         self.name, self.pos, self.nu, self.nv = name, pos, nu, nv
         self.sgn, self.flip, self.thick, self.kind = sgn, flip, thick, kind
-        self.tubes = []          # (lista de pontos, raio, fechado, tipo) — tipo: 'gold' | 'rune' | 'steel'
+        self.tubes = []          # (lista de pontos, raio, fechado, tipo) — tipo: 'gold' | 'rune' | 'steel' | 'strap' | 'stitch'
+        self.extra = []          # peças pequenas presas nesta (rebites)
 
     def P(self, u, v):
         p = Vector(self.pos(u, v))
-        p.x *= self.sgn
+        if getattr(self, 'pos_mirror', True):
+            p.x *= self.sgn
         return p
 
     def N(self, u, v):
@@ -96,6 +98,46 @@ class Shell:
                 out.append(p + n * ((r or 0.0016) * 0.45))   # filete/emblema: deitado sobre a placa
         rr = r if r is not None else (self.thick * 0.5 + 0.0021 if rim else 0.0016)
         self.tubes.append((out, rr, closed, kind))
+
+    # --- detalhes de acabamento
+    def rivets(self, uvs, r=0.0048, kind='goldplate'):
+        """Rebites em forma de cúpula baixa sobre a placa."""
+        for (u, v) in uvs:
+            p, n = self.P(u, v), self.N(u, v)
+            k = len(self.extra)
+            sp = spike('%s_Reb%d' % (self.name, k), p - n * 0.0015, n, r, r * 0.9, 1, kind)
+            sp.pos_mirror = False
+            self.extra.append(sp)
+
+    def rivet_row(self, side, inset, count, r=0.0048, span=(0.06, 0.94), kind='goldplate'):
+        uvs = []
+        for i in range(count):
+            t = _lerp(span[0], span[1], (i + 0.5) / count)
+            uvs.append({'b': (t, inset), 't': (t, 1 - inset), 'l': (inset, t), 'r': (1 - inset, t)}[side])
+        self.rivets(uvs, r, kind)
+
+    def stitches(self, side, inset, dash=0.022, r=0.0011, span=(0.0, 1.0)):
+        """Costura tracejada paralela à borda (traços curtos de linha clara)."""
+        n = max(4, int(self._len(side) / dash))
+        for i in range(0, n, 2):
+            a, b = _lerp(span[0], span[1], i / n), _lerp(span[0], span[1], (i + 1) / n)
+            m = {'b': lambda t: (t, inset), 't': lambda t: (t, 1 - inset),
+                 'l': lambda t: (inset, t), 'r': lambda t: (1 - inset, t)}[side]
+            self.add_uv_tube([m(a), m((a + b) / 2), m(b)], r, 'stitch', False, False)
+
+    def _len(self, side):
+        if side in 'bt':
+            v = 0.0 if side == 'b' else 1.0
+            return sum((self.P(i / 20, v) - self.P((i + 1) / 20, v)).length for i in range(20))
+        u = 0.0 if side == 'l' else 1.0
+        return sum((self.P(u, i / 20) - self.P(u, (i + 1) / 20)).length for i in range(20))
+
+    def strap(self, uv0, uv1, width=0.006, steps=16, buckle=True):
+        pts = [(_lerp(uv0[0], uv1[0], i / steps), _lerp(uv0[1], uv1[1], i / steps)) for i in range(steps + 1)]
+        self.add_uv_tube(pts, width, 'strap', False, False)
+        if buckle:
+            m = pts[steps // 2]
+            self.rivets([m], width * 1.5)
 
     # --- malha
     def build(self):
@@ -154,7 +196,7 @@ def tubes_obj(name, tubes, res=1):
     """Converte a lista de tubos numa malha (uma por tipo de cor guardada no atributo 'tk')."""
     G = bpy.app.driver_namespace['KZ']
     objs = []
-    for kind in ('gold', 'rune', 'steel'):
+    for kind in ('gold', 'rune', 'steel', 'strap', 'stitch'):
         sel = [t for t in tubes if t[3] == kind]
         if not sel:
             continue
@@ -645,11 +687,8 @@ def build6(set_name='Runica'):
     for side in ('L', 'R'):
         for s in pauldrons(side) + arm(side) + leg(side):
             shells[s.name] = s
-    objs = {}
-    for nm, s in shells.items():
-        objs[nm] = s.build()
-        for t in tubes_obj(nm + '_T', s.tubes):
-            objs[t.name] = t
+    decorate(shells.values(), DECOR6)
+    objs = build_shells(shells.values())
     # capa longa (até a canela)
     cp = long_cape()
     objs[cp.name] = cp
@@ -660,6 +699,47 @@ def build6(set_name='Runica'):
 
 
 CAPE_TUBES = []
+
+
+def build_shells(shells):
+    objs = {}
+    for s in shells:
+        objs[s.name] = s.build()
+        for t in tubes_obj(s.name + '_T', s.tubes):
+            objs[t.name] = t
+        for e in s.extra:
+            objs[e.name] = e.build()
+    return objs
+
+
+def decorate(shells, rules):
+    """rules: lista de (prefixo do nome, função(shell))."""
+    for s in shells:
+        for pref, fn in rules:
+            if s.name.startswith(pref):
+                fn(s)
+
+
+# ---- acabamento da Rúnica
+DECOR6 = [
+    ('KZ6_Peito', lambda s: (s.rivet_row('l', 0.03, 7, 0.005, (0.12, 0.85)), s.rivet_row('r', 0.03, 7, 0.005, (0.12, 0.85)),
+                             s.rivet_row('b', 0.07, 9, 0.0045, (0.2, 0.8)))),
+    ('KZ6_Costas', lambda s: s.rivet_row('b', 0.07, 10, 0.0045)),
+    ('KZ6_Cinto', lambda s: s.rivet_row('b', 0.5, 22, 0.0045, (0.02, 0.98))),
+    ('KZ6_OmbroL_Lamina', lambda s: (s.rivet_row('t', 0.25, 7, 0.0045, (0.1, 0.9)), s.border(inset=0.0, r=0.0014, sides='t'))),
+    ('KZ6_OmbroR_Lamina', lambda s: (s.rivet_row('t', 0.25, 7, 0.0045, (0.1, 0.9)), s.border(inset=0.0, r=0.0014, sides='t'))),
+    ('KZ6_OmbroL_Cupula', lambda s: s.rivet_row('b', 0.12, 8, 0.0055, (0.1, 0.9))),
+    ('KZ6_OmbroR_Cupula', lambda s: s.rivet_row('b', 0.12, 8, 0.0055, (0.1, 0.9))),
+    ('KZ6_Bracal', lambda s: s.rivet_row('t', 0.08, 6, 0.0042, (0.05, 0.95))),
+    ('KZ6_Braco', lambda s: s.rivet_row('b', 0.15, 6, 0.0042, (0.05, 0.95))),
+    ('KZ6_Cotovelo', lambda s: s.rivets([(0.5, 0.5)], 0.008)),
+    ('KZ6_Joelho', lambda s: s.rivets([(0.41, 0.5), (0.8, 0.5)], 0.007)),
+    ('KZ6_Coxote', lambda s: s.rivet_row('t', 0.1, 7, 0.0045, (0.1, 0.9))),
+    ('KZ6_Greva', lambda s: s.rivet_row('t', 0.06, 10, 0.0042, (0.02, 0.98))),
+    ('KZ6_LamMao', lambda s: s.rivet_row('b', 0.5, 4, 0.0055, (0.15, 0.85))),
+    ('KZ6_Escarcela', lambda s: s.rivet_row('t', 0.15, 3, 0.0045, (0.2, 0.8))),
+    ('KZ6_Elmo_Lados', lambda s: s.rivet_row('t', 0.12, 12, 0.0045, (0.05, 0.95))),
+]
 
 
 def long_cape():
@@ -742,6 +822,10 @@ def paint6(objs, set_name='Runica'):
                     c = mix(c2, (0, 0, 0), 0.3)
             elif kind == 'rune':
                 c, a = rn, 0.0
+            elif kind == 'strap':
+                c = mix(mix(lt, (0, 0, 0), 0.55), mix(lt, (0, 0, 0), 0.2), top)
+            elif kind == 'stitch':
+                c = mix(lt, (1.0, 0.92, 0.75), 0.55)
             else:
                 c = st
             flat[li * 4:li * 4 + 4] = (min(1, c[0]), min(1, c[1]), min(1, c[2]), a)

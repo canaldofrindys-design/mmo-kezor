@@ -203,6 +203,23 @@ def set_couro():
 def set_escamas():
     P = 'KE_'
     out = []
+    def gambeson(u, v):                                  # gibão de couro por baixo (sem pele nas axilas e ombros)
+        a = _lerp(-180, 180, u)
+        z = _lerp(0.9, 1.47, v)
+        rx, ry = _torso_r(z, -0.01)
+        x, y = ring(0, 0.012, rx - 0.002 + 0.03 * _sm(1.3, 1.47, z), ry - 0.002, a)
+        return x, y, z
+    out.append(Shell(P + 'Gibao', gambeson, 40, 10, thick=0.004, kind='leather'))
+    for side in ('L', 'R'):
+        sg = 1 if side == 'L' else -1
+
+        def sleeve(u, v):
+            a = _lerp(-180, 180, u)
+            z = _lerp(0.98, 1.42, v)
+            r = 0.07 + 0.012 * v
+            x, y = ring(0.305, -0.004, r, r, a)
+            return x, y, z
+        out.append(Shell(P + 'MangaCouro' + side, sleeve, 28, 8, sgn=sg, thick=0.004, kind='leather'))
     # cota de escamas do tronco: 8 fileiras do peito até o quadril
     out += scale_rows(P + 'Cota', 1.43, 8, 0.085, 0.066,
                       lambda z: tuple(r + 0.008 for r in _torso_r(z, -0.01)), -180, 180, 26)
@@ -397,11 +414,9 @@ def set_escamas():
 
 
 def build_set(set_name, maker):
-    objs = {}
-    for s in maker():
-        objs[s.name] = s.build()
-        for t in tubes_obj(s.name + '_T', s.tubes):
-            objs[t.name] = t
+    shells = maker()
+    decorate(shells, DECOR_SETS.get(set_name, []))
+    objs = build_shells(shells)
     paint6(objs, set_name)
     return objs
 
@@ -418,9 +433,9 @@ def groups_set(objs, P):
             'Elmo': (pick('Gorro', 'Nuca'), (0, 0, 1.47)),
         }
     return {
-        'Armadura': (pick('Cota', 'Saia', 'Cinto', 'Fivela', 'Placa', 'Gorjal', 'OmbroL', 'OmbroR'), (0, 0, 0)),
-        'LuvaL': (pick('MangaL', 'BracalL', 'CotoveloL', 'LuvaL'), (0.31, 0, 1.40)),
-        'LuvaR': (pick('MangaR', 'BracalR', 'CotoveloR', 'LuvaR'), (-0.31, 0, 1.40)),
+        'Armadura': (pick('Cota', 'Saia', 'Cinto', 'Fivela', 'Placa', 'Gorjal', 'OmbroL', 'OmbroR', 'Gibao'), (0, 0, 0)),
+        'LuvaL': (pick('MangaL', 'MangaCouroL', 'BracalL', 'CotoveloL', 'LuvaL'), (0.31, 0, 1.40)),
+        'LuvaR': (pick('MangaR', 'MangaCouroR', 'BracalR', 'CotoveloR', 'LuvaR'), (-0.31, 0, 1.40)),
         'CalcaL': (pick('MalhaL', 'CoxaL', 'JoelhoL'), (0.12, 0, 0.92)),
         'CalcaR': (pick('MalhaR', 'CoxaR', 'JoelhoR'), (-0.12, 0, 0.92)),
         'BotaL': (pick('GrevaL', 'TornozeloL', 'PeL'), (0.12, 0, 0.92)),
@@ -446,3 +461,41 @@ def export_named(objs, groups, set_name):
         G['GROUPS5'].clear()
         G['GROUPS5'].update(old5)
         G['_copy'] = oldcopy
+
+
+# ---- acabamento dos sets (costuras, tiras, rebites)
+DECOR_SETS = {
+    'Couro': [
+        ('KC_Gibao', lambda s: s.stitches('b', 0.04)),
+        ('KC_Peito', lambda s: (s.stitches('l', 0.07), s.stitches('r', 0.07), s.stitches('b', 0.1), s.stitches('t', 0.08),
+                                s.strap((0.92, 0.97), (0.12, 0.06), 0.0055),
+                                s.rivet_row('t', 0.16, 6, 0.0045, (0.15, 0.85)))),
+        ('KC_OmbroL0', lambda s: (s.stitches('b', 0.12), s.rivet_row('b', 0.3, 6, 0.0048, (0.1, 0.9)))),
+        ('KC_OmbroR0', lambda s: (s.stitches('b', 0.12), s.rivet_row('b', 0.3, 6, 0.0048, (0.1, 0.9)))),
+        ('KC_OmbroL1', lambda s: s.stitches('b', 0.15)),
+        ('KC_OmbroR1', lambda s: s.stitches('b', 0.15)),
+        ('KC_Bracal', lambda s: (s.stitches('t', 0.1), s.stitches('b', 0.12), s.rivet_row('t', 0.2, 5, 0.004, (0.45, 0.95)))),
+        ('KC_Aba', lambda s: (s.stitches('l', 0.12), s.stitches('r', 0.12), s.stitches('b', 0.08), s.rivets([(0.5, 0.85)], 0.005))),
+        ('KC_Joelho', lambda s: (s.stitches('t', 0.12), s.stitches('b', 0.12), s.rivets([(0.5, 0.5)], 0.007))),
+        ('KC_Bota', lambda s: (s.stitches('t', 0.05), s.strap((0.25, 0.62), (0.75, 0.62), 0.005, 20, False),
+                               s.strap((0.25, 0.42), (0.75, 0.42), 0.005, 20, False))),
+        ('KC_Gorro', lambda s: (s.stitches('b', 0.1), s.rivet_row('b', 0.2, 10, 0.0042, (0.0, 1.0)))),
+        ('KC_Calca', lambda s: s.stitches('l', 0.5, 0.03, 0.001, (0.05, 0.95))),
+    ],
+    'Escamas': [
+        ('KE_Placa', lambda s: (s.rivets([(0.06, 0.08), (0.94, 0.08), (0.06, 0.92), (0.94, 0.92)], 0.0065),
+                                s.rivet_row('t', 0.08, 5, 0.0045, (0.25, 0.75)))),
+        ('KE_OmbroL_Cupula', lambda s: s.rivet_row('b', 0.1, 8, 0.0055, (0.08, 0.92))),
+        ('KE_OmbroR_Cupula', lambda s: s.rivet_row('b', 0.1, 8, 0.0055, (0.08, 0.92))),
+        ('KE_OmbroL_Lamina', lambda s: s.rivet_row('t', 0.25, 6, 0.0045, (0.1, 0.9))),
+        ('KE_OmbroR_Lamina', lambda s: s.rivet_row('t', 0.25, 6, 0.0045, (0.1, 0.9))),
+        ('KE_Cinto', lambda s: s.rivet_row('b', 0.5, 20, 0.0045, (0.02, 0.98))),
+        ('KE_Bracal', lambda s: (s.rivet_row('t', 0.08, 6, 0.0042, (0.05, 0.95)), s.border(inset=0.15, r=0.0014, sides='bt'))),
+        ('KE_Cotovelo', lambda s: s.rivets([(0.5, 0.5)], 0.008)),
+        ('KE_Joelho', lambda s: s.rivets([(0.41, 0.5), (0.85, 0.5)], 0.0072)),
+        ('KE_Greva', lambda s: (s.rivet_row('t', 0.06, 10, 0.0042, (0.02, 0.98)), s.border(inset=0.1, r=0.0014, sides='bt'))),
+        ('KE_Elmo', lambda s: s.rivet_row('b', 0.1, 12, 0.0045, (0.0, 1.0))),
+        ('KE_Pe', lambda s: s.rivet_row('l', 0.5, 4, 0.004, (0.35, 0.95))),
+        ('KE_Gorjal', lambda s: s.rivet_row('b', 0.5, 14, 0.004, (0.0, 1.0))),
+    ],
+}
