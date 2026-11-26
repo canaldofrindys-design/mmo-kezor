@@ -119,10 +119,11 @@ namespace Kezor.Client
     {
         public Transform? Target;
         public Vector3 OrbitCenter;
-        // Câmera isométrica alta e próxima (50°): o herói ocupa ~10% da altura da tela no zoom padrão.
-        public const float DefaultDistance = 30f, DefaultYaw = 45f;
-        public const string PrefYaw = "kz.camYaw", PrefDist = "kz.camDist";
-        public float Yaw = DefaultYaw, Pitch = 50f, Distance = DefaultDistance, MinDistance = 16f, MaxDistance = 36f;
+        // Câmera no estilo do MU: alta (50°) e perto, o herói ocupa ~1/4 da altura da tela no zoom padrão.
+        // (a chave do zoom salvo mudou para todo mundo começar no novo padrão)
+        public const float DefaultDistance = 11f, DefaultYaw = 45f;
+        public const string PrefYaw = "kz.camYaw", PrefDist = "kz.camDist2";
+        public float Yaw = DefaultYaw, Pitch = 50f, Distance = DefaultDistance, MinDistance = 7f, MaxDistance = 22f;
         /// <summary>Distância pedida pela roda do mouse; a real chega nela suavemente.</summary>
         private float _wantDistance = DefaultDistance;
         private float _orbitYaw;
@@ -172,7 +173,7 @@ namespace Kezor.Client
             float wheel = InputK.Scroll;
             if (Mathf.Abs(wheel) > 0.01f && !KezorGame.PointerOverUi)
             {
-                _wantDistance = Mathf.Clamp(_wantDistance - wheel * 1.6f, MinDistance, MaxDistance);
+                _wantDistance = Mathf.Clamp(_wantDistance - wheel * 1.0f, MinDistance, MaxDistance);
                 SaveSoon();
             }
             Distance = Mathf.SmoothDamp(Distance, _wantDistance, ref _zoomVel, ZoomSmoothTime);       // zoom suave
