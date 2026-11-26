@@ -109,6 +109,8 @@ namespace Kezor.Client
             fx.Rig = rig;
             if (!legacy)
             {
+                var baseFilters = rig.Root.GetComponentsInChildren<MeshFilter>(true);   // corpo e cabeça (antes das peças)
+                var hide = new List<string>();
                 var w = a[EquipSlot.RightHand];
                 if (w.Def != null && WeaponModels.TryGetValue(w.Id, out var wm))
                 {
@@ -128,12 +130,13 @@ namespace Kezor.Client
                 var sh = a[EquipSlot.LeftHand];
                 if (sh.Def != null && WeaponModels.TryGetValue(sh.Id, out var sm)) fx.Decorate(Attach(rig, "Equip/" + sm, rig.ArmL, out _), sh.Level, sh.Ascended);
 
-                var helm = PieceFor(rig, fx, a[EquipSlot.Helm], "Elmo", rig.Head);
+                var helm = PieceFor(rig, fx, a[EquipSlot.Helm], "Elmo", rig.Head, hide: hide);
                 if (a[EquipSlot.Helm].Def is ItemDefinition hd && SetOf(hd) is string hs && ClosedHelms.Contains(hs)) HideHeadUnderHelm(rig, helm);
-                PieceFor(rig, fx, a[EquipSlot.Armor], "Armadura", rig.Body);
-                PieceFor(rig, fx, a[EquipSlot.Pants], "CalcaL", rig.LegL, "CalcaR", rig.LegR);
-                PieceFor(rig, fx, a[EquipSlot.Gloves], "LuvaL", rig.ArmL, "LuvaR", rig.ArmR);
-                PieceFor(rig, fx, a[EquipSlot.Boots], "BotaL", rig.LegL, "BotaR", rig.LegR);
+                PieceFor(rig, fx, a[EquipSlot.Armor], "Armadura", rig.Body, hide: hide);
+                PieceFor(rig, fx, a[EquipSlot.Pants], "CalcaL", rig.LegL, "CalcaR", rig.LegR, hide);
+                PieceFor(rig, fx, a[EquipSlot.Gloves], "LuvaL", rig.ArmL, "LuvaR", rig.ArmR, hide);
+                PieceFor(rig, fx, a[EquipSlot.Boots], "BotaL", rig.LegL, "BotaR", rig.LegR, hide);
+                if (hide.Count > 0) HideCovered(rig, baseFilters, BaseModel(cls), hide);
                 int armorLevel = a.MaxArmorLevel;
                 if (armorLevel >= 11) { fx.BodySparks(RuneTier(armorLevel)); fx.GroundAura(RuneTier(armorLevel), armorLevel); }
             }
@@ -153,17 +156,20 @@ namespace Kezor.Client
             return rig;
         }
 
-        private static List<Renderer>? PieceFor(Rig rig, GearFx fx, Appearance.Piece p, string suffix, Transform? part, string? suffix2 = null, Transform? part2 = null)
+        private static List<Renderer>? PieceFor(Rig rig, GearFx fx, Appearance.Piece p, string suffix, Transform? part, string? suffix2 = null, Transform? part2 = null,
+                                                List<string>? hide = null)
         {
             if (p.Def == null || part == null) return null;
             var set = SetOf(p.Def);
             if (set == null) return null;
             var rs = Attach(rig, $"Equip/{set}_{suffix}", part, out _);
             ApplyMaps(rs, $"{set}_{suffix}");
+            if (rs.Count > 0) hide?.Add($"{set}_{suffix}");
             if (suffix2 != null && part2 != null)
             {
                 var rs2 = Attach(rig, $"Equip/{set}_{suffix2}", part2, out _);
                 ApplyMaps(rs2, $"{set}_{suffix2}");
+                if (rs2.Count > 0) hide?.Add($"{set}_{suffix2}");
                 rs.AddRange(rs2);
             }
             fx.Decorate(rs, p.Level, p.Ascended, sparks: false);
@@ -183,8 +189,13 @@ namespace Kezor.Client
             if (rs.Count == 0) return;
             if (!_maps.TryGetValue(name, out var t))
             {
-                t = (Resources.Load<Texture2D>($"Textures/Equip/{name}_Base"), Resources.Load<Texture2D>($"Textures/Equip/{name}_Normal"),
-                     Resources.Load<Texture2D>($"Textures/Equip/{name}_Mask"));
+                // a peça usa a própria textura ou a do par: Runica_LuvaL -> Runica_Luva; calças e botas -> Runica_Pernas
+                foreach (var n in MapNames(name))
+                {
+                    t = (Resources.Load<Texture2D>($"Textures/Equip/{n}_Base"), Resources.Load<Texture2D>($"Textures/Equip/{n}_Normal"),
+                         Resources.Load<Texture2D>($"Textures/Equip/{n}_Mask"));
+                    if (t.b != null) break;
+                }
                 _maps[name] = t;
             }
             if (t.b == null) return;
@@ -197,6 +208,95 @@ namespace Kezor.Client
                 if (t.m != null) mpb.SetTexture(MaskMapId, t.m);
                 mpb.SetFloat(UseMapsId, 1f);
                 r.SetPropertyBlock(mpb);
+            }
+        }
+
+        private static IEnumerable<string> MapNames(string name)
+        {
+            yield return name;
+            if (name.EndsWith("L") || name.EndsWith("R")) yield return name.Substring(0, name.Length - 1);
+            int u = name.IndexOf('_');
+            if (u > 0 && (name.Contains("_Calca") || name.Contains("_Bota"))) yield return name.Substring(0, u) + "_Pernas";
+        }
+
+        private static readonly Dictionary<string, HashSet<long>?> _hideCache = new Dictionary<string, HashSet<long>?>();
+
+        private static long HideKey(int x, int y, int z) => ((long)(x + 4096) << 26) | ((long)(y + 4096) << 13) | (long)(z + 4096);
+
+        /// <summary>Vértices do corpo cobertos pela peça (Resources/Equip/Hide/&lt;Set&gt;_&lt;Peça&gt;_&lt;Modelo&gt;.txt, mm no Blender).</summary>
+        private static HashSet<long>? HideList(string piece, string model)
+        {
+            string key = piece + "_" + model;
+            if (_hideCache.TryGetValue(key, out var hs)) return hs;
+            hs = null;
+            var ta = Resources.Load<TextAsset>("Equip/Hide/" + key);
+            if (ta != null)
+            {
+                hs = new HashSet<long>();
+                foreach (var line in ta.text.Split('\n'))
+                {
+                    var p = line.Trim().Split(' ');
+                    if (p.Length == 3 && int.TryParse(p[0], out var x) && int.TryParse(p[1], out var y) && int.TryParse(p[2], out var z))
+                        hs.Add(HideKey(x, y, z));
+                }
+            }
+            _hideCache[key] = hs;
+            return hs;
+        }
+
+        /// <summary>
+        /// Esconde a pele que fica por baixo das peças equipadas (sets com lista no Resources/Equip/Hide): tira da malha do
+        /// corpo e da cabeça os triângulos com os três vértices cobertos, para nada atravessar a armadura ao animar.
+        /// </summary>
+        private static void HideCovered(Rig rig, MeshFilter[] filters, string model, List<string> pieces)
+        {
+            var all = new HashSet<long>();
+            foreach (var pc in pieces)
+                if (HideList(pc, model) is HashSet<long> h) all.UnionWith(h);
+            if (all.Count == 0 || rig.LegL == null || rig.ArmL == null) return;
+            var body = rig.Body;
+            float s = body.InverseTransformPoint(rig.LegL.position).y / 0.92f;
+            if (s < 0.3f) return;
+            float sx = body.InverseTransformPoint(rig.ArmL.position).x < 0 ? -1f : 1f;
+            var verts = new List<Vector3>();
+            foreach (var mf in filters)
+            {
+                if (mf == null || mf.sharedMesh == null || !mf.sharedMesh.isReadable) continue;
+                var src = mf.sharedMesh;
+                src.GetVertices(verts);
+                var toBody = body.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                var hit = new bool[2][];
+                int best = -1, bestN = 0;
+                for (int fz = 0; fz < 2; fz++)
+                {   // o eixo da frente do FBX pode vir trocado: fica o sinal que casar mais vértices
+                    hit[fz] = new bool[verts.Count];
+                    int n = 0;
+                    for (int i = 0; i < verts.Count; i++)
+                    {
+                        var q = toBody.MultiplyPoint3x4(verts[i]) / s;
+                        int bx = Mathf.RoundToInt(q.x * sx * 1000f), by = Mathf.RoundToInt((fz == 0 ? q.z : -q.z) * 1000f), bz = Mathf.RoundToInt(q.y * 1000f);
+                        bool c = false;
+                        for (int dx = -1; dx <= 1 && !c; dx++)
+                            for (int dy = -1; dy <= 1 && !c; dy++)
+                                for (int dz = -1; dz <= 1 && !c; dz++)
+                                    c = all.Contains(HideKey(bx + dx, by + dy, bz + dz));
+                        if (c) { hit[fz][i] = true; n++; }
+                    }
+                    if (n > bestN) { bestN = n; best = fz; }
+                }
+                if (best < 0) continue;
+                var h = hit[best];
+                var mesh = Object.Instantiate(src);
+                mesh.name = src.name + "_coberto";
+                for (int sub = 0; sub < mesh.subMeshCount; sub++)
+                {
+                    var tris = mesh.GetTriangles(sub);
+                    var keep = new List<int>(tris.Length);
+                    for (int t = 0; t + 2 < tris.Length; t += 3)
+                        if (!(h[tris[t]] && h[tris[t + 1]] && h[tris[t + 2]])) { keep.Add(tris[t]); keep.Add(tris[t + 1]); keep.Add(tris[t + 2]); }
+                    mesh.SetTriangles(keep, sub);
+                }
+                mf.sharedMesh = mesh;
             }
         }
 
