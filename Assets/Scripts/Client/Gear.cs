@@ -136,7 +136,11 @@ namespace Kezor.Client
                 PieceFor(rig, fx, a[EquipSlot.Pants], "CalcaL", rig.LegL, "CalcaR", rig.LegR, hide);
                 PieceFor(rig, fx, a[EquipSlot.Gloves], "LuvaL", rig.ArmL, "LuvaR", rig.ArmR, hide);
                 PieceFor(rig, fx, a[EquipSlot.Boots], "BotaL", rig.LegL, "BotaR", rig.LegR, hide);
-                if (hide.Count > 0) HideCovered(rig, baseFilters, BaseModel(cls), hide);
+                if (hide.Count > 0)
+                {   // nunca derruba o herói: se falhar, só fica sem esconder a pele
+                    try { HideCovered(rig, baseFilters, BaseModel(cls), hide); }
+                    catch (System.Exception e) { Debug.LogWarning("[Kezor] esconder o corpo sob a armadura falhou: " + e); }
+                }
                 int armorLevel = a.MaxArmorLevel;
                 if (armorLevel >= 11) { fx.BodySparks(RuneTier(armorLevel)); fx.GroundAura(RuneTier(armorLevel), armorLevel); }
             }
@@ -288,6 +292,9 @@ namespace Kezor.Client
                 var h = hit[best];
                 var mesh = Object.Instantiate(src);
                 mesh.name = src.name + "_coberto";
+                // Unity 6: malha com LODs automáticos não aceita trocar os triângulos; fica só o LOD0
+                var lodProp = typeof(Mesh).GetProperty("lodCount");
+                if (lodProp != null && lodProp.CanWrite && lodProp.GetValue(mesh) is int lods && lods > 1) lodProp.SetValue(mesh, 1);
                 for (int sub = 0; sub < mesh.subMeshCount; sub++)
                 {
                     var tris = mesh.GetTriangles(sub);
