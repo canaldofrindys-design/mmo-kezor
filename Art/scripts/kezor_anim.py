@@ -194,9 +194,9 @@ def _gait(u, run):
                  (0.82, (0.36, 0.22)), (0.94, (0.36, 0.06))]
         hipk = [(0.0, -0.075), (0.1, -0.095), (0.25, -0.03), (0.37, -0.012), (0.5, -0.075), (0.6, -0.095), (0.75, -0.03), (0.87, -0.012)]
     else:
-        duty, front, back = 0.56, 0.34, -0.36          # caminhada firme (vila): passada longa, calcanhar primeiro
-        swing = [(0.0, (front, 0.0)), (duty, (back, 0.06)), (0.68, (-0.16, 0.14)), (0.84, (0.20, 0.12)), (0.95, (0.35, 0.03))]
-        hipk = [(0.0, -0.085), (0.25, -0.045), (0.5, -0.085), (0.75, -0.045)]
+        duty, front, back = 0.56, 0.30, -0.31          # caminhada firme (vila): passada longa, calcanhar primeiro
+        swing = [(0.0, (front, 0.0)), (duty, (back, 0.06)), (0.68, (-0.14, 0.12)), (0.84, (0.18, 0.10)), (0.95, (0.31, 0.03))]
+        hipk = [(0.0, -0.055), (0.25, -0.02), (0.5, -0.055), (0.75, -0.02)]
 
     def foot(ph):
         ph %= 1.0
@@ -220,7 +220,7 @@ def _gait(u, run):
     torso(P, pitch=lean * 0.55, yaw=s * (9 if run else 6), roll=-math.cos(u * 4 * math.pi) * (2.0 if run else 1.5),
           cpitch=lean * 0.6 + (math.cos(u * 4 * math.pi) * 2 if run else 0), cyaw=-s * (17 if run else 10), croll=s * 1.5,
           hpitch=-lean * 0.9, hyaw=s * (7 if run else 4))
-    sw = 40 if run else 28
+    sw = 40 if run else 22
     arm(P, 'L', fwd=-s * sw + (8 if run else 2), out=15 if run else 7, flex=(68 if run else 18) + max(0, -s) * (14 if run else 14), twist=-6 if run else 2)
     arm(P, 'R', fwd=s * sw + (10 if run else 6), out=15 if run else 8, flex=(66 if run else 26) + max(0, s) * (14 if run else 14), twist=6 if run else -4, wrist=8)
     for side, ph, x in (('L', u, 0.11), ('R', u + 0.5, -0.11)):
@@ -354,7 +354,7 @@ CLIPS = [
     ('Death', 1.2, False, death),
 ]
 # passada (m por ciclo) dos clipes de locomoção, para o jogo sincronizar a fase com a velocidade (pé sem deslizar)
-STRIDE = {'Walk': (0.34 + 0.36) / 0.56, 'Run': (0.30 + 0.32) / 0.2}   # percurso do pé no apoio / fração de apoio
+STRIDE = {'Walk': (0.30 + 0.31) / 0.56, 'Run': (0.30 + 0.32) / 0.2}   # percurso do pé no apoio / fração de apoio
 
 
 # ================================================================ Blender: armature, actions e prévia
