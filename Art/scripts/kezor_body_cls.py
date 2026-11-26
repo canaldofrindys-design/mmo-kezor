@@ -126,8 +126,12 @@ def load_head(profile):
                     y += 0.006 * low * _sm(-0.02, -0.08, y)                         # queixo menor
                     if 1.70 < z < 1.74 and y < -0.05:
                         y += 0.0035                                                 # sobrancelha suave
-                    if abs(x) < 0.016 and y < -0.085 and 1.625 < z < 1.69:
-                        y += 0.004                                                  # nariz menor
+                    if abs(x) < 0.02 and y < -0.075 and 1.62 < z < 1.695:
+                        k = _sm(0.02, 0.0, abs(x)) * _sm(-0.075, -0.1, y)
+                        y += 0.009 * k                                              # nariz menor e fino
+                        x *= 1 - 0.25 * k
+                    if 1.585 < z < 1.625 and y < -0.04:
+                        x *= 0.95                                                   # queixo delicado
                     if abs(z - 1.668) < 0.02 and 0.03 < abs(x) < 0.06 and y < -0.05:
                         y -= 0.002                                                  # maçãs do rosto
                 elif profile == 'forte':
@@ -160,7 +164,7 @@ def hair_cls(body, style):
         if p.z < 1.62:
             return False
         if style == 'mohawk':
-            return abs(p.x) < 0.026 + 0.004 * _smooth(1.79, 1.7, p.z) and p.y > -0.075 and p.z > 1.66
+            return abs(p.x) < 0.024 + 0.004 * _smooth(1.79, 1.7, p.z) and p.y > -0.035 + 0.25 * max(0.0, 1.76 - p.z) and p.z > 1.68
         front = p.y < -0.02
         if front:
             line = 1.735 if style != 'shaggy' else 1.715
@@ -187,7 +191,7 @@ def hair_cls(body, style):
     if style == 'long':
         def drape(u, v):
             t = 1 - v
-            half = 110 - 25 * t ** 1.3                       # embaixo fica só atrás dos ombros
+            half = 96 - 16 * t ** 1.3                       # embaixo fica só atrás dos ombros
             az = (180 + half * (2 * u - 1)) * math.pi / 180
             tips = abs(math.sin(math.pi * 9 * u)) ** 0.5     # pontas das mechas na barra
             z = 1.70 - (0.30 + 0.04 * tips) * t

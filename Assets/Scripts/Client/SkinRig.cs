@@ -212,6 +212,48 @@ namespace Kezor.Client
             return bw;
         }
 
+        private static readonly List<Vector2>[] _pw = { new List<Vector2>(), new List<Vector2>(), new List<Vector2>(), new List<Vector2>() };
+
+        /// <summary>Lê os pesos do Blender gravados nos canais UV2..UV5; false se a malha não tiver (usa a fórmula).</summary>
+        public static bool ReadPainted(Mesh src, int n, BoneWeight[] bw, int boneCount)
+        {
+            for (int k = 0; k < 4; k++)
+            {
+                _pw[k].Clear();
+                src.GetUVs(2 + k, _pw[k]);
+                if (_pw[k].Count != n) return false;
+            }
+            var idx = new int[4];
+            var w = new float[4];
+            bool any = false;
+            for (int i = 0; i < n; i++)
+            {
+                float tot = 0f;
+                for (int k = 0; k < 4; k++)
+                {
+                    var p = _pw[k][i];
+                    idx[k] = Mathf.Clamp(Mathf.RoundToInt(p.x), 0, boneCount - 1);
+                    w[k] = Mathf.Max(0f, p.y);
+                    tot += w[k];
+                }
+                if (tot <= 1e-5f) return false;            // canal com outro uso: não são pesos
+                any = true;
+                // ordena do maior para o menor (o Unity espera o maior primeiro)
+                for (int a = 1; a < 4; a++)
+                    for (int b = a; b > 0 && w[b] > w[b - 1]; b--)
+                    {
+                        (w[b], w[b - 1]) = (w[b - 1], w[b]);
+                        (idx[b], idx[b - 1]) = (idx[b - 1], idx[b]);
+                    }
+                bw[i] = new BoneWeight
+                {
+                    boneIndex0 = idx[0], weight0 = w[0] / tot, boneIndex1 = idx[1], weight1 = w[1] / tot,
+                    boneIndex2 = idx[2], weight2 = w[2] / tot, boneIndex3 = idx[3], weight3 = w[3] / tot,
+                };
+            }
+            return any;
+        }
+
         private static void Convert(Rig rig, MeshFilter mf, MeshRenderer mr, string part, Transform[] bones, Transform body, float s, float sx)
         {
             var src = mf.sharedMesh;
@@ -228,7 +270,9 @@ namespace Kezor.Client
                 // só o corpo inteiro (vai do pé até a cabeça); armadura com capa longa continua rígida no tronco
                 if (Mathf.Max(-bmin.x, bmax.x) / s > 0.27f && bmin.y / s < 0.5f && bmax.y / s > 1.74f) part = "Full";
             }
-            for (int i = 0; i < _v.Count; i++)
+            // pesos pintados no Blender (kezor_body_cls.encode_uv): UV2..UV5 = (osso, peso), osso no índice do KezorAnim
+            bool painted = ReadPainted(src, _v.Count, bw, bones.Length);
+            for (int i = 0; i < _v.Count && !painted; i++)
             {
                 var pb = toBody.MultiplyPoint3x4(_v[i]);
                 float z = pb.y / s;
