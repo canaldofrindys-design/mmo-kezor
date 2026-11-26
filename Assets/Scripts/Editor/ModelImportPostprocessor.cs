@@ -9,7 +9,7 @@ namespace Kezor.EditorTools
     /// </summary>
     public sealed class ModelImportPostprocessor : AssetPostprocessor
     {
-        public override uint GetVersion() => 2;
+        public override uint GetVersion() => 3;
 
         private void OnPreprocessModel()
         {
@@ -30,7 +30,8 @@ namespace Kezor.EditorTools
             mi.importNormals = ModelImporterNormals.Import;
             mi.addCollider = false;
             mi.meshCompression = ModelImporterMeshCompression.Off;
-            mi.isReadable = path.Contains("/Environment/");
+            // Environment (WorldBuilder combina) e personagens/equipamentos (o SkinRig cria a pele que dobra nas juntas)
+            mi.isReadable = path.Contains("/Environment/") || path.Contains("/Classes/") || path.Contains("/Equip/") || path.Contains("/Npcs/");
             // mid poly: heróis, equipamentos, asas e monstros ganham LODs automáticos (Mesh LOD do Unity 6: LOD0/1/2)
             bool lods = !path.Contains("/Environment/");
             mi.generateMeshLods = lods;

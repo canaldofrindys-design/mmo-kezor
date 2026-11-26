@@ -24,6 +24,14 @@ namespace Kezor.Client
         public bool Flying;
         /// <summary>Chamado quando o personagem golpeia (rastro da arma épica).</summary>
         public System.Action? OnAttack;
+        /// <summary>Esqueleto completo do SkinRig (ordem de KezorAnim.BoneNames); null = só as partes rígidas.</summary>
+        public Transform[]? Bones;
+        /// <summary>Rotação de repouso de cada osso no espaço da raiz.</summary>
+        public Quaternion[]? BoneRest;
+        /// <summary>Escala do herói em relação ao esqueleto do Blender (altura do quadril / 0,92) e espelho do eixo X.</summary>
+        public float BoneScale = 1f, MirrorX = -1f;
+        /// <summary>Altura do pivô do Body (quadril) no espaço do Body.</summary>
+        public float HipPivot = 0.95f;
     }
 
     /// <summary>Fábrica de modelos low poly montados de primitivas (personagens, monstros, NPCs, itens).</summary>

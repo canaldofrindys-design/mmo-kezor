@@ -31,6 +31,12 @@ namespace Kezor.Client
             v.transform.position = v.Target = v._lastPos = pos;
             v._phase = Random.value * 10f;
             v._anim = rig.Root.GetComponentInChildren<Animator>();
+            // heróis e NPCs humanos: esqueleto com pele e animações feitas no Blender (Anim/Heroi)
+            if (kind == EntityKind.Player && rig.ArmR != null && rig.LegL != null && !rig.Bouncy && !rig.Hover && KezorAnim.Hero is KezorAnim ka)
+            {
+                try { if (SkinRig.Build(rig, ka)) v._clips = ka; }
+                catch (System.Exception e) { Debug.LogWarning("[Kezor] esqueleto do herói falhou: " + e.Message); }
+            }
             if (v._anim != null && v._anim.runtimeAnimatorController != null)
                 foreach (var prm in v._anim.parameters) if (prm.nameHash == SpeedId && prm.type == AnimatorControllerParameterType.Float) v._animHasSpeed = true;
             return v;
@@ -46,15 +52,33 @@ namespace Kezor.Client
             Target = old.Target; _lastPos = old._lastPos;
             _walk = old._walk; _speed = old._speed; _phase = old._phase; _face = old._face;
             _attackT = old._attackT; _hitT = old._hitT;
+            _gait = old._gait; _idleT = old._idleT; _flyT = old._flyT; _fly = old._fly; _move = old._move; _atkClip = old._atkClip;
         }
 
-        public void PlayAttack(Vector3 towards) { _attackT = 0; _face = towards; Rig.OnAttack?.Invoke(); }
+        public void PlayAttack(Vector3 towards)
+        {
+            _attackT = 0; _face = towards; Rig.OnAttack?.Invoke();
+            _atkClip = IsCaster(WeaponId) ? "Cast" : (_atkClip == "Slash1" ? "Slash2" : "Slash1");   // golpes alternados
+        }
+
+        /// <summary>Cajados, varinhas, arcos, tomos e sinos: o golpe é o gesto de magia/disparo.</summary>
+        private static bool IsCaster(int w) => w is 10 or 11 or 12 or 41 or 71 or 20 or 21 or 22 or 42 or 72 or 56 or 57 or 58 or 45 or 75;
         public void PlayHit() { _hitT = 0; }
         public void PlayDeath() { Dying = true; _dieT = 0; }
 
         private void Update()
         {
             float dt = Time.deltaTime;
+            if (Dying && _clips != null && Rig.Bones != null && _clips.Clips.TryGetValue("Death", out var dc))
+            {   // morte animada: cai de costas, fica no chão e afunda
+                _dieT += dt;
+                KezorAnim.Sample(dc, _dieT / dc.Duration, Rig.MirrorX, _qb, out var dh);
+                KezorAnim.Blend(_qa, _hip, _qb, dh, Mathf.Clamp01(_dieT / 0.15f), out _hip);
+                ApplyPose(_hip);
+                if (_dieT > 1.7f) transform.position += Vector3.down * dt * 0.8f;
+                if (_dieT > 2.8f) Destroy(gameObject);
+                return;
+            }
             if (Dying)
             {
                 _dieT += dt;
@@ -108,7 +132,8 @@ namespace Kezor.Client
 
             if (humanoid)
             {
-                AnimateHumanoid(dt, t, run);
+                if (_clips != null && Rig.Bones != null) AnimateClips(dt, t);
+                else AnimateHumanoid(dt, t, run);
                 _hitT += dt;
                 SetFlash(_hitT < 0.15f ? 0.65f * (1f - _hitT / 0.15f) : 0f);
                 return;
@@ -232,6 +257,11 @@ namespace Kezor.Client
             Rig.ArmL!.localRotation = Quaternion.Euler(-armSwing - idle + flyArmX - atkAny * 25f, 0, flyArmZ + 3f + atkAny * 10f);
             if (Rig.Head != null) Rig.Head.localRotation = Quaternion.Euler(-pitch * 0.55f + breathe * 1.2f * (1f - mv), -twist * 0.5f, 0);
 
+            AnimateWings(t, mv, fl, flapping, flapF);
+        }
+
+        private void AnimateWings(float t, float mv, float fl, bool flapping, float flapF)
+        {
             // asas do herói: abertas e firmes; batida forte voando, lenta parado no chão; planeio aberto
             if (Rig.WingL != null && Rig.WingR != null)
             {
@@ -242,6 +272,96 @@ namespace Kezor.Client
                 Rig.WingL.localRotation = Quaternion.Euler(fl * 6f, sweep, f + open);
                 Rig.WingR.localRotation = Quaternion.Euler(fl * 6f, -sweep, -f - open);
             }
+        }
+
+        // ================================================================ animações do Blender (KezorAnim)
+        private KezorAnim? _clips;
+        private float _gait, _idleT, _flyT;
+        private string _atkClip = "Slash1";
+        private Vector3 _hip;
+        private readonly Quaternion[] _qa = new Quaternion[KezorAnim.Count], _qb = new Quaternion[KezorAnim.Count], _qc = new Quaternion[KezorAnim.Count];
+        private readonly float[] _mask = new float[KezorAnim.Count];
+        private const float AttackTime = 0.55f;
+
+        private static float Smooth01(float a, float b, float x) { float k = Mathf.Clamp01((x - a) / (b - a)); return k * k * (3 - 2 * k); }
+
+        /// <summary>
+        /// Mistura os clipes: parado ↔ andar ↔ correr (fase sincronizada com a distância, pé sem deslizar), chão ↔ voo
+        /// (pouso e decolagem suaves), golpe no tronco e braços por cima da corrida e montaria com as pernas na sela.
+        /// </summary>
+        private void AnimateClips(float dt, float t)
+        {
+            var A = _clips!;
+            float sx = Rig.MirrorX, sc = Rig.BoneScale;
+            float spd = _speed / Mathf.Max(0.3f, sc);
+            float runW = Smooth01(1.6f, 3.4f, spd);
+            float sw = A.Stride.TryGetValue("Walk", out var a1) ? a1 : 1f, sr = A.Stride.TryGetValue("Run", out var a2) ? a2 : 3.1f;
+            _gait += dt * spd / Mathf.Lerp(sw, sr, runW);
+            _idleT += dt; _flyT += dt;
+            float mv = _move, fl = _fly;
+
+            Vector3 hA, hB, hC;
+            var idle = A.Clips["Idle"];
+            KezorAnim.Sample(idle, _idleT / idle.Duration, sx, _qa, out hA);
+            if (mv > 0.001f)
+            {
+                KezorAnim.Sample(A.Clips["Walk"], _gait, sx, _qb, out hB);
+                KezorAnim.Sample(A.Clips["Run"], _gait, sx, _qc, out hC);
+                KezorAnim.Blend(_qb, hB, _qc, hC, runW, out hB);
+                KezorAnim.Blend(_qa, hA, _qb, hB, mv, out hA);
+            }
+            if (fl > 0.001f)
+            {
+                var fi = A.Clips["FlyIdle"]; var fm = A.Clips["FlyMove"];
+                KezorAnim.Sample(fi, _flyT / fi.Duration, sx, _qb, out hB);
+                KezorAnim.Sample(fm, _flyT / fm.Duration, sx, _qc, out hC);
+                KezorAnim.Blend(_qb, hB, _qc, hC, mv, out hB);
+                KezorAnim.Blend(_qa, hA, _qb, hB, fl, out hA);
+            }
+            if (_attackT < AttackTime && A.Clips.TryGetValue(_atkClip, out var atk))
+            {
+                float u = _attackT / AttackTime;
+                float w = Smooth01(0f, 0.06f, _attackT) * (1f - Smooth01(0.78f, 1f, u));
+                KezorAnim.Sample(atk, u, sx, _qb, out hB);
+                float lower = (1f - mv) * (1f - fl) * (Rig.Seated ? 0f : 1f);   // correndo/voando, as pernas seguem o movimento
+                for (int i = 0; i < KezorAnim.Count; i++) _mask[i] = i >= KezorAnim.Chest && i <= KezorAnim.HandR ? 1f : lower;
+                KezorAnim.Blend(_qa, hA, _qb, hB, w, out hA, _mask);
+            }
+            if (Rig.Seated)
+            {   // montado: quadril parado na sela, coxas para a frente e abertas, canelas penduradas
+                hA = Vector3.zero;
+                _qa[KezorAnim.Body] = Quaternion.Slerp(Quaternion.identity, _qa[KezorAnim.Body], 0.3f);
+                _qa[KezorAnim.LegL] = Quaternion.Euler(0, sx * 14f, 0) * Quaternion.Euler(-78f, 0, 0);
+                _qa[KezorAnim.LegR] = Quaternion.Euler(0, -sx * 14f, 0) * Quaternion.Euler(-78f, 0, 0);
+                _qa[KezorAnim.ShinL] = _qa[KezorAnim.ShinR] = Quaternion.Euler(-8f, 0, 0);
+                _qa[KezorAnim.FootL] = _qa[KezorAnim.FootR] = Quaternion.Euler(10f, 0, 0);
+                for (int i = 0; i < Rig.ExtraLegs.Count; i++)
+                {
+                    var leg = Rig.ExtraLegs[i];
+                    float s = mv > 0.1f ? Mathf.Sin(_walk + i * 1.7f) * 25f * mv : 0f;
+                    var e = leg.localRotation.eulerAngles;
+                    leg.localRotation = Quaternion.Euler(s, e.y, e.z);
+                }
+            }
+            _hip = hA;
+            ApplyPose(hA);
+
+            // asas: mesmo ritmo do voo procedural
+            _glide += dt * (mv > 0.5f ? 1f : 0.45f);
+            float cyc = Mathf.Repeat(_glide, 2.2f);
+            bool flapping = mv < 0.5f || cyc < 1.0f;
+            float flapF = flapping ? Mathf.Sin(t * (mv > 0.5f ? 11f : 4.2f)) : Mathf.Sin(t * 1.3f) * 0.15f;
+            AnimateWings(t, mv, fl, flapping, flapF);
+        }
+
+        /// <summary>Aplica a pose: rotação de cada osso no espaço da raiz × repouso; o Body gira em volta do quadril.</summary>
+        private void ApplyPose(Vector3 hip)
+        {
+            var bones = Rig.Bones!; var rest = Rig.BoneRest!;
+            var rr = Rig.Root.rotation;
+            for (int i = 0; i < KezorAnim.Count; i++) bones[i].rotation = rr * _qa[i] * rest[i];
+            var pivot = new Vector3(0, Rig.HipPivot, 0);
+            Rig.Body.localPosition = Rig.BodyBase + pivot + hip * Rig.BoneScale - _qa[KezorAnim.Body] * pivot;
         }
 
         private float _baseScale = 1f;
