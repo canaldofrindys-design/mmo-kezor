@@ -126,8 +126,12 @@ namespace Kezor.Client
         private readonly List<Vector3> _n = new List<Vector3>();
         private readonly List<Color32> _c = new List<Color32>();
         private readonly List<Vector2> _u = new List<Vector2>();
+        private readonly List<Vector3> _tp = new List<Vector3>();   // UV3: posição no modelo (× escala) — textura segue o modelo
+        private readonly List<Vector3> _tn = new List<Vector3>();   // UV4: normal no modelo
         private readonly List<int> _t = new List<int>();
         public int VertexCount => _v.Count;
+        /// <summary>Construções: madeira vira tábuas (15) e pedra vira alvenaria (16) na textura.</summary>
+        public bool Building;
 
         private static Src Get(Mesh m)
         {
@@ -158,12 +162,20 @@ namespace Kezor.Client
                 var s = Get(mesh);
                 var mm = m * toRoot * mf.transform.localToWorldMatrix;
                 var nm = mm.inverse.transpose;                    // normais certas com escala não uniforme (muralha esticada)
+                var lm = toRoot * mf.transform.localToWorldMatrix;  // vértice → espaço do modelo
+                var lnm = lm.inverse.transpose;
+                var sc = new Vector3(((Vector3)m.GetColumn(0)).magnitude, ((Vector3)m.GetColumn(1)).magnitude, ((Vector3)m.GetColumn(2)).magnitude);
                 int baseIdx = _v.Count;
                 for (int i = 0; i < s.V.Length; i++)
                 {
                     _v.Add(mm.MultiplyPoint3x4(s.V[i]));
                     _n.Add(nm.MultiplyVector(s.N[i]).normalized);
-                    _u.Add(s.U[i]);
+                    var uv = s.U[i];
+                    if (Building) { int id = Mathf.RoundToInt(uv.x); if (id == 6) uv.x = 15; else if (id == 7) uv.x = 16; }
+                    _u.Add(uv);
+                    _tp.Add(Vector3.Scale(lm.MultiplyPoint3x4(s.V[i]), sc));
+                    var ln = lnm.MultiplyVector(s.N[i]);
+                    _tn.Add(ln.sqrMagnitude > 1e-8f ? ln.normalized : Vector3.up);
                     var c = remap != null ? remap(s.C[i]) : s.C[i];
                     _c.Add(new Color32((byte)(c.r * tint.r), (byte)(c.g * tint.g), (byte)(c.b * tint.b), c.a));
                 }
@@ -183,7 +195,7 @@ namespace Kezor.Client
             if (_v.Count == 0) return null;
             var mesh = new Mesh { name = name };
             if (_v.Count > 65000) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-            mesh.SetVertices(_v); mesh.SetNormals(_n); mesh.SetColors(_c); mesh.SetUVs(1, _u); mesh.SetTriangles(_t, 0);
+            mesh.SetVertices(_v); mesh.SetNormals(_n); mesh.SetColors(_c); mesh.SetUVs(1, _u); mesh.SetUVs(3, _tp); mesh.SetUVs(4, _tn); mesh.SetTriangles(_t, 0);
             mesh.RecalculateBounds();
             return KezorLook.MakeObject(name, mesh, parent, occluder);
         }

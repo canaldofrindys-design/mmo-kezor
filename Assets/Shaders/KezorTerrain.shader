@@ -51,7 +51,7 @@ Shader "Kezor/Terrain"
             }
 
             // camadas (DetailTextures): 10 grama, 11 terra, 12 calçamento, 13 cascalho
-            half3 Layer(float2 uv, float layer) { return SAMPLE_TEXTURE2D_ARRAY(_KezorDetail, sampler_KezorDetail, uv, layer).rgb; }
+            half4 Layer(float2 uv, float layer) { return SAMPLE_TEXTURE2D_ARRAY(_KezorDetail, sampler_KezorDetail, uv, layer); }
 
             half4 frag (Varyings i) : SV_Target
             {
@@ -61,12 +61,14 @@ Shader "Kezor/Terrain"
                 {
                     float4 w = i.w / max(i.w.x + i.w.y + i.w.z + i.w.w, 1e-3);
                     float2 uv = i.positionWS.xz * _Tiling;
-                    half3 d = 0;
+                    half4 d = 0;
                     if (w.x > 0.01) d += Layer(uv * 1.7, 10) * w.x;
                     if (w.y > 0.01) d += Layer(uv * 1.2 + 0.37, 11) * w.y;
                     if (w.z > 0.01) d += Layer(uv, 12) * w.z;
                     if (w.w > 0.01) d += Layer(uv * 2.1 + 0.71, 13) * w.w;
-                    detail = 0.72 + 0.56 * d.b;
+                    detail = (0.62 + 0.76 * d.b) * (1.0 - d.a * 0.45);   // tom + cavidade (rejunte, vãos entre torrões)
+                    half macro = SAMPLE_TEXTURE2D(_NoiseMap, sampler_NoiseMap, i.positionWS.xz * 0.03).r;
+                    detail *= 0.86 + 0.28 * macro;
                     float2 bump = (d.rg - 0.5) * 1.4;
                     n = normalize(n + float3(bump.x, 0, bump.y));
                 }

@@ -32,6 +32,35 @@ half3 KezorDetailTri(float3 p, float3 n, float layer)
     return a * w.x + b * w.y + c * w.z;
 }
 
+// repetições por metro de cada material (id 1..16): tábuas e blocos em escala de construção, tecido e pele finos
+static const float kKezorTiling[17] = { 1.0, 2.2, 2.6, 1.4, 2.2, 2.4, 1.1, 0.55, 0.45, 0.85, 1.2, 1.0, 1.0, 1.0, 1.0, 0.42, 0.38 };
+static const float kKezorBump[17]   = { 0.0, 0.2, 0.6, 0.35, 0.6, 0.5, 0.7, 1.0, 0.5, 0.9, 0.7, 0.0, 0.0, 0.0, 0.0, 0.9, 1.0 };
+float KezorTilingFor(int mid) { return kKezorTiling[clamp(mid, 0, 16)] * (_KezorDetailTiling > 0 ? _KezorDetailTiling : 1.0); }
+float KezorBumpFor(int mid) { return kKezorBump[clamp(mid, 0, 16)]; }
+
+half4 KezorDetailTri4(float3 p, float3 n, float layer, float t)
+{
+    float3 w = pow(abs(n), 6.0); w /= max(w.x + w.y + w.z, 1e-4);
+    half4 a = SAMPLE_TEXTURE2D_ARRAY(_KezorDetail, sampler_KezorDetail, p.zy * t, layer);
+    half4 b = SAMPLE_TEXTURE2D_ARRAY(_KezorDetail, sampler_KezorDetail, p.xz * t, layer);
+    half4 c = SAMPLE_TEXTURE2D_ARRAY(_KezorDetail, sampler_KezorDetail, p.xy * t, layer);
+    return a * w.x + b * w.y + c * w.z;
+}
+
+// Relevo sem UV nem tangente (Mikkelsen, "bump mapping unparametrized surfaces"): inclina a normal pela derivada
+// da altura na tela. Serve para qualquer projeção (triplanar local ou do mundo).
+float3 KezorBumpFromHeight(float3 n, float3 wp, float h, float k)
+{
+    if (k <= 0.0) return n;
+    float3 dpdx = ddx(wp), dpdy = ddy(wp);
+    float dhx = ddx(h), dhy = ddy(h);
+    float3 r1 = cross(dpdy, n), r2 = cross(n, dpdx);
+    float det = dot(dpdx, r1);
+    float3 grad = sign(det) * (dhx * r1 + dhy * r2);
+    float3 nn = normalize(abs(det) * n - grad * k * 0.06);
+    return dot(nn, nn) > 0.5 ? nn : n;
+}
+
 // Luz URP (Blinn-Phong quase fosco) sobre o albedo: sombra da luz principal, Forward+, SSAO e ambiente.
 half3 KezorLit(half3 albedo, float3 positionWS, half3 normalWS, float4 positionCS)
 {

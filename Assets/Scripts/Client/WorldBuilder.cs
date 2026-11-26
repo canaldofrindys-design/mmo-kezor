@@ -112,7 +112,7 @@ namespace Kezor.Client
             float cx = _map.SafeX, cz = _map.SafeZ;
             // 8 fatias (setores de 45°) em malhas separadas: a câmera só desenha as que vê (culling por fatia)
             var slices = new StaticBatch[8];
-            for (int q = 0; q < 8; q++) slices[q] = new StaticBatch();
+            for (int q = 0; q < 8; q++) slices[q] = new StaticBatch { Building = true };
             StaticBatch Slice(Vector3 p) { float ang = Mathf.Atan2(p.z - cz, p.x - cx) * Mathf.Rad2Deg; return slices[Mathf.Clamp((int)(Mathf.Repeat(ang, 360f) / 45f), 0, 7)]; }
             var wallPf = Env("Muralha2"); var ivyPf = Env("Muralha2Hera") ?? wallPf; var towerPf = Env("Torre2"); var archPf = Env("PortaoArco");
             float R = TownWallRadius;
@@ -175,7 +175,10 @@ namespace Kezor.Client
                 if (pf == null) continue;
                 var rot = Quaternion.Euler(0, pr.Yaw, 0);
                 var pos = new Vector3(pr.X, 0, pr.Z);
-                Slice(pos).Add(pf, Matrix4x4.TRS(pos, rot, Vector3.one * pr.Scale), Color.white);
+                var sb = Slice(pos);
+                sb.Building = !(pr.Kind.StartsWith("Arvore") || pr.Kind.StartsWith("Pinheiro") || pr.Kind == "Arbusto");   // tronco é veio, não tábua
+                sb.Add(pf, Matrix4x4.TRS(pos, rot, Vector3.one * pr.Scale), Color.white);
+                sb.Building = true;
                 switch (pr.Kind)
                 {
                     case "Poste2": LocalLights.Add(pos + rot * new Vector3(0, 3.3f, 0.78f), new Color(1f, 0.62f, 0.3f), 7.5f); break;

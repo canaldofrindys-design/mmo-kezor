@@ -73,11 +73,12 @@ Shader "Kezor/LowPoly"
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl"
             #include "KezorCommon.hlsl"
 
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; half4 color : COLOR; float2 uv1 : TEXCOORD1; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; half4 color : COLOR; float2 uv1 : TEXCOORD1; float3 uv3 : TEXCOORD3; float3 uv4 : TEXCOORD4; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings
             {
                 float4 positionCS : SV_POSITION; half4 color : COLOR; float3 normalWS : TEXCOORD0; float3 positionWS : TEXCOORD1;
                 float3 positionOS : TEXCOORD2; float3 normalOS : TEXCOORD3; float mid : TEXCOORD4; float fogCoord : TEXCOORD5;
+                float3 texPos : TEXCOORD6; float3 texNrm : TEXCOORD7;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -95,6 +96,11 @@ Shader "Kezor/LowPoly"
                 o.positionOS = v.positionOS.xyz;
                 o.normalOS = v.normalOS;
                 o.mid = v.uv1.x;
+                // espaço da textura: malhas combinadas (StaticBatch) trazem a posição/normal local do modelo em UV3/UV4,
+                // assim tábuas e blocos seguem a parede de cada casa, qualquer que seja o giro dela
+                bool hasTex = dot(v.uv4, v.uv4) > 0.25;
+                o.texPos = hasTex ? v.uv3 : v.positionOS.xyz;
+                o.texNrm = hasTex ? v.uv4 : v.normalOS;
                 o.fogCoord = ComputeFogFactor(o.positionCS.z);
                 return o;
             }
@@ -131,18 +137,19 @@ Shader "Kezor/LowPoly"
                     }
                 }
                 float3 n = normalize(i.normalWS);
-                half detail = 1.0;
+                half3 albedo = i.color.rgb;
                 if (_KezorDetailOn > 0.5 && i.mid > 0.5)
-                {   // textura de detalhe: varia o tom e inclina a normal
-                    float3 on = normalize(i.normalOS);
-                    half3 d = KezorDetailTri(i.positionOS, on, floor(i.mid + 0.5) - 1.0);
-                    detail = 0.84 + 0.32 * d.b;
-                    float2 bump = (d.rg - 0.5) * 1.1;
-                    float3 w = abs(on);
-                    float3 pert = w.x > w.y && w.x > w.z ? float3(0, bump.y, bump.x) : (w.y > w.z ? float3(bump.x, 0, bump.y) : float3(bump.x, bump.y, 0));
-                    n = normalize(n + mul(pert, (float3x3)UNITY_MATRIX_I_M));
+                {   // textura do material: tom, cavidade (juntas e frestas escurecem) e relevo pela derivada do tom
+                    int mid = (int)floor(i.mid + 0.5);
+                    half4 d = KezorDetailTri4(i.texPos, normalize(i.texNrm), mid - 1.0, KezorTilingFor(mid));
+                    half tone = 0.42 + 1.16 * d.b;
+                    albedo *= tone;
+                    albedo = lerp(albedo, albedo * half3(0.40, 0.34, 0.29), d.a * 0.85);
+                    // variação grande (manchas de 5-15 m) para paredes e chão não parecerem pintados de uma cor só
+                    half macro = SAMPLE_TEXTURE2D(_NoiseMap, sampler_NoiseMap, i.positionWS.xz * 0.045 + i.positionWS.y * 0.02).r;
+                    albedo *= 0.9 + 0.2 * macro;
+                    n = KezorBumpFromHeight(n, i.positionWS, d.b - d.a * 0.6, KezorBumpFor(mid));
                 }
-                half3 albedo = i.color.rgb * detail;
                 half e = saturate((0.5 - i.color.a) * 2.0);
                 half3 lit = _Unlit > 0.5 ? albedo : KezorLit(albedo, i.positionWS, n, i.positionCS);
                 half emis = 1.5 * (_KezorEmissive > 0.0 ? _KezorEmissive : 1.0) * (1.0 + _Hdr);

@@ -201,7 +201,7 @@ namespace Kezor.Client
             KezorLook.MakeObject("Cripta — chão", floor.ToMesh("crypt floor"), parent);
 
             // paredes: blocos de 2 m nas bordas dos retângulos onde o lado de fora é parede (não há outro chão)
-            var walls = new StaticBatch();
+            var walls = new StaticBatch { Building = true };
             var wallPf = Env("ParedeCripta");
             var proc = new MeshBuilder();
             var wallCol = KezorLook.Hex("#3a3842");
