@@ -924,20 +924,20 @@ def build_cls(set_name, maker):
     return objs
 
 
-PIVOTS = {'Armadura': (0, 0, 0), 'LuvaL': (0.31, 0, 1.40), 'LuvaR': (-0.31, 0, 1.40),
+PIVOTS_CLS = {'Armadura': (0, 0, 0), 'LuvaL': (0.31, 0, 1.40), 'LuvaR': (-0.31, 0, 1.40),
           'CalcaL': (0.12, 0, 0.92), 'CalcaR': (-0.12, 0, 0.92), 'BotaL': (0.12, 0, 0.92),
           'BotaR': (-0.12, 0, 0.92), 'Elmo': (0, 0, 1.47)}
 
 
 def groups_cls(objs):
     keys = sorted(GRP, key=len, reverse=True)
-    out = {g: [] for g in PIVOTS}
+    out = {g: [] for g in PIVOTS_CLS}
     for nm in objs:
         for k in keys:
             if nm.startswith(k):
                 out[GRP[k]].append(nm)
                 break
-    return {g: (tuple(v), PIVOTS[g]) for g, v in out.items()}
+    return {g: (tuple(v), PIVOTS_CLS[g]) for g, v in out.items()}
 
 
 CLS_MAKERS = {'Veu': set_veu, 'Trama': set_trama, 'Bastiao': set_bastiao, 'Ecos': set_ecos, 'Igneo': set_igneo}
