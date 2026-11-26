@@ -98,7 +98,10 @@ namespace Kezor.Client
             bool moving = _speed > 0.4f;
             float run = Mathf.Clamp01((_speed - 0.4f) / 4.5f);                 // 0 parado .. 1 correndo
             _move = Mathf.Lerp(_move, moving ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
-            _fly = Mathf.Lerp(_fly, Rig.Flying && !Rig.Seated ? 1f : 0f, 1f - Mathf.Exp(-3f * dt));
+            // Asas só levantam voo fora da vila/zonas seguras; dentro delas o herói pousa e anda no chão.
+            var here = transform.position; var map = WorldBuilder.Current;
+            bool safe = map != null && map.InSafeZone(here.x, here.z);
+            _fly = Mathf.Lerp(_fly, Rig.Flying && !Rig.Seated && !safe ? 1f : 0f, 1f - Mathf.Exp(-3f * dt));
             _walk += dt * (moving ? Mathf.Clamp(_speed * 1.9f, 4f, 13f) : 0f);
             _attackT += dt;
             bool humanoid = Rig.ArmR != null && Rig.LegL != null && !Rig.Bouncy && !Rig.Hover;
