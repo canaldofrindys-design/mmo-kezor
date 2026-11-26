@@ -83,6 +83,33 @@ half3 KezorLit(half3 albedo, float3 positionWS, half3 normalWS, float4 positionC
     return UniversalFragmentBlinnPhong(d, s).rgb;
 }
 
+// PBR (metal e lisura vindos da máscara) para as peças com texturas assadas; mesmo ambiente hemisférico do KezorLit.
+// Sem sonda de reflexo no mapa o metal ficaria preto: o reflexo do céu/chão entra como especular aproximado.
+half3 KezorLitPBR(half3 albedo, half metallic, half smoothness, half occlusion, float3 positionWS, half3 normalWS, float4 positionCS)
+{
+    InputData d = (InputData)0;
+    d.positionWS = positionWS;
+    d.normalWS = normalWS;
+    d.viewDirectionWS = GetWorldSpaceNormalizeViewDir(positionWS);
+    d.shadowCoord = TransformWorldToShadowCoord(positionWS);
+    d.bakedGI = lerp(_KezorGroundColor.rgb, _KezorSkyColor.rgb, normalWS.y * 0.5 + 0.5);
+    d.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(positionCS);
+    d.shadowMask = half4(1, 1, 1, 1);
+    SurfaceData s = (SurfaceData)0;
+    s.albedo = albedo;
+    s.alpha = 1;
+    s.metallic = metallic;
+    s.smoothness = smoothness;
+    s.occlusion = occlusion;
+    half3 c = UniversalFragmentPBR(d, s).rgb;
+    // reflexo aproximado do ambiente: céu em cima, chão embaixo, tingido pela cor do metal
+    half3 R = reflect(-d.viewDirectionWS, normalWS);
+    half3 env = lerp(_KezorGroundColor.rgb, _KezorSkyColor.rgb, R.y * 0.5 + 0.5);
+    half3 f0 = lerp(half3(0.04, 0.04, 0.04), albedo, metallic);
+    c += env * f0 * smoothness * occlusion * 0.9;
+    return c;
+}
+
 // Névoa por distância do Kezor (_KezorFogParams, por mapa) + névoa rasteira nas baixadas.
 // fogCoord fica na assinatura por compatibilidade; a névoa não depende do RenderSettings.
 half3 KezorFog(half3 col, float3 wp, float fogCoord, half emissive)

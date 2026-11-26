@@ -28,6 +28,7 @@ namespace Kezor.EditorTools
             mi.importBlendShapes = false;
             mi.materialImportMode = ModelImporterMaterialImportMode.None;
             mi.importNormals = ModelImporterNormals.Import;
+            mi.importTangents = ModelImporterTangents.CalculateMikk;      // relevo (normal map) das peças com textura
             mi.addCollider = false;
             mi.meshCompression = ModelImporterMeshCompression.Off;
             // Environment (WorldBuilder combina) e personagens/equipamentos (o SkinRig cria a pele que dobra nas juntas)
@@ -36,6 +37,24 @@ namespace Kezor.EditorTools
             bool lods = !path.Contains("/Environment/");
             mi.generateMeshLods = lods;
             if (lods) mi.maximumMeshLod = 3;
+        }
+
+        /// <summary>Texturas assadas dos equipamentos: _Normal vira normal map; _Mask fica linear (metal/oclusão/lisura).</summary>
+        private void OnPreprocessTexture()
+        {
+            var path = assetPath.Replace('\\', '/');
+            if (!path.StartsWith("Assets/Resources/Textures/Equip/")) return;
+            if (!(assetImporter is TextureImporter ti)) return;
+            ti.mipmapEnabled = true;
+            ti.maxTextureSize = 2048;
+            ti.textureCompression = TextureImporterCompression.CompressedHQ;
+            ti.anisoLevel = 4;
+            if (path.EndsWith("_Normal.png")) ti.textureType = TextureImporterType.NormalMap;
+            else
+            {
+                ti.textureType = TextureImporterType.Default;
+                ti.sRGBTexture = !path.EndsWith("_Mask.png");
+            }
         }
     }
 }

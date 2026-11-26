@@ -159,9 +159,45 @@ namespace Kezor.Client
             var set = SetOf(p.Def);
             if (set == null) return null;
             var rs = Attach(rig, $"Equip/{set}_{suffix}", part, out _);
-            if (suffix2 != null && part2 != null) rs.AddRange(Attach(rig, $"Equip/{set}_{suffix2}", part2, out _));
+            ApplyMaps(rs, $"{set}_{suffix}");
+            if (suffix2 != null && part2 != null)
+            {
+                var rs2 = Attach(rig, $"Equip/{set}_{suffix2}", part2, out _);
+                ApplyMaps(rs2, $"{set}_{suffix2}");
+                rs.AddRange(rs2);
+            }
             fx.Decorate(rs, p.Level, p.Ascended, sparks: false);
             return rs;
+        }
+
+        private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap"), BumpMapId = Shader.PropertyToID("_BumpMap"),
+                                    MaskMapId = Shader.PropertyToID("_MaskMap"), UseMapsId = Shader.PropertyToID("_UseMaps");
+        private static readonly Dictionary<string, (Texture2D? b, Texture2D? n, Texture2D? m)> _maps = new Dictionary<string, (Texture2D?, Texture2D?, Texture2D?)>();
+
+        /// <summary>
+        /// Peças com texturas assadas no Blender (Resources/Textures/Equip/&lt;Set&gt;_&lt;Peça&gt;_Base/_Normal/_Mask):
+        /// liga o modo de mapas do Kezor/LowPoly (cor pintada, relevo, metal e brilho). Sem textura, fica a cor de vértice.
+        /// </summary>
+        private static void ApplyMaps(List<Renderer> rs, string name)
+        {
+            if (rs.Count == 0) return;
+            if (!_maps.TryGetValue(name, out var t))
+            {
+                t = (Resources.Load<Texture2D>($"Textures/Equip/{name}_Base"), Resources.Load<Texture2D>($"Textures/Equip/{name}_Normal"),
+                     Resources.Load<Texture2D>($"Textures/Equip/{name}_Mask"));
+                _maps[name] = t;
+            }
+            if (t.b == null) return;
+            var mpb = new MaterialPropertyBlock();
+            foreach (var r in rs)
+            {
+                r.GetPropertyBlock(mpb);
+                mpb.SetTexture(BaseMapId, t.b);
+                if (t.n != null) mpb.SetTexture(BumpMapId, t.n);
+                if (t.m != null) mpb.SetTexture(MaskMapId, t.m);
+                mpb.SetFloat(UseMapsId, 1f);
+                r.SetPropertyBlock(mpb);
+            }
         }
 
         /// <summary>

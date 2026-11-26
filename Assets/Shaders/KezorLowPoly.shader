@@ -21,6 +21,10 @@ Shader "Kezor/LowPoly"
         _BaseGlow ("Brilho base do fluxo", Range(0,1)) = 0.18
         _FlowScale ("Escala do ruído (repetições/m)", Range(0.2,8)) = 2.2
         _Unlit ("Sem luz (partículas)", Float) = 0
+        _UseMaps ("Usa mapas (cor, relevo, metal/lisura)", Float) = 0
+        _BaseMap ("Cor pintada", 2D) = "white" {}
+        [Normal] _BumpMap ("Relevo (normal map)", 2D) = "bump" {}
+        _MaskMap ("Máscara: R metal, G oclusão, B lisura", 2D) = "white" {}
     }
 
     HLSLINCLUDE
@@ -35,6 +39,7 @@ Shader "Kezor/LowPoly"
         half _Wind;
         half _RefineFlow, _GlowStrength, _FresnelPower, _FlowContrast, _ScrollSpeed, _BaseGlow, _FlowScale;
         half _Unlit;
+        half _UseMaps;
     CBUFFER_END
 
     // balanço do vento: cresce com a altura do vértice no objeto (a base fica presa)
@@ -59,6 +64,7 @@ Shader "Kezor/LowPoly"
             Name "ForwardLit"
             Tags { "LightMode"="UniversalForward" }
             HLSLPROGRAM
+            #pragma target 3.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -73,12 +79,16 @@ Shader "Kezor/LowPoly"
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl"
             #include "KezorCommon.hlsl"
 
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; half4 color : COLOR; float2 uv1 : TEXCOORD1; float3 uv3 : TEXCOORD3; float3 uv4 : TEXCOORD4; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float4 tangentOS : TANGENT; half4 color : COLOR; float2 uv0 : TEXCOORD0; float2 uv1 : TEXCOORD1; float3 uv3 : TEXCOORD3; float3 uv4 : TEXCOORD4; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_BumpMap); SAMPLER(sampler_BumpMap);
+            TEXTURE2D(_MaskMap); SAMPLER(sampler_MaskMap);
             struct Varyings
             {
                 float4 positionCS : SV_POSITION; half4 color : COLOR; float3 normalWS : TEXCOORD0; float3 positionWS : TEXCOORD1;
                 float3 positionOS : TEXCOORD2; float3 normalOS : TEXCOORD3; float mid : TEXCOORD4; float fogCoord : TEXCOORD5;
                 float3 texPos : TEXCOORD6; float3 texNrm : TEXCOORD7;
+                float2 uv0 : TEXCOORD8; float4 tangentWS : TEXCOORD9;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -102,6 +112,8 @@ Shader "Kezor/LowPoly"
                 o.texPos = hasTex ? v.uv3 : v.positionOS.xyz;
                 o.texNrm = hasTex ? v.uv4 : v.normalOS;
                 o.fogCoord = ComputeFogFactor(o.positionCS.z);
+                o.uv0 = v.uv0;
+                o.tangentWS = float4(TransformObjectToWorldDir(v.tangentOS.xyz), v.tangentOS.w * GetOddNegativeScale());
                 return o;
             }
 
@@ -138,7 +150,19 @@ Shader "Kezor/LowPoly"
                 }
                 float3 n = normalize(i.normalWS);
                 half3 albedo = i.color.rgb;
-                if (_KezorDetailOn > 0.5 && i.mid > 0.5)
+                half metal = 0, smooth = 0.25, occ = 1;
+                bool maps = _UseMaps > 0.5;
+                if (maps)
+                {   // peça com texturas assadas no Blender: cor pintada, relevo e máscara metal/oclusão/lisura
+                    albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv0).rgb * _Tint.rgb;
+                    half3 tn = UnpackNormal(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, i.uv0));
+                    float3 t = normalize(i.tangentWS.xyz - n * dot(i.tangentWS.xyz, n));
+                    float3 b = cross(n, t) * i.tangentWS.w;
+                    n = normalize(tn.x * t + tn.y * b + tn.z * n);
+                    half4 mk = SAMPLE_TEXTURE2D(_MaskMap, sampler_MaskMap, i.uv0);
+                    metal = mk.r * 0.85; occ = lerp(1.0, mk.g, 0.7); smooth = mk.b;
+                }
+                else if (_KezorDetailOn > 0.5 && i.mid > 0.5)
                 {   // textura do material: tom, cavidade (juntas e frestas escurecem) e relevo pela derivada do tom
                     int mid = (int)floor(i.mid + 0.5);
                     half4 d = KezorDetailTri4(i.texPos, normalize(i.texNrm), mid - 1.0, KezorTilingFor(mid));
@@ -151,7 +175,9 @@ Shader "Kezor/LowPoly"
                     n = KezorBumpFromHeight(n, i.positionWS, d.b - d.a * 0.6, KezorBumpFor(mid));
                 }
                 half e = saturate((0.5 - i.color.a) * 2.0);
-                half3 lit = _Unlit > 0.5 ? albedo : KezorLit(albedo, i.positionWS, n, i.positionCS);
+                half3 lit = _Unlit > 0.5 ? albedo
+                          : maps ? KezorLitPBR(albedo, metal, smooth, occ, i.positionWS, n, i.positionCS)
+                                 : KezorLit(albedo, i.positionWS, n, i.positionCS);
                 half emis = 1.5 * (_KezorEmissive > 0.0 ? _KezorEmissive : 1.0) * (1.0 + _Hdr);
                 half3 col = lerp(lit, i.color.rgb * emis, e);
                 col = KezorFog(col, i.positionWS, i.fogCoord, e);
