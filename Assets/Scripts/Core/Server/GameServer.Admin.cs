@@ -15,14 +15,16 @@ namespace Kezor.Core.Server
     /// </summary>
     public sealed partial class GameServer
     {
-        private readonly Queue<int> _kicks = new Queue<int>();
+        private readonly Queue<(int id, string reason)> _kicks = new Queue<(int, string)>();
 
-        /// <summary>Conexões que o servidor quer derrubar (o host TCP fecha depois de mandar a última mensagem).</summary>
-        public bool TryTakeKick(out int sessionId)
+        /// <summary>Conexões que o servidor quer derrubar e o motivo (o host TCP manda "@BYE motivo" e fecha).</summary>
+        public bool TryTakeKick(out int sessionId, out string reason)
         {
-            if (_kicks.Count > 0) { sessionId = _kicks.Dequeue(); return true; }
-            sessionId = 0; return false;
+            if (_kicks.Count > 0) { (sessionId, reason) = _kicks.Dequeue(); return true; }
+            sessionId = 0; reason = ""; return false;
         }
+
+        public bool TryTakeKick(out int sessionId) => TryTakeKick(out sessionId, out _);
 
         /// <summary>Herói online com este nome (console, testes).</summary>
         public Character? OnlineCharacter(string name) => CharByName(name);
@@ -46,10 +48,10 @@ namespace Kezor.Core.Server
         private static string Until(DateTime? t) => t == null || t.Value.Year >= Account.PermanentBan.Year ? "para sempre"
             : "até " + t.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
 
-        private void Kick(Session s, string message)
+        private void Kick(Session s, string message, string reason = "desconectado por um GM")
         {
             Sys(s, message);
-            if (!_kicks.Contains(s.Id)) _kicks.Enqueue(s.Id);
+            if (!_kicks.Any(k => k.id == s.Id)) _kicks.Enqueue((s.Id, reason));
         }
 
         /// <summary>Expulsa quem está online (herói ou conta). O herói é salvo normalmente ao cair.</summary>
@@ -72,7 +74,7 @@ namespace Kezor.Core.Server
             a.BannedUntil = days <= 0 ? Account.PermanentBan : DateTime.UtcNow.AddDays(days);
             a.BanReason = Clean(reason);
             _accounts.Save(a);
-            if (online != null) Kick(online, $"Sua conta foi banida {Until(a.BannedUntil)}" + (reason.Length > 0 ? ": " + Clean(reason) : "."));
+            if (online != null) Kick(online, $"Sua conta foi banida {Until(a.BannedUntil)}" + (reason.Length > 0 ? ": " + Clean(reason) : "."), "conta banida");
             LogLine($"GM {by}: baniu a conta {a.Name} {Until(a.BannedUntil)}" + (reason.Length > 0 ? $" ({reason})" : ""));
             return $"OK conta {a.Name} banida {Until(a.BannedUntil)}";
         }

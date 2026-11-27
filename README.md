@@ -80,6 +80,7 @@ Se ninguém mandar nada por 60 s (cabo puxado, jogo travado) o servidor derruba 
 cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma conta só pode estar conectada uma vez.
 
 ## Servidor dedicado
+- **Ligar o servidor neste PC**: duplo clique em `Tools/Iniciar-Servidor.bat` e entre no jogo por "Servidor deste PC" (guia, e o que deixa a conexão robusta: `docs/SERVIDOR-E-CLIENTE.md`).
 - **Online 24h num VPS**: duplo clique em `Tools/Publicar-Servidor.bat` (monta, envia e instala; guia completo em `docs/SERVIDOR-ONLINE.md`).
 - **Moderação**: contas GM usam `/gm kick|ban|unban|mute|unmute|info|goto|bring|aviso` no chat; tudo vai para o registro diário do servidor (veja "Moderação (GM) e registros" em `docs/SERVIDOR-ONLINE.md`).
 - **Sem Unity** (recomendado para deixar ligado): `cd Build && dotnet run --project Headless -- 55901 --gm-account SuaConta`
@@ -91,7 +92,7 @@ cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma con
 - Dá para testar na mão com `telnet`/`nc localhost 55901` e digitar `HELP`.
 
 ## Testes
-- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (161 testes: moderação por GM pela rede (expulsar, banir, desbanir, silenciar, ir até / trazer), Escarpa e evento da Fenda (ondas, Colosso, prêmio por dano), banco SQL (SQLite e MySQL: contas, heróis, guildas, ranking, reinício do servidor, importação dos JSON, backup), multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
+- `cd Build && dotnet test Tests/Kezor.Tests.csproj` (169 testes: conexão robusta pela rede (versão, volta depois de queda sem senha, conexão fantasma, freio de senha, limite por IP, motivo de saída, jogador lento), moderação por GM pela rede (expulsar, banir, desbanir, silenciar, ir até / trazer), Escarpa e evento da Fenda (ondas, Colosso, prêmio por dano), banco SQL (SQLite e MySQL: contas, heróis, guildas, ranking, reinício do servidor, importação dos JSON, backup), multiplayer por TCP de verdade (vários jogadores se vendo, chat, sussurro, grupo, trocar de personagem, conta duplicada, queda por inatividade, GM por conta), inventário em grade (encaixe, cheio, mover, troca, baú, equipar, migração), interface (buffs e recargas no protocolo), 7 classes e simulação de DPS, estandartes, ecos, maldições, Fluxo de Brasa, combate, itens, runas, forja, conjuntos, IA com A*, troca, guildas, loja pessoal, ranking, guerra de guildas, asas, montarias, mascotes, aparência, mapas e portais, baú, contas e saves, movimento e colisão, IA, drops, grupo, PvP, evento, protocolo TCP e cultura pt-BR).
 - No Unity: **Window ▸ General ▸ Test Runner ▸ EditMode**.
 - `Build/ClientCheck` compila o cliente fora do Unity (referências do UnityEngine via NuGet) para pegar erros cedo.
 

@@ -105,6 +105,8 @@ namespace Kezor.Core.Server
             public int PendingInviteFrom;
             /// <summary>Conta autenticada nesta conexão (null = convidado).</summary>
             public Account? Account;
+            /// <summary>IP de onde veio a conexão ("" em testes sem rede).</summary>
+            public string Address = "";
             /// <summary>Caminho calculado pelo A* até o destino atual (null = linha reta).</summary>
             public List<(float x, float z)>? Path;
             public float PathTx = float.NaN, PathTz = float.NaN;
@@ -156,9 +158,12 @@ namespace Kezor.Core.Server
         }
 
         // ------------------------------------------------------------ sessões
-        public Session Connect(int sessionId)
+        public Session Connect(int sessionId) => Connect(sessionId, "");
+
+        /// <summary>Nova conexão (o host TCP passa o IP, usado nos limites de tentativas de login e no registro).</summary>
+        public Session Connect(int sessionId, string address)
         {
-            var s = new Session { Id = sessionId };
+            var s = new Session { Id = sessionId, Address = address ?? "" };
             _sessions[sessionId] = s;
             return s;
         }
@@ -167,6 +172,7 @@ namespace Kezor.Core.Server
         {
             if (!_sessions.TryGetValue(sessionId, out var s)) return;
             LeaveWorld(s);
+            TokenAfterDisconnect(s);
             _sessions.Remove(sessionId);
             _guildInvite.Remove(sessionId);
         }
@@ -220,6 +226,8 @@ namespace Kezor.Core.Server
                 if (cmd == "PLAY") return Play(s, parts);
                 if (cmd == "DELCHAR") return DeleteChar(s, parts);
                 if (cmd == "PING") return "OK pong";
+                if (cmd == "HELLO") return Hello(s, parts);
+                if (cmd == "RESUME") return Resume(s, parts);
                 if (cmd == "SELECT") return BackToSelect(s);
                 if (cmd == "HELP") return "OK REGISTER <conta> <senha> | AUTH <conta> <senha> | CHARS | PLAY <nome> | CREATE <nome> <GUA|ARC|PAT> | LOGIN <nome> | MOVE <x> <z> | STOP | ATTACK <id> | SKILL <skillId> <id> | PICK <id> | " +
                                           "ADD <STR|AGI|VIT|ENE> <n> | STATS | LOOK | INV | EQUIP <slot> | UNEQUIP <RightHand|Helm..> | USE <slot> | RUNE <runa> <alvo> | " +
@@ -345,7 +353,8 @@ namespace Kezor.Core.Server
             var a = new Account { Name = name, PasswordHash = PasswordHasher.Hash(pass, _opt.PasswordIterations) };
             _accounts.Save(a);
             s.Account = a;
-            LogLine($"conta criada: {a.Name} (sessão {s.Id})");
+            IssueToken(s);
+            LogLine($"conta criada: {a.Name} (sessão {s.Id}{(s.Address != "" ? ", " + s.Address : "")})");
             return $"OK conta {a.Name} criada";
         }
 
@@ -354,7 +363,8 @@ namespace Kezor.Core.Server
             if (s.Character != null || s.Account != null) return "ERR já conectado";
             if (p.Length < 3) return "ERR use AUTH <conta> <senha>";
             var a = _accounts.Load(p[1]);
-            if (a == null || !PasswordHasher.Verify(p[2], a.PasswordHash)) return "ERR conta ou senha incorretas";
+            if (LoginBlocked(s) is string wait) return wait;
+            if (a == null || !PasswordHasher.Verify(p[2], a.PasswordHash)) { LoginFailed(s, p[1]); return "ERR conta ou senha incorretas"; }
             if (a.IsBanned(DateTime.UtcNow))
             {
                 LogLine($"login recusado (conta banida): {a.Name} (sessão {s.Id})");
@@ -363,7 +373,8 @@ namespace Kezor.Core.Server
             if (_sessions.Values.Any(o => o != s && o.Account != null && string.Equals(o.Account.Name, a.Name, StringComparison.OrdinalIgnoreCase)))
                 return "ERR esta conta já está conectada";
             s.Account = a;
-            LogLine($"login: {a.Name} (sessão {s.Id})");
+            IssueToken(s);
+            LogLine($"login: {a.Name} (sessão {s.Id}{(s.Address != "" ? ", " + s.Address : "")})");
             return "OK " + CharList(a);
         }
 

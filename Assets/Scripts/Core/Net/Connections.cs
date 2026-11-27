@@ -14,6 +14,8 @@ namespace Kezor.Core.Net
     {
         bool Connected { get; }
         string Error { get; }
+        /// <summary>Motivo que o servidor mandou antes de fechar ("@BYE motivo"): expulso, banido, desligando... "" se só caiu.</summary>
+        string ByeReason { get; }
         void Send(string line);
         bool TryReceive(out string line);
         /// <summary>Chamado todo frame pelo cliente.</summary>
@@ -31,6 +33,7 @@ namespace Kezor.Core.Net
         public GameServer Server { get; }
         public bool Connected => true;
         public string Error => "";
+        public string ByeReason => "";
 
         public LoopbackConnection(GameServer server)
         {
@@ -71,8 +74,10 @@ namespace Kezor.Core.Net
         private readonly object _lock = new object();
         private volatile bool _connected;
         private volatile string _error = "";
+        private volatile string _bye = "";
         public bool Connected => _connected;
         public string Error => _error;
+        public string ByeReason => _bye;
 
         public TcpClientConnection(string host, int port)
         {
@@ -82,15 +87,20 @@ namespace Kezor.Core.Net
                 {
                     _tcp.NoDelay = true;
                     _tcp.Connect(host, port);
+                    try { _tcp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true); } catch { }
                     var s = _tcp.GetStream();
                     var r = new StreamReader(s, Encoding.UTF8);
                     lock (_lock) _w = new StreamWriter(s, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" };
                     _connected = true;
                     string? line;
-                    while ((line = r.ReadLine()) != null) _in.Enqueue(line);
-                    _error = "conexão encerrada pelo servidor";
+                    while ((line = r.ReadLine()) != null)
+                    {
+                        if (line.StartsWith("@BYE")) { _bye = line.Length > 5 ? line.Substring(5) : "desconectado pelo servidor"; continue; }
+                        _in.Enqueue(line);
+                    }
+                    _error = _bye != "" ? _bye : "conexão encerrada pelo servidor";
                 }
-                catch (Exception e) { _error = e.Message; }
+                catch (Exception e) { if (_error == "") _error = _bye != "" ? _bye : e.Message; }
                 _connected = false;
             }) { IsBackground = true, Name = "Kezor-Net" };
             t.Start();
