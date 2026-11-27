@@ -104,8 +104,8 @@ def tex_alias(mat, metal=0.0, rough=0.8):
 
 def cls_bottom(mn, mx):
     """Calça (pernas abaixo do quadril, um lado só) x saiote/faixa (tronco)."""
-    one = mn[0] * mx[0] > 0 or min(abs(mn[0]), abs(mx[0])) < 0.01
-    if mx[2] < 0.93 and one and mn[2] < 0.7:
+    one = mn[0] * mx[0] > 0 or min(abs(mn[0]), abs(mx[0])) < 0.02
+    if one and mn[2] < 0.5:                 # perna do calção (desce até o joelho), um lado só
         return 'PantsL' if mn[0] + mx[0] > 0 else 'PantsR'
     return 'Rest'
 

@@ -66,6 +66,27 @@ namespace Kezor.Client
             return list;
         }
 
+        /// <summary>Cor do brilho de conjunto completo (as 5 peças do mesmo set equipadas).</summary>
+        internal static readonly Dictionary<string, Color> SetColors = new Dictionary<string, Color>
+        {
+            { "Couro", KezorLook.Hex("#d9a066") }, { "Escamas", KezorLook.Hex("#7fd18b") }, { "Veu", KezorLook.Hex("#9fb8ff") },
+            { "Runica", KezorLook.Hex("#7af0ff") }, { "Trama", KezorLook.Hex("#c9b8ff") }, { "Bastiao", KezorLook.Hex("#ffd36a") },
+            { "Ecos", KezorLook.Hex("#b6ffd9") }, { "Igneo", KezorLook.Hex("#ff7a2a") },
+        };
+
+        /// <summary>Nome do set quando elmo, armadura, calças, luvas e botas são todos do mesmo conjunto.</summary>
+        internal static string? FullSetOf(Appearance a)
+        {
+            string? set = null;
+            foreach (var slot in new[] { EquipSlot.Helm, EquipSlot.Armor, EquipSlot.Pants, EquipSlot.Gloves, EquipSlot.Boots })
+            {
+                if (!(a[slot].Def is ItemDefinition d) || !(SetOf(d) is string s)) return null;
+                if (set == null) set = s;
+                else if (set != s) return null;
+            }
+            return set;
+        }
+
         /// <summary>Conjunto (prefixo do modelo) de cada peça de armadura.</summary>
         internal static string? SetOf(ItemDefinition d)
         {
@@ -143,6 +164,7 @@ namespace Kezor.Client
                 }
                 int armorLevel = a.MaxArmorLevel;
                 if (armorLevel >= 11) { fx.BodySparks(RuneTier(armorLevel)); fx.GroundAura(RuneTier(armorLevel), armorLevel); }
+                if (FullSetOf(a) is string full && SetColors.TryGetValue(full, out var setColor)) fx.SetAura(setColor);
             }
 
             bool asc = false;
@@ -521,6 +543,25 @@ namespace Kezor.Client
         public void BodySparks((float glow, Color color, float rate) tier)
         {
             Sparks(Rig.Body, new Vector3(0, 1.1f, 0), new Vector3(0.5f, 0.9f, 0.35f), tier.color, tier.rate * 0.6f, 0.06f, -0.2f);
+        }
+
+        /// <summary>Conjunto completo: partículas suaves na cor do set subindo pelo corpo e um anel fino nos pés.</summary>
+        public void SetAura(Color color)
+        {
+            Sparks(Rig.Body, new Vector3(0, 0.95f, 0), new Vector3(0.45f, 1.1f, 0.3f), color, 7f, 0.045f, -0.12f);
+            var mb = new MeshBuilder();
+            const int n = 32; const float r = 0.5f;
+            for (int i = 0; i < n; i++)
+            {
+                float a0 = i * Mathf.PI * 2f / n, a1 = (i + 1) * Mathf.PI * 2f / n;
+                var p0 = new Vector3(Mathf.Cos(a0) * r, 0.02f, Mathf.Sin(a0) * r);
+                var p1 = new Vector3(Mathf.Cos(a1) * r, 0.02f, Mathf.Sin(a1) * r);
+                mb.Box((p0 + p1) * 0.5f, new Vector3((p1 - p0).magnitude, 0.008f, 0.025f), KezorLook.Glow(color));
+            }
+            var go = KezorLook.MakeObject("AuraConjunto", mb.ToMesh(), Rig.Root);
+            SetHdr(new List<Renderer> { go.GetComponent<Renderer>() }, 0.35f);
+            go.AddComponent<Spin>().Speed = 12f;
+            foreach (var rr in go.GetComponentsInChildren<Renderer>()) Rig.Renderers.Add(rr);
         }
 
         public void AscendedAura()
