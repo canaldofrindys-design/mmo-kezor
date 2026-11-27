@@ -212,6 +212,7 @@ namespace Kezor.Tests
             StringAssert.StartsWith("OK", w.Ask(gm, "GM KICK Bagunca flood no chat"));
             Assert.IsTrue(w.Step(() => !bad.Conn.Connected), "o expulso cai");
             Assert.IsTrue(bad.All.Any(l => l.Contains("desconectado por um GM: flood no chat")), "e vê o motivo");
+            Assert.AreEqual("desconectado por um GM", bad.Conn.ByeReason, "o jogo sabe que não deve reconectar sozinho");
             Assert.IsTrue(w.Step(() => w.Game.OnlineCount == 1));
 
             // volta, leva ban de 3 dias: cai e não consegue mais entrar
@@ -271,6 +272,95 @@ namespace Kezor.Tests
             StringAssert.StartsWith("OK", w.Ask(gm, "WARP VALE"));
             StringAssert.StartsWith("OK", w.Ask(gm, "GM BRING Perdido"));
             Assert.AreEqual(gc.MapId, lc.MapId, "e traz o jogador até ele");
+        }
+
+        private static string TokenOf(Player p) => p.All.Last(l => l.StartsWith("@TOKEN ")).Substring(7);
+
+        [Test]
+        public void HandshakeChecksGameVersion()
+        {
+            using var w = new World();
+            var p = w.Join();
+            StringAssert.StartsWith("ERR versão do jogo diferente", w.Ask(p, "HELLO 0.01"));
+            StringAssert.StartsWith("OK hello " + Protocol.GameVersion, w.Ask(p, "HELLO " + Protocol.GameVersion));
+        }
+
+        [Test]
+        public void DroppedPlayerComesBackWithoutPasswordAndCodeIsSingleUse()
+        {
+            using var w = new World();
+            var a = w.Enter("contavolta", "Volta");
+            var token = TokenOf(a);
+            Assert.AreEqual(32, token.Length);
+            a.Dispose(); w.Players.Remove(a);
+            Assert.IsTrue(w.Step(() => w.Game.OnlineCount == 0), "a queda tira o herói do mundo (e salva)");
+
+            var back = w.Join();
+            StringAssert.StartsWith("OK chars Volta", w.Ask(back, $"RESUME contavolta {token}"));
+            StringAssert.StartsWith("OK", w.Ask(back, "PLAY Volta"));
+            Assert.IsTrue(w.Step(() => back.State.InWorld));
+            Assert.AreNotEqual(token, TokenOf(back), "cada volta ganha um código novo");
+
+            var thief = w.Join();
+            StringAssert.StartsWith("ERR sessão expirada", w.Ask(thief, $"RESUME contavolta {token}"), "código velho não serve mais");
+            StringAssert.StartsWith("ERR", w.Ask(thief, "RESUME contavolta 00000000000000000000000000000000"));
+        }
+
+        [Test]
+        public void ResumeTakesOverAGhostConnection()
+        {
+            using var w = new World();
+            var ghost = w.Enter("contafantasma", "Fantasma");
+            var token = TokenOf(ghost);
+            // o servidor ainda acha que a conexão antiga está viva (Wi-Fi trocou, cabo puxado)
+            var fresh = w.Join();
+            StringAssert.StartsWith("ERR", w.Ask(fresh, "AUTH contafantasma segredo123"), "com senha, a conta continua protegida contra entrar duas vezes");
+            var again = w.Join();
+            StringAssert.StartsWith("OK chars Fantasma", w.Ask(again, $"RESUME contafantasma {token}"));
+            Assert.IsTrue(w.Step(() => !ghost.Conn.Connected), "a conexão fantasma é fechada");
+            StringAssert.Contains("outra conexão", ghost.Conn.ByeReason);
+            StringAssert.StartsWith("OK", w.Ask(again, "PLAY Fantasma"));
+            Assert.AreEqual(1, w.Game.OnlineCount);
+        }
+
+        [Test]
+        public void TooManyWrongPasswordsWaitAWhile()
+        {
+            using var w = new World();
+            var p = w.Join();
+            StringAssert.StartsWith("OK", w.Ask(p, "REGISTER contacerta segredo123"));
+            var guess = w.Join();
+            for (int i = 0; i < GameServer.MaxLoginFailures; i++) StringAssert.StartsWith("ERR conta ou senha", w.Ask(guess, "AUTH contacerta chute" + i));
+            StringAssert.StartsWith("ERR muitas tentativas", w.Ask(guess, "AUTH contacerta segredo123"), "nem a senha certa entra enquanto espera");
+            var sameIp = w.Join();
+            StringAssert.StartsWith("ERR muitas tentativas", w.Ask(sameIp, "AUTH contacerta segredo123"), "o freio é pelo endereço, não pela conexão");
+        }
+
+        [Test]
+        public void ConnectionLimitsAndGoodbyeReasons()
+        {
+            using var w = new World();
+            w.Host.MaxConnectionsPerAddress = 2;
+            var a = w.Join(); var b = w.Join();
+            var c = new Player(w.Host.Port); w.Players.Add(c);
+            Assert.IsTrue(w.Step(() => c.Conn.ByeReason != ""), "a terceira conexão do mesmo IP é recusada");
+            StringAssert.Contains("muitas conexões", c.Conn.ByeReason);
+            Assert.IsTrue(a.Conn.Connected && b.Conn.Connected);
+
+            w.Host.Dispose();
+            var end = DateTime.UtcNow.AddSeconds(3);
+            while (DateTime.UtcNow < end && (a.Conn.Connected || b.Conn.Connected)) Thread.Sleep(10);
+            Assert.AreEqual("servidor desligando", a.Conn.ByeReason, "quem está dentro fica sabendo que o servidor desligou");
+        }
+
+        [Test]
+        public void SlowClientIsDroppedInsteadOfFreezingTheServer()
+        {
+            using var w = new World();
+            var slow = w.Enter("contalenta", "Lenta");
+            w.Host.MaxQueuedLines = 1;   // simula um jogador que não dá conta de receber
+            Assert.IsTrue(w.Step(() => !slow.Conn.Connected), "quem não consegue receber cai");
+            StringAssert.Contains("lenta", slow.Conn.ByeReason);
         }
 
         [Test]

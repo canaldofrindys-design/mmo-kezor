@@ -88,6 +88,8 @@ bool running = true;
 void RequestStop(string why) { if (!running) return; running = false; Log($"Desligando ({why})..."); }
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; RequestStop("Ctrl+C"); };
 using var sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx => { ctx.Cancel = true; RequestStop("serviço parado"); stop.Wait(15000); });
+// Windows: fechar a janela do servidor (X) também salva todo mundo antes (o Windows dá alguns segundos).
+using var sighup = PosixSignalRegistration.Create(PosixSignal.SIGHUP, ctx => { ctx.Cancel = true; RequestStop("janela fechada"); stop.Wait(4500); });
 
 // Comandos digitados no console (lidos numa thread; executados na thread do jogo).
 var console = new ConcurrentQueue<string>();

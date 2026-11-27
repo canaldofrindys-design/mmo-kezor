@@ -132,10 +132,24 @@ namespace Kezor.Client
         private void OnApplicationQuit() { Disconnect(); StopHost(); }
 
         // ---------------------------------------------------------------- conexão
+        // volta automática depois de uma queda (sem pedir a senha de novo)
+        private string _resumeToken = "", _resumeAccount = "", _resumeHero = "";
+        private bool _resuming;
+        private int _reconnectAttempt;
+        private float _reconnectAt = -1;
+        private static readonly float[] ReconnectDelays = { 1f, 2f, 4f, 6f, 8f, 10f };
+        /// <summary>Tentando voltar sozinho para o servidor depois de uma queda.</summary>
+        public bool Reconnecting => _reconnectAt >= 0 || _resuming;
+
         /// <summary>Conecta por TCP no servidor escolhido (_host/_port) e, ao conectar, entra na conta (AUTH ou REGISTER).</summary>
-        internal void StartGame()
+        internal void StartGame() => StartGame(false);
+
+        private void StartGame(bool resume)
         {
             _loginError = "";
+            if (!resume) { _resumeToken = ""; _resumeHero = ""; _reconnectAttempt = 0; }
+            _resuming = resume;
+            _reconnectAt = -1;
             Disconnect();
             State.MyId = 0;
             if (!int.TryParse(_port, out var port) || port < 1 || port > 65535) { _loginError = "Porta inválida"; return; }
@@ -152,6 +166,7 @@ namespace Kezor.Client
             Send("SELECT", r =>
             {
                 if (r.StartsWith("ERR")) { State.AddLog("err", r.Substring(4)); return; }
+                _resumeHero = "";
                 LeaveWorldLocally();
                 ParseCharList(r);
             });
@@ -160,6 +175,7 @@ namespace Kezor.Client
         /// <summary>Volta para a lista de servidores (desconecta).</summary>
         internal void BackToServerList()
         {
+            _resumeToken = ""; _resumeHero = ""; _resuming = false; _reconnectAt = -1;
             Disconnect();
             _loginStage = LoginStage.Form;
         }
@@ -203,15 +219,35 @@ namespace Kezor.Client
             float dt = Time.deltaTime;
             State.LocalTime += dt;
 
+            if (_reconnectAt >= 0 && Time.unscaledTime >= _reconnectAt)
+            {
+                StartGame(true);
+                _loginError = $"Conexão perdida. Voltando para o servidor ({_reconnectAttempt}/{ReconnectDelays.Length})...";
+            }
+
             if (_conn != null)
             {
                 if (_connecting && _conn.Connected)
                 {
                     _connecting = false;
-                    SendAccountLogin();
+                    OnConnected();
                 }
-                else if (_connecting && Time.time - _connectStarted > 6f) { _loginError = "Sem resposta do servidor: " + _conn.Error; _connecting = false; Disconnect(); return; }
-                else if (!_connecting && !_conn.Connected) { _loginError = "Conexão perdida: " + _conn.Error; Disconnect(); return; }
+                else if (_connecting && Time.time - _connectStarted > 6f)
+                {
+                    var why = _conn.ByeReason != "" ? _conn.ByeReason : _conn.Error;
+                    _connecting = false; Disconnect();
+                    if (!_resuming || !ScheduleReconnect()) _loginError = "Sem resposta do servidor: " + why;
+                    return;
+                }
+                else if (!_connecting && !_conn.Connected)
+                {
+                    DrainIncoming();   // o que chegou antes de cair (aviso de expulsão, por exemplo)
+                    var bye = _conn?.ByeReason ?? ""; var err = _conn?.Error ?? "";
+                    Disconnect();
+                    if (bye != "") { _resumeToken = ""; _resuming = false; _loginError = "Desconectado: " + bye; }
+                    else if (!ScheduleReconnect()) _loginError = "Conexão perdida: " + err;
+                    return;
+                }
 
                 _conn.Update(dt);
                 if (!_connecting && Time.unscaledTime >= _nextPing)
@@ -220,12 +256,9 @@ namespace Kezor.Client
                     _pingSentAt = Time.unscaledTime;
                     Send("PING", _ => { if (_pingSentAt >= 0) PingMs = Mathf.RoundToInt((Time.unscaledTime - _pingSentAt) * 1000f); _pingSentAt = -1; });
                 }
-                while (_conn != null && _conn.TryReceive(out var line))
-                {
-                    State.Process(line);
-                    if (line.Length > 0 && line[0] != '@' && _replyHandlers.Count > 0) _replyHandlers.Dequeue()?.Invoke(line);
-                }
+                DrainIncoming();
             }
+            if (InWorld && State.Entities.TryGetValue(State.MyId, out var meNow) && meNow.Name != "") _resumeHero = meNow.Name;
 
             if (State.MapId != _builtMapId)
             {   // troca de mapa: mostra a tela de carregamento num quadro e monta o mapa no seguinte
@@ -243,6 +276,60 @@ namespace Kezor.Client
             {
                 _iso.Target = null; // tela de entrada: a câmera orbita a vila
             }
+        }
+
+        private void DrainIncoming()
+        {
+            while (_conn != null && _conn.TryReceive(out var line))
+            {
+                if (line.StartsWith("@TOKEN ")) { _resumeToken = line.Substring(7).Trim(); _resumeAccount = _account.Trim(); continue; }
+                State.Process(line);
+                if (line.Length > 0 && line[0] != '@' && _replyHandlers.Count > 0) _replyHandlers.Dequeue()?.Invoke(line);
+            }
+        }
+
+        /// <summary>Conectou: confere a versão do jogo e entra na conta (ou volta para ela depois de uma queda).</summary>
+        private void OnConnected()
+        {
+            Send($"HELLO {Protocol.GameVersion}", r =>
+            {
+                if (!r.StartsWith("ERR versão")) return;   // servidor antigo sem HELLO responde outro ERR: segue o login
+                _loginError = r.Substring(4); _resumeToken = ""; _resuming = false; _reconnectAt = -1;
+                Disconnect();
+            });
+            if (!_resuming) { SendAccountLogin(); return; }
+            Send($"RESUME {_resumeAccount} {_resumeToken}", r =>
+            {
+                _resuming = false;
+                if (r.StartsWith("ERR"))
+                {
+                    _resumeToken = ""; _loginStage = LoginStage.Form;
+                    _loginError = "A conexão caiu e não deu para voltar sozinho: " + r.Substring(4);
+                    Disconnect();
+                    return;
+                }
+                _reconnectAttempt = 0;
+                ParseCharList(r);
+                if (_resumeHero == "") return;   // estava na tela de personagens
+                var hero = _resumeHero;
+                Send($"PLAY {hero}", rep =>
+                {
+                    if (rep.StartsWith("ERR")) { _loginError = rep.Substring(4); return; }
+                    _loginStage = LoginStage.Form;
+                    State.AddLog("sys", "Conexão recuperada.");
+                });
+            });
+        }
+
+        /// <summary>Marca a próxima tentativa de voltar. False se não há como voltar (sem código) ou as tentativas acabaram.</summary>
+        private bool ScheduleReconnect()
+        {
+            _resuming = false;
+            if (_resumeToken == "" || _reconnectAttempt >= ReconnectDelays.Length) { _resumeToken = ""; _reconnectAttempt = 0; return false; }
+            _reconnectAt = Time.unscaledTime + ReconnectDelays[_reconnectAttempt];
+            _reconnectAttempt++;
+            _loginError = $"Conexão perdida. Tentando voltar em {ReconnectDelays[_reconnectAttempt - 1]:0} s ({_reconnectAttempt}/{ReconnectDelays.Length})...";
+            return true;
         }
 
         private Vector3 GroundPos(float x, float z) => new Vector3(x, WorldBuilder.Height(x, z), z);
