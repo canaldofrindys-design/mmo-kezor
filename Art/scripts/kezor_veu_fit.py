@@ -246,3 +246,27 @@ def pivots_veu():
     g = lambda n: tuple(bpy.data.objects[n].matrix_world.translation)
     return {'Armadura': (0.0, 0.0, 0.0), 'Elmo': g('VB_Head.001'), 'LuvaL': g('VB_ArmL.001'), 'LuvaR': g('VB_ArmR.001'),
             'CalcaL': g('VB_LegL.001'), 'CalcaR': g('VB_LegR.001')}
+
+
+def tunic_mix(co, w):
+    """Túnica: abaixo do quadril passa a seguir um pouco as coxas (não abre buraco ao andar)."""
+    f = 0.7 * sm(0.95, 0.72, co.z)
+    if f <= 0:
+        return w
+    wl = sm(-0.06, 0.06, co.x)
+    base = [(b, x * (1 - f)) for b, x in w if b in ('Body', 'Chest')] or [('Body', 1 - f)]
+    return base + [('LegL', f * wl), ('LegR', f * (1 - wl))]
+
+
+def run_veu(K):
+    """Tudo de uma vez (K = namespace do kezor_sketchfab_set). A bota do Véu continua a antiga (o modelo não tem)."""
+    fit_all()
+    K['ALLOWED'].update({'Armadura': ('Body', 'Chest', 'LegL', 'LegR'),
+                         'CalcaL': ('LegL', 'Body', 'Chest'), 'CalcaR': ('LegR', 'Body', 'Chest')})
+    K['WEIGHT_MIX'].update({'Armadura': tunic_mix, 'CalcaL': tail_mix, 'CalcaR': tail_mix})
+    K['HIDE_ZMIN'].update({'Elmo': 9.0, 'CalcaL': 9.0, 'CalcaR': 9.0, 'Armadura': 0.95})
+    parts = build_parts_veu(K)
+    wb = K['decode_body'](bpy.data.objects[BODY], 'KZB_PesosVeu')
+    rep = K['export_parts']('Veu', parts, wb, pivots_veu(), textures=True)
+    hide = K['write_hide']('Veu', 'ArcanistaDoVeuBase', parts, [bpy.data.objects[BODY], bpy.data.objects['VB_Head.001']])
+    return rep, hide
