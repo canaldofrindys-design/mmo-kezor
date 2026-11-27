@@ -777,7 +777,7 @@ namespace Kezor.Core.Server
                 if (t is Monster m)
                 {
                     if (h.Damage > 0) m.DamageBy[c.Id] = (m.DamageBy.TryGetValue(c.Id, out var dd) ? dd : 0) + h.Damage;
-                    if (m.State != MonsterState.Chase && !m.IsDead) { m.State = MonsterState.Chase; m.TargetId = c.Id; }
+                    if (m.State != MonsterState.Chase && !m.IsDead) { m.State = MonsterState.Chase; m.TargetId = c.Id; BroadcastAggro(m); }
                     if (h.Killed && !killed.Contains(m)) killed.Add(m);
                 }
                 else if (t is Character v)
@@ -1031,8 +1031,12 @@ namespace Kezor.Core.Server
             }
             if (best == null) return false;
             m.State = MonsterState.Chase; m.TargetId = best.Id;
+            BroadcastAggro(m);
             return true;
         }
+
+        /// <summary>Monstro partiu para cima de alguém: o cliente toca o grito de alerta (só som/efeito, sem regra de jogo).</summary>
+        private void BroadcastAggro(Monster m) => BroadcastNear(m.MapId, m.X, m.Z, $"@EV AGGRO;{m.Id};{m.TargetId}");
 
         private void TickGround()
         {

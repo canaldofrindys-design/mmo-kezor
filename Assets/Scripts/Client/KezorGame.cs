@@ -44,6 +44,7 @@ namespace Kezor.Client
         private Camera _cam = null!;
         private IsoCamera _iso = null!;
         private Effects _fx = null!;
+        private CombatAudio _sfx = null!;
         private readonly Dictionary<int, EntityView> _views = new Dictionary<int, EntityView>();
         private readonly Dictionary<int, float> _diedAt = new Dictionary<int, float>();
         private readonly List<(NpcDefinition def, EntityView view)> _npcs = new List<(NpcDefinition, EntityView)>();
@@ -94,6 +95,7 @@ namespace Kezor.Client
             // (a luz vem do shader)
 
             _fx = new GameObject("Efeitos").AddComponent<Effects>();
+            _sfx = CombatAudio.Ensure();
             UI.UiRoot.Create(this);
             LoadMap(MapDefinition.ValeId);
         }
@@ -285,11 +287,25 @@ namespace Kezor.Client
             if (_iso.Target == null && _views.TryGetValue(State.MyId, out var me)) _iso.Target = me.transform;
         }
 
+        private static System.Collections.IEnumerator Later(float delay, Action act) { yield return new WaitForSeconds(delay); act(); }
+
+        /// <summary>Cor das marcas de garra conforme a família do monstro.</summary>
+        private static Color ClawColor(int defId) => CombatAudio.VoiceOf(defId) switch
+        {
+            MonsterVoice.Fire => KezorLook.Hex("#ff7a2a"),
+            MonsterVoice.Crystal => KezorLook.Hex("#9fe6ff"),
+            MonsterVoice.Spirit => KezorLook.Hex("#c59bff"),
+            MonsterVoice.Slime => KezorLook.Hex("#9be36a"),
+            MonsterVoice.Undead => KezorLook.Hex("#d8e0c8"),
+            _ => KezorLook.Hex("#ff5040"),
+        };
+
         private EntityView? View(int id) => _views.TryGetValue(id, out var v) ? v : null;
         private Vector3 TopOf(EntityView v) => v.transform.position + Vector3.up * v.Height;
 
         private void ProcessEvents()
         {
+            CombatAudio.Focus = _iso != null ? _iso.Target : null;
             while (State.Events.Count > 0)
             {
                 var ev = State.Events.Dequeue();
@@ -301,9 +317,24 @@ namespace Kezor.Client
                         {
                             var a = View(ev.I(0)); var t = View(ev.I(1));
                             var type = (HitType)ev.I(2); int dmg = ev.I(3); int skillId = ev.I(4);
+                            CharacterClass? atkClass = null;
+                            if (a != null && a.Kind == EntityKind.Player && State.Entities.TryGetValue(a.Id, out var ac)) atkClass = (CharacterClass)ac.TypeId;
+                            float impactDelay = CombatAudio.ImpactDelay(atkClass, type);
                             if (a != null && t != null)
                             {
                                 if (type != HitType.Combo) a.PlayAttack(t.transform.position);
+                                if (atkClass is CharacterClass hc && type != HitType.Combo) _sfx.HeroSwing(hc, skillId, a.transform.position);
+                                if (a.Kind == EntityKind.Monster)
+                                {   // bote do monstro: grito de ataque já, garra e impacto quando a mordida encosta
+                                    impactDelay = 0.12f;
+                                    _sfx.Monster(a.Id, a.TypeId, MonsterSfx.Attack, a.transform.position);
+                                    if (type != HitType.Miss) StartCoroutine(Later(impactDelay, () =>
+                                    {
+                                        if (t == null || a == null) return;
+                                        var def = MonsterCatalog.Get(a.TypeId);
+                                        _fx.ClawSlash(t.transform.position + Vector3.up * t.Height * 0.55f, a.transform.position, ClawColor(a.TypeId), Mathf.Clamp(def?.Scale ?? 1f, 0.8f, 2.4f));
+                                    }));
+                                }
                                 if (a.Kind == EntityKind.Player && State.Entities.TryGetValue(a.Id, out var ae))
                                 {
                                     var cls = (CharacterClass)ae.TypeId;
@@ -316,6 +347,9 @@ namespace Kezor.Client
                             }
                             if (t != null)
                             {
+                                MonsterVoice? tv = t.Kind == EntityKind.Monster ? CombatAudio.VoiceOf(t.TypeId) : (MonsterVoice?)null;
+                                _sfx.Impact(t.transform.position, type, atkClass, tv, ev.I(1) == State.MyId, impactDelay);
+                                if (t.Kind == EntityKind.Monster && type != HitType.Miss) _sfx.Monster(t.Id, t.TypeId, MonsterSfx.Hurt, t.transform.position);
                                 if (type != HitType.Miss) t.PlayHit();
                                 _fx.Damage(TopOf(t), type, dmg, ev.I(1) == State.MyId);
                             }
@@ -327,6 +361,7 @@ namespace Kezor.Client
                             if (sk == null) break;
                             var col = sk.Magic ? KezorLook.Hex("#ff7a2a") : (sk.Classes == ClassMask.Ranger ? KezorLook.Hex("#e8d9a8") : KezorLook.Hex("#7fb2ff"));
                             _fx.AreaRing(GroundPos(ev.Fl(2), ev.Fl(3)), sk.AreaRadius, col);
+                            _sfx.Play("area", GroundPos(ev.Fl(2), ev.Fl(3)), 0.7f);
                             break;
                         }
                         case "CAST":
@@ -342,6 +377,7 @@ namespace Kezor.Client
                                 _ => sk.Classes == ClassMask.EmberFist ? KezorLook.Hex("#ff6a1a") : KezorLook.Hex("#8fd0ff"),
                             };
                             _fx.AreaRing(pos, sk.Kind == SkillKind.Banner ? sk.AuraRadius : 1.6f, col);
+                            _sfx.Play(sk.Kind == SkillKind.Banner ? "cast_banner" : sk.Kind == SkillKind.Summon ? "spell_summon" : "cast_buff", pos, 0.65f);
                             if (v != null) { v.PlayAttack(v.transform.position + v.transform.forward); _fx.Text(TopOf(v) + Vector3.up * 0.3f, sk.Name, col, 1.0f); }
                             break;
                         }
@@ -349,14 +385,27 @@ namespace Kezor.Client
                         {
                             int id = ev.I(0);
                             _diedAt[id] = Time.time;
-                            if (_views.TryGetValue(id, out var v)) { v.PlayDeath(); _views.Remove(id); }
+                            if (_views.TryGetValue(id, out var v))
+                            {
+                                if (v.Kind == EntityKind.Monster) _sfx.Monster(v.Id, v.TypeId, MonsterSfx.Death, v.transform.position);
+                                else if (v.Kind == EntityKind.Player) _sfx.Play("death_me", v.transform.position, id == State.MyId ? 0.9f : 0.6f);
+                                v.PlayDeath(); _views.Remove(id);
+                            }
                             if (_selectedTarget == id) _selectedTarget = 0;
                             break;
                         }
                         case "LVL":
                         {
                             var v = View(ev.I(0));
-                            if (v != null) { _fx.LevelUp(v.transform.position); _fx.Text(TopOf(v) + Vector3.up * 0.5f, $"NÍVEL {ev.I(1)}!", new Color(1f, 0.85f, 0.3f), 1.6f); }
+                            if (v != null) { _fx.LevelUp(v.transform.position); _fx.Text(TopOf(v) + Vector3.up * 0.5f, $"NÍVEL {ev.I(1)}!", new Color(1f, 0.85f, 0.3f), 1.6f); _sfx.Play("levelup", v.transform.position, 0.7f); }
+                            break;
+                        }
+                        case "AGGRO":
+                        {   // monstro viu alguém e partiu para cima: grito de alerta e um "!" se o alvo sou eu
+                            var m = View(ev.I(0));
+                            if (m == null || m.Kind != EntityKind.Monster) break;
+                            _sfx.Monster(m.Id, m.TypeId, MonsterSfx.Aggro, m.transform.position);
+                            if (ev.I(1) == State.MyId) _fx.Text(TopOf(m) + Vector3.up * 0.3f, "!", new Color(1f, 0.3f, 0.2f), 1.8f);
                             break;
                         }
                         case "EXP": { var v = View(State.MyId); if (v != null) _fx.Text(TopOf(v), $"+{ev.F[0]} exp", new Color(0.95f, 0.9f, 0.5f), 0.9f); break; }

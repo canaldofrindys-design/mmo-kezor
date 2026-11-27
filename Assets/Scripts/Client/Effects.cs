@@ -66,6 +66,43 @@ namespace Kezor.Client
             if (t != null) Destroy(t.gameObject);
         }
 
+        private static Mesh? _claw;
+        /// <summary>Três riscos de garra, finos e levemente curvos, num plano vertical.</summary>
+        private static Mesh Claw => _claw != null ? _claw : (_claw = Build(b =>
+        {
+            for (int i = -1; i <= 1; i++)
+                for (int k = 0; k < 4; k++)
+                {   // cada risco é feito de 4 gomos que afinam nas pontas
+                    float u = (k - 1.5f) / 2f, w = 0.05f * (1f - Mathf.Abs(u) * 0.6f);
+                    b.Box(new Vector3(i * 0.17f + u * 0.12f, u * 0.32f, -u * u * 0.08f), new Vector3(w, 0.2f, 0.02f), G);
+                }
+        }));
+
+        /// <summary>
+        /// Golpe de monstro no alvo: marcas de garra que rasgam na diagonal e somem. <paramref name="size"/> cresce
+        /// com o tamanho do bicho (chefes deixam marcas enormes).
+        /// </summary>
+        public void ClawSlash(Vector3 pos, Vector3 from, Color color, float size)
+        {
+            var dir = pos - from; dir.y = 0;
+            if (dir.sqrMagnitude < 0.0001f) dir = Vector3.forward;
+            var go = Spawn(Claw, color, pos);
+            go.transform.rotation = Quaternion.LookRotation(dir.normalized) * Quaternion.Euler(0, 0, Random.Range(-40f, -20f) * (Random.value < 0.5f ? 1f : -1f));
+            StartCoroutine(Rake(go.transform, size, 0.22f));
+        }
+
+        private System.Collections.IEnumerator Rake(Transform t, float size, float dur)
+        {
+            for (float x = 0; x < 1f; x += Time.deltaTime / dur)
+            {
+                if (t == null) yield break;
+                float grow = Mathf.Min(1f, x * 4f), thin = 1f - Mathf.Max(0f, x - 0.4f) / 0.6f;
+                t.localScale = new Vector3(size * thin, size * (0.4f + 0.8f * grow), size);
+                yield return null;
+            }
+            if (t != null) Destroy(t.gameObject);
+        }
+
         public void LevelUp(Vector3 pos)
         {
             var go = Spawn(Column, KezorLook.Hex("#ffd36a"), pos);

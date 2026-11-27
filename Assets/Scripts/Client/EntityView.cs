@@ -157,7 +157,15 @@ namespace Kezor.Client
                 var e = leg.localRotation.eulerAngles;
                 leg.localRotation = Quaternion.Euler(s, e.y, e.z);
             }
-            float atk = _attackT < 0.35f ? Mathf.Sin(_attackT / 0.35f * Mathf.PI) : 0f;
+            // ---- bote do monstro: 0..0,1 encolhe e recua (prepara), 0,1..0,22 avança e morde, 0,22..0,5 volta.
+            // O som e a marca de garra no alvo saem com ~0,12 s de atraso (KezorGame) para casar com a mordida.
+            float at = _attackT, wind = 0f, atk = 0f;
+            if (at < 0.1f) wind = Mathf.SmoothStep(0f, 1f, at / 0.1f);
+            else if (at < 0.22f) { wind = 1f - (at - 0.1f) / 0.12f; atk = Mathf.Sin((at - 0.1f) / 0.12f * Mathf.PI * 0.5f); }
+            else if (at < 0.5f) atk = 1f - Mathf.SmoothStep(0f, 1f, (at - 0.22f) / 0.28f);
+            // ao levar golpe, o bicho recua um pouco
+            float recoil = _hitT < 0.2f ? Mathf.Sin(_hitT / 0.2f * Mathf.PI) : 0f;
+            float reach = Mathf.Clamp(Rig.Height / 1.6f, 0.7f, 2.2f);
             float idleArm = Mathf.Sin(t * 2f) * 3f;
             if (Rig.ArmR != null) Rig.ArmR.localRotation = Quaternion.Euler(-swing * 0.6f - atk * 110f + idleArm, 0, 0);
             if (Rig.ArmL != null) Rig.ArmL.localRotation = Quaternion.Euler(swing * 0.6f - atk * 20f - idleArm, 0, 0);
@@ -167,12 +175,15 @@ namespace Kezor.Client
             {
                 float k = Mathf.Abs(Mathf.Sin(t * (moving ? 7f : 3f)));
                 bodyPos.y = k * (moving ? 0.35f : 0.08f);
-                bodyScale = new Vector3(1f + (1 - k) * 0.12f, 1f - (1 - k) * 0.15f + atk * 0.3f, 1f + (1 - k) * 0.12f);
+                bodyScale = new Vector3(1f + (1 - k) * 0.12f + wind * 0.18f, 1f - (1 - k) * 0.15f + atk * 0.35f - wind * 0.25f, 1f + (1 - k) * 0.12f + wind * 0.18f);
             }
             else if (Rig.Hover) bodyPos.y = 0.4f + Mathf.Sin(t * 1.6f) * 0.15f;
             else if (moving) bodyPos.y = Mathf.Abs(Mathf.Sin(_walk)) * 0.06f;
-            bodyPos.z = atk * 0.25f;
+            bodyPos.z = (atk * 0.45f - wind * 0.18f - recoil * 0.12f) * reach;
+            bodyPos.y += wind * 0.05f * reach;
             Rig.Body.localPosition = Rig.BodyBase + bodyPos;
+            // corpo empina na preparação e mergulha no golpe (lodos só esticam: a rotação ficaria estranha)
+            if (!Rig.Bouncy) Rig.Body.localRotation = _bodyRot * Quaternion.Euler(atk * 16f - wind * 14f - recoil * 6f, 0, 0);
             if (Rig.Bouncy) Rig.Body.localScale = bodyScale * _baseScale;
 
             _hitT += dt;
@@ -367,7 +378,8 @@ namespace Kezor.Client
         }
 
         private float _baseScale = 1f;
-        private void Start() { _baseScale = Rig.Body.localScale.x; }
+        private Quaternion _bodyRot = Quaternion.identity;
+        private void Start() { _baseScale = Rig.Body.localScale.x; _bodyRot = Rig.Body.localRotation; }
 
         private float _lastFlash = -1;
         private void SetFlash(float v)
