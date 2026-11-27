@@ -9,6 +9,7 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Bastião (Comandante): elmo, armadura, luvas, calças e botas | Judgement Armor | GarrettMarshallArt | CC BY 4.0 | https://sketchfab.com/3d-models/5551916126a44228b4b2a8125af0128b |
 | Set Véu (Arcanista): gola, túnica, mangas e caudas do casaco | Monarch's Gamble - Full Outfit | RealityRoller | CC BY 4.0 | https://sketchfab.com/3d-models/19ea6f600fe346cf9baacabebc644fad |
 | Set Ecos (Invocadora): vestido, sobrevestido, mangas, escoffion e véu | Medieval Dress | A9908244 | CC BY 4.0 | https://sketchfab.com/3d-models/f6b5cf078d044b6cb9764445ecc0cdf0 |
+| Set Escamas (Patrulheiro): elmo, cota de escamas, saia, manoplas, calças e botas | Fantasy scaled armor | nordwar | CC BY 4.0 | https://sketchfab.com/3d-models/c592ef6e41b346bca2e7de9109388276 |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças
