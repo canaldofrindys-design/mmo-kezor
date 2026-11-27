@@ -145,7 +145,7 @@ namespace Kezor.Core.Server
             var h = CombatResolver.Resolve(e, target, SkillCatalog.BasicAttack, _rng);
             BroadcastNear(e.MapId, target.X, target.Z, $"@EV HIT;{e.Id};{target.Id};{(int)h.Type};{h.Damage};0");
             if (h.Damage > 0) target.DamageBy[owner.Id] = (target.DamageBy.TryGetValue(owner.Id, out var dd) ? dd : 0) + h.Damage;
-            if (target.State != MonsterState.Chase && !target.IsDead) { target.State = MonsterState.Chase; target.TargetId = owner.Id; }
+            if (target.State != MonsterState.Chase && !target.IsDead) { target.State = MonsterState.Chase; target.TargetId = owner.Id; BroadcastAggro(target); }
             if (h.Killed) OnMonsterKilled(target, owner);
         }
 
