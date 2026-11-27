@@ -12,6 +12,7 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Escamas (Patrulheiro): elmo, cota de escamas, saia, manoplas, calças e botas | Fantasy scaled armor | nordwar | CC BY 4.0 | https://sketchfab.com/3d-models/c592ef6e41b346bca2e7de9109388276 |
 | Set Trama (Lâmina Arcana): elmo, peitoral com gola de pele, saia, braçadeiras e manoplas, coxotes e botas | Mithril Armor set | 12oyraj | CC BY 4.0 | https://sketchfab.com/3d-models/3ae9057e840e4da0bf05269865c29c91 |
 | Set Ígneo (Punho de Brasa): elmo, colete, saiote e faixa, faixas de pulso, calções e sandálias | Ancient indian warrior | RustyGREINDER | CC BY 4.0 | https://sketchfab.com/3d-models/dba79e75dd7e4c32aa9867bd231f7914 |
+| Set Couro (todas as classes): gibão, cintos, mangas e luvas, calça e botas; faixa de testa feita com o cinto | Witcher Outfit | Blue-Spirit | CC BY 4.0 | https://sketchfab.com/3d-models/ae3d4a2e195b446d879637737ed89f5f |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças

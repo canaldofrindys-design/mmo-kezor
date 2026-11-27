@@ -43,6 +43,13 @@ def spine_scale(z):
     return 0.76 + 0.10 * sm(1.0, 0.75, z)
 
 
+def spine_map(p):
+    """Tronco: escala x/y em torno do eixo do corpo (sem mexer na altura)."""
+    s = np.array([spine_scale(z) for z in p[:, 2]])
+    q = p.copy(); q[:, 0] *= s; q[:, 1] = -0.025 + (p[:, 1] + 0.025) * s
+    return q
+
+
 def prep():
     col = bpy.data.collections.get('TR_work') or bpy.data.collections.new('TR_work')
     if col.name not in bpy.context.scene.collection.children:
@@ -134,9 +141,7 @@ def repose(objs, allowed=None, sharp=2.0, debug=False):
             ws.append(np.exp(-sharp * (seg_dist(p, a0, d0, L0) / BONES[b][2]) ** 2))
             names.append(b)
         if k in ('Torso',):
-            s = np.array([spine_scale(z) for z in p[:, 2]])
-            q = p.copy(); q[:, 0] *= s; q[:, 1] = -0.025 + (p[:, 1] + 0.025) * s
-            outs.append(q)
+            outs.append(spine_map(p))
             zc = np.clip(p[:, 2], 0.95, 1.5)
             d = np.sqrt(p[:, 0] ** 2 + (p[:, 1] + 0.025) ** 2 + (p[:, 2] - zc) ** 2)
             ws.append(np.exp(-sharp * (d / SPINE_R) ** 2) + 1e-6)
@@ -144,6 +149,9 @@ def repose(objs, allowed=None, sharp=2.0, debug=False):
         W = np.array(ws); W /= W.sum(0) + 1e-12
         newp = sum(W[i][:, None] * outs[i] for i in range(len(outs)))
         _set(o, newp)
+        aw = sum(W[i] for i, n in enumerate(names) if n.startswith(('UpArm', 'ForeArm', 'Hand')))
+        at = o.data.attributes.get('kz_arm') or o.data.attributes.new('kz_arm', 'FLOAT', 'POINT')
+        at.data.foreach_set('value', np.asarray(aw if not np.isscalar(aw) else np.zeros(len(p)), dtype=np.float32))
         if debug:
             print(o.name, k, len(p), {n: round(float(W[i].mean()), 2) for i, n in enumerate(names) if W[i].mean() > 0.02})
 
