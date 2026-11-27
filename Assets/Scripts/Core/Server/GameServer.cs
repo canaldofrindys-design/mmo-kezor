@@ -696,7 +696,7 @@ namespace Kezor.Core.Server
         }
 
         /// <summary>Velocidade de caminhada na vila (m/s).</summary>
-        public const float TownWalkSpeed = 1.8f;   // passo de caminhada natural para o clipe de mocap (Anim/Heroi: Walk)
+        public const float TownWalkSpeed = 2.2f;   // caminhada na vila: um pouco acima do passo natural do clipe Walk (a fase segue a distância)
 
         /// <summary>Portais: pisar no círculo leva ao outro mapa (nível mínimo do destino; 2 s de espera após chegar).</summary>
         private void CheckPortals(Session s, Character c)
