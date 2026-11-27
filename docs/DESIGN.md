@@ -288,6 +288,13 @@ Saves antigos são reempacotados ao carregar; o que não couber na mochila vai p
 
 ## Login com lista de servidores
 - Fluxo: **servidor → conta → seleção em fileira**. O fundo é a vila à noite, com a câmera passeando baixo e devagar.
+- **Seleção de herói**: pátio noturno com os 5 discos. O herói escolhido dá um passo à frente, faz uma pose de golpe e fica
+  grande no centro (câmera em close); os vizinhos aparecem menores nas laterais. Troca com as setas na tela, ←/→ (ou A/D) ou
+  clicando na faixa dos 5 lugares embaixo; a câmera desliza pela fila e os heróis andam até o lugar. Ficha à esquerda (nível,
+  renascimentos, guilda e cargo, história da classe). Arrastar gira o herói; duplo clique ou Enter entra.
+- **Criação de herói**: no mesmo pátio, o herói de amostra da classe grande no centro; as 7 classes numa coluna à esquerda
+  (↑/↓ também trocam), ficha com papel, história e atributos iniciais à direita (opção de ver com o conjunto +9), nome e
+  Criar embaixo. O herói criado já volta escolhido na seleção.
 - Lista: **Servidor deste PC** (abre um servidor de verdade aqui ou entra no que já estiver aberto na porta), **Entrar por IP** e os servidores do
   `servers.json`. O jogo procura primeiro em `persistentDataPath/kezor/servers.json` e depois no `StreamingAssets/servers.json`
   que vem com o jogo. Cada servidor tem nome, endereço, região e canais (um canal = uma porta). Entradas inválidas são ignoradas.

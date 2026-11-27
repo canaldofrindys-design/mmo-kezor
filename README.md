@@ -58,8 +58,8 @@ Detalhes, números e o teste de equilíbrio em `docs/DESIGN.md`.
 ### Interface
 Interface em **UI Toolkit** com estilo próprio (carvão, metal envelhecido e brasa), guia em `docs/UI_GUIDE.md`:
 HUD com orbes animadas, barra de skills com recarga radial, buffs com timer, quadro do alvo, minimapa redondo, chat com abas e
-toasts; 14 janelas arrastáveis (posição salva) com tooltip de item com comparação e arrastar/soltar; telas de login e criação com
-o herói 3D girando num pedestal; tela de carregamento entre mapas. Escala automática de 720p a 4K e opção de escala (O).
+toasts; 14 janelas arrastáveis (posição salva) com tooltip de item com comparação e arrastar/soltar; telas de login, seleção e criação com
+o herói 3D grande no pátio noturno (troca com setas, arrastar gira); tela de carregamento entre mapas. Escala automática de 720p a 4K e opção de escala (O).
 Arte da interface e ícones são gerados em código: menus **Kezor ▸ Gerar arte da UI** e **Kezor ▸ Gerar ícones**.
 
 ### Multiplayer (o único modo)

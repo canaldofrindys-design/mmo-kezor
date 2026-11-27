@@ -406,29 +406,93 @@ Label { padding: 0; margin: 0; }
 .hud-chat { bottom: 180px; }
 .hud-target { padding: 10px 20px 12px 20px; }
 
-/* ------------------------------------------------------------------ tela de seleção em fileira */
-.sel { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
-.sel__vignette { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-image: resource("UI/Art/vignette"); -unity-background-scale-mode: stretch-to-fill; opacity: 0.85; }
-.sel__title { position: absolute; top: 26px; left: 0; right: 0; -unity-text-align: middle-center; font-size: 26px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 106, 26, 0.45); }
+/* ------------------------------------------------------------------ seleção e criação de herói (v3: herói grande no centro) */
+.sel, .cr { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.sel__vignette { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-image: resource("UI/Art/vignette"); -unity-background-scale-mode: stretch-to-fill; opacity: 0.8; }
+.sel__drag { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.sel__head { position: absolute; top: 14px; left: 0; right: 0; align-items: center; }
+.sel__title { font-size: 28px; letter-spacing: 3px; -unity-text-align: middle-center; text-shadow: 0 0 12px rgba(255, 106, 26, 0.55); }
+.sel__head-div { width: 380px; height: 12px; margin: 2px 0 2px 0; }
+.sel__subtitle { font-size: 13px; color: var(--text-2); letter-spacing: 1px; -unity-text-align: middle-center; }
 .sel__zone { position: absolute; }
-.sel__zone:hover { background-color: rgba(255, 179, 71, 0.04); }
-.sel__plate { position: absolute; width: 190px; padding: 6px 10px 8px 10px; align-items: center;
-              background-image: resource("UI/Art/panel_dark"); -unity-slice-left: 10; -unity-slice-right: 10; -unity-slice-top: 10; -unity-slice-bottom: 10; }
-.sel__plate--on { background-image: resource("UI/Art/panel"); -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; }
-.sel__plate--on .sel__name { color: var(--amber); }
-.sel__plate--empty { opacity: 0.6; }
-.sel__name { -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; -unity-font-style: bold; font-size: 17px; color: var(--text); -unity-text-align: middle-center; }
-.sel__sub { font-size: 11px; color: var(--info); -unity-text-align: middle-center; }
-.sel__info { font-size: 12px; color: var(--text-2); -unity-text-align: middle-center; margin-top: 2px; }
-.sel__corner { position: absolute; bottom: 28px; flex-direction: row; }
-.sel__corner--left { left: 32px; }
-.sel__corner--right { right: 32px; }
-.sel__btn { min-width: 128px; height: 40px; font-size: 15px; -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; margin: 0 4px; }
-.sel__btn--big { min-width: 170px; height: 46px; font-size: 18px; }
-.sel__error { position: absolute; bottom: 86px; left: 0; right: 0; -unity-text-align: middle-center; font-size: 14px; }
-.sel__menu { position: absolute; left: 32px; bottom: 80px; width: 220px; }
+.sel__zone:hover { background-color: rgba(255, 179, 71, 0.05); }
+.sel__plate { position: absolute; width: 140px; padding: 3px 6px 4px 6px; align-items: center; background-color: rgba(6, 5, 5, 0.72);
+              border-width: 1px; border-color: rgba(196, 154, 90, 0.45); border-radius: 3px; }
+.sel__plate:hover { border-color: var(--amber); }
+.sel__plate--empty { opacity: 0.55; }
+.sel__name { -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; -unity-font-style: bold; font-size: 13px; color: var(--text); -unity-text-align: middle-center; }
+.sel__info { font-size: 10px; color: var(--text-2); -unity-text-align: middle-center; }
+
+/* setas de trocar herói, dos lados do escolhido */
+.sel__arrow { position: absolute; top: 50%; width: 54px; height: 84px; margin-top: -70px; align-items: center; justify-content: center;
+              background-color: rgba(8, 6, 5, 0.55); border-width: 1px; border-color: rgba(196, 154, 90, 0.5); border-radius: 6px; }
+.sel__arrow:hover { background-color: rgba(60, 30, 10, 0.75); border-color: var(--amber); }
+.sel__arrow:hover .sel__chev { border-color: var(--amber); }
+.sel__arrow--l { left: 31%; margin-left: -27px; }
+.sel__arrow--r { right: 31%; margin-right: -27px; }
+.sel__chev { width: 22px; height: 22px; border-left-width: 4px; border-top-width: 4px; border-color: var(--gold); }
+.sel__chev--l { rotate: -45deg; margin-left: 8px; }
+.sel__chev--r { rotate: 135deg; margin-right: 8px; }
+
+/* ficha do herói escolhido */
+.sel__card { position: absolute; left: 28px; top: 150px; width: 300px; padding: 12px 16px 14px 16px; }
+.sel__card-slot { font-size: 11px; color: var(--text-3); letter-spacing: 2px; }
+.sel__card-name { font-size: 26px; color: var(--amber); margin-top: 2px; text-shadow: 0 0 8px rgba(255, 106, 26, 0.4); }
+.sel__card-class { font-size: 13px; -unity-font-style: bold; white-space: normal; }
+.sel__card-row { flex-direction: row; justify-content: space-between; align-items: center; margin: 2px 0; }
+.sel__card-key { font-size: 13px; }
+.sel__card-val { font-size: 14px; -unity-font-style: bold; color: var(--text); -unity-text-align: middle-right; }
+.sel__card-lore { font-size: 12px; white-space: normal; }
+
+/* faixa de baixo: lugares e botões */
+.sel__bar { position: absolute; left: 0; right: 0; bottom: 0; height: 92px; background-color: rgba(4, 3, 3, 0.9);
+            border-top-width: 1px; border-color: rgba(138, 106, 62, 0.55); }
+.sel__slots { position: absolute; left: 0; right: 0; bottom: 14px; height: 64px; flex-direction: row; justify-content: center; }
+.sel__slot { width: 146px; height: 64px; margin: 0 3px; padding: 4px 8px; flex-direction: row; align-items: center;
+             background-color: rgba(22, 18, 15, 0.92); border-width: 1px; border-color: rgba(110, 96, 82, 0.6); border-radius: 3px; }
+.sel__slot:hover { border-color: var(--bronze-l); background-color: rgba(40, 30, 22, 0.95); }
+.sel__slot--on { border-width: 2px; border-color: var(--amber); background-color: rgba(58, 28, 10, 0.95); }
+.sel__slot--empty { opacity: 0.6; }
+.sel__slot-icon { width: 40px; height: 40px; margin-right: 8px; -unity-background-scale-mode: scale-to-fit; flex-shrink: 0;
+                  background-color: rgba(0, 0, 0, 0.4); border-width: 1px; border-color: rgba(138, 106, 62, 0.5); }
+.sel__slot--empty .sel__slot-icon { border-color: rgba(110, 96, 82, 0.4); }
+.sel__slot-text { flex-grow: 1; flex-shrink: 1; overflow: hidden; }
+.sel__slot-name { -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; -unity-font-style: bold; font-size: 13px; color: var(--text); }
+.sel__slot--on .sel__slot-name { color: var(--amber); }
+.sel__slot-info { font-size: 10px; color: var(--text-2); white-space: normal; }
+.sel__corner { position: absolute; bottom: 22px; flex-direction: row; align-items: center; }
+.sel__corner--left { left: 20px; }
+.sel__corner--right { right: 20px; }
+.sel__btn { min-width: 128px; height: 42px; font-size: 15px; -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; margin: 0 3px; }
+.sel__btn--small { min-width: 88px; }
+.sel__btn--big { min-width: 170px; height: 48px; font-size: 18px; }
+.sel__hint { position: absolute; bottom: 98px; left: 0; right: 0; -unity-text-align: middle-center; font-size: 11px; color: var(--text-3); }
+.sel__error { position: absolute; bottom: 118px; left: 0; right: 0; -unity-text-align: middle-center; font-size: 14px; }
+.sel__menu { position: absolute; left: 20px; bottom: 100px; width: 220px; }
 .sel__modalbg { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); align-items: center; justify-content: center; }
 .sel__modal { width: 440px; }
+
+/* criação: classes à esquerda, ficha à direita, nome embaixo */
+.cr__classes { position: absolute; left: 28px; top: 130px; width: 300px; padding: 10px 12px; }
+.cr__h { margin: 0 0 4px 4px; }
+.cr__class { flex-direction: row; align-items: center; height: 52px; padding: 4px 8px; margin: 2px 0;
+             background-color: rgba(22, 18, 15, 0.85); border-width: 1px; border-color: rgba(110, 96, 82, 0.45); border-radius: 3px; }
+.cr__class:hover { border-color: var(--bronze-l); background-color: rgba(40, 30, 22, 0.95); }
+.cr__class--on { border-width: 2px; border-color: var(--amber); background-color: rgba(58, 28, 10, 0.95); }
+.cr__class-icon { width: 40px; height: 40px; margin-right: 10px; flex-shrink: 0; -unity-background-scale-mode: scale-to-fit;
+                  background-color: rgba(0, 0, 0, 0.4); border-width: 1px; border-color: rgba(138, 106, 62, 0.5); }
+.cr__class-name { -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; -unity-font-style: bold; font-size: 14px; color: var(--text); }
+.cr__class--on .cr__class-name { color: var(--amber); }
+.cr__class-role { font-size: 11px; color: var(--text-3); }
+.cr__info { position: absolute; right: 28px; top: 130px; width: 360px; padding: 14px 18px; }
+.cr__hero-name { font-size: 24px; color: var(--amber); text-shadow: 0 0 8px rgba(255, 106, 26, 0.4); white-space: normal; }
+.cr__hero-role { font-size: 13px; -unity-font-style: bold; }
+.cr__lore { font-size: 13px; white-space: normal; margin-bottom: 8px; }
+.cr__sub { color: var(--gold); font-size: 12px; -unity-font-style: bold; margin: 2px 0 4px 0; }
+.cr__namebar { position: absolute; bottom: 20px; left: 50%; width: 560px; margin-left: -280px; flex-direction: row; align-items: center; justify-content: center; }
+.cr__name-label { -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; -unity-font-style: bold; color: var(--gold); font-size: 15px; margin-right: 10px; }
+.cr__name { width: 260px; height: 40px; font-size: 17px; margin-right: 8px; }
+.cr__count { font-size: 12px; color: var(--text-3); }
 
 /* ---------------- Inventário v4 (painel alto à direita) ---------------- */
 .inv4 .kz-window__body { align-items: center; }
@@ -540,21 +604,6 @@ Label { padding: 0; margin: 0; }
 .login__credits { position: absolute; left: 50%; top: 120px; width: 640px; margin-left: -320px; padding: 18px 24px; align-items: center; }
 .login__credits-text { white-space: normal; margin: 12px 0; font-size: 13px; }
 
-/* ---------------- Seleção v2: placas compactas e botões pequenos nos cantos ---------------- */
-.sel__title { top: 18px; font-size: 15px; opacity: 0.75; }
-.sel__plate { width: 156px; padding: 3px 6px 5px 6px; background-color: rgba(6, 5, 5, 0.82); border-width: 1px; border-color: rgba(196, 154, 90, 0.55); background-image: none; }
-.sel__plate--on { background-image: none; border-color: var(--amber); background-color: rgba(30, 16, 6, 0.9); }
-.sel__name { font-size: 12px; }
-.sel__sub { font-size: 9px; color: var(--text-2); }
-.sel__info { font-size: 9px; margin-top: 1px; }
-.sel__corner { bottom: 14px; }
-.sel__corner--left { left: 16px; }
-.sel__corner--right { right: 16px; }
-.sel__btn { min-width: 74px; height: 26px; font-size: 12px; margin: 0 2px; }
-.sel__btn--big { min-width: 74px; height: 26px; font-size: 12px; }
-.sel__menu { left: 16px; bottom: 48px; }
-.sel__bar { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background-color: rgba(4, 3, 3, 0.92); border-top-width: 1px; border-color: rgba(138, 106, 62, 0.45); }
-.sel__corner { bottom: 11px; }
 
 /* ---------------- Inventário v5 (equipamento + mochila + caixa de ouro, painel alto à direita) ---------------- */
 .inv4-slot { background-image: none; background-color: rgba(28, 26, 26, 0.92); border-width: 1px; border-color: rgba(120, 110, 100, 0.55); }
