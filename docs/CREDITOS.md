@@ -10,6 +10,7 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Véu (Arcanista): gola, túnica, mangas e caudas do casaco | Monarch's Gamble - Full Outfit | RealityRoller | CC BY 4.0 | https://sketchfab.com/3d-models/19ea6f600fe346cf9baacabebc644fad |
 | Set Ecos (Invocadora): vestido, sobrevestido, mangas, escoffion e véu | Medieval Dress | A9908244 | CC BY 4.0 | https://sketchfab.com/3d-models/f6b5cf078d044b6cb9764445ecc0cdf0 |
 | Set Escamas (Patrulheiro): elmo, cota de escamas, saia, manoplas, calças e botas | Fantasy scaled armor | nordwar | CC BY 4.0 | https://sketchfab.com/3d-models/c592ef6e41b346bca2e7de9109388276 |
+| Set Trama (Lâmina Arcana): elmo, peitoral com gola de pele, saia, braçadeiras e manoplas, coxotes e botas | Mithril Armor set | 12oyraj | CC BY 4.0 | https://sketchfab.com/3d-models/3ae9057e840e4da0bf05269865c29c91 |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças
