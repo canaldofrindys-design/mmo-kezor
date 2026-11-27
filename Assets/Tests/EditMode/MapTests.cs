@@ -54,48 +54,44 @@ namespace Kezor.Tests
         public void TownLayoutLeavesStreetsAndPlazasFree()
         {
             var m = MapDefinition.Get(MapDefinition.ValeId);
-            float cx = m.SafeX, cz = m.SafeZ;
             var problems = new List<string>();
-            // obstáculos de cada casa (o servidor guarda todos juntos; refaz por casa para checar sobreposição entre casas)
-            var houseCircles = new List<(int house, float x, float z, float r)>();
+            // pontos (a cada 0,5 m) do corpo principal de cada prédio, já em mundo
+            List<(float x, float z)> Body(TownHouse h)
+            {
+                var pts = new List<(float, float)>();
+                var (bx, bz, hx, hz) = MapDefinition.HouseFootprint(h.Kind)[0];
+                for (float u = -hx + 0.3f; u <= hx - 0.3f; u += 0.5f)
+                    for (float v = -hz + 0.3f; v <= hz - 0.3f; v += 0.5f)
+                        pts.Add(MapDefinition.LocalToWorld(h.X, h.Z, h.Yaw, h.Scale, bx + u, bz + v));
+                return pts;
+            }
+            var boxes = m.Houses.Select(h => MapDefinition.HouseBoxes(h).ToList()).ToList();
             for (int i = 0; i < m.Houses.Count; i++)
             {
                 var h = m.Houses[i];
-                double yaw = (-h.Angle - 90f) * System.Math.PI / 180.0, cs = System.Math.Cos(yaw), sn = System.Math.Sin(yaw);
-                foreach (var (bx, by, br) in MapDefinition.HouseFootprint(h.Kind))
+                foreach (var (x, z) in Body(h))
                 {
-                    float lx = bx * h.Scale, lz = -by * h.Scale;
-                    houseCircles.Add((i, h.X + (float)(lx * cs + lz * sn), h.Z + (float)(-lx * sn + lz * cs), br * h.Scale));
+                    if (m.IsTownStreet(x, z)) { problems.Add($"{h.Kind} #{i} invade a rua em {x - m.SafeX:0.0};{z - m.SafeZ:0.0}"); break; }
+                    if (m.TownDistance(x, z) > MapDefinition.LaneRadius) { problems.Add($"{h.Kind} #{i} encosta na muralha"); break; }
                 }
+                for (int j = 0; j < m.Houses.Count; j++)
+                    if (j != i && Body(h).Any(p => boxes[j].Any(b => b.Contains(p.x, p.z, 0.1f))))
+                        problems.Add($"{h.Kind} #{i} sobreposto a {m.Houses[j].Kind} #{j}");
+                // a porta (frente) dá para um lugar livre: 1 m à frente do prédio não é parede nem outro prédio
+                var (fx, fz) = MapDefinition.LocalToWorld(h.X, h.Z, h.Yaw, h.Scale, 0f, MapDefinition.HouseFootprint(h.Kind)[0].HZ + 1.6f);
+                if (h.Kind != "Taverna4" && h.Kind != "Guilda4" && h.Kind != "Capela4" && h.Kind != "Loja4" && m.IsBlocked(fx, fz))
+                    problems.Add($"{h.Kind} #{i}: porta bloqueada");
             }
-            bool OnStreet(float x, float z, float r, out string where)
-            {
-                float d = MathK.Dist(x, z, cx, cz);
-                where = "";
-                if (d - r < MapDefinition.PlazaRadius) { where = "praça"; return true; }
-                if (System.Math.Abs(x - cx) < MapDefinition.AvenueHalfWidth + r || System.Math.Abs(z - cz) < MapDefinition.AvenueHalfWidth + r) { where = "avenida"; return true; }
-                if (System.Math.Abs(d - MapDefinition.RingRoadRadius) < MapDefinition.RingHalfWidth + r) { where = "rua interna"; return true; }
-                if (System.Math.Abs(d - MapDefinition.OuterRingRadius) < MapDefinition.RingHalfWidth + r) { where = "rua externa"; return true; }
-                foreach (var sq in m.Squares) if (MathK.Dist(x, z, sq.X, sq.Z) < sq.R + r) { where = "pracinha"; return true; }
-                if (d + r > m.WallRadius - m.WallHalfThickness - 0.5f) { where = "muralha"; return true; }
-                return false;
-            }
-            foreach (var c in houseCircles)
-                if (OnStreet(c.x, c.z, c.r - 0.3f, out var w)) problems.Add($"casa {m.Houses[c.house].Kind} #{c.house} invade {w}");
-            for (int a = 0; a < houseCircles.Count; a++)
-                for (int b = a + 1; b < houseCircles.Count; b++)
-                    if (houseCircles[a].house != houseCircles[b].house && MathK.Dist(houseCircles[a].x, houseCircles[a].z, houseCircles[b].x, houseCircles[b].z) < houseCircles[a].r + houseCircles[b].r + 1.2f)
-                        problems.Add($"casas #{houseCircles[a].house} e #{houseCircles[b].house} coladas");
             foreach (var p in m.Props)
             {
                 if (p.R <= 0) continue;
-                foreach (var c in houseCircles)
-                    if (MathK.Dist(p.X, p.Z, c.x, c.z) < p.R + c.r + 0.3f) { problems.Add($"{p.Kind} dentro da casa #{c.house}"); break; }
+                for (int j = 0; j < m.Houses.Count; j++)
+                    if (boxes[j].Any(b => b.Contains(p.X, p.Z, p.R))) { problems.Add($"{p.Kind} dentro do prédio #{j} ({m.Houses[j].Kind})"); break; }
             }
             foreach (var n in m.Npcs)
                 if (m.IsBlocked(n.X, n.Z)) problems.Add($"NPC {n.Name} preso num obstáculo");
             Assert.IsEmpty(problems, string.Join("\n", problems));
-            Assert.Greater(m.Houses.Count, 30);
+            Assert.Greater(m.Houses.Count, 40);
         }
 
         [Test]
@@ -221,16 +217,21 @@ namespace Kezor.Tests
         }
     
         [Test]
-        public void CityV2IsBigNavigableAndCoherent()
+        public void CityV4IsWalledNavigableAndCoherent()
         {
             var m = MapDefinition.Get(MapDefinition.ValeId);
-            Assert.AreEqual(MapDefinition.TownWallRadius, m.WallRadius, 0.01f, "muralha de raio 72 m (vila v3)");
-            Assert.Greater(m.Size, 2 * (m.WallRadius + 60), "mapa com bosque em volta da vila");
-            Assert.GreaterOrEqual(m.Houses.Count, 30, "bairros de casas");
+            Assert.AreEqual(MapDefinition.TownWallRadius, m.WallRadius, 0.01f, "muralha quadrada de 104 m (cidade v4)");
+            Assert.Greater(m.Size, 2 * (m.WallRadius * 1.42f + 40), "mapa com bosque em volta da cidade");
+            Assert.GreaterOrEqual(m.Houses.Count, 40, "quarteirões de casas");
             Assert.IsTrue(m.InSafeZone(m.RespawnX, m.RespawnZ));
+            Assert.IsTrue(m.InSafeZone(m.SafeX + m.WallRadius - 3, m.SafeZ + m.WallRadius - 3), "canto de dentro da muralha é cidade");
+            Assert.IsFalse(m.InSafeZone(m.SafeX + m.WallRadius + 4, m.SafeZ), "fora da muralha não é cidade");
             Assert.IsFalse(m.IsBlocked(m.RespawnX, m.RespawnZ), "renascer na praça, fora da fonte");
-            foreach (var kind in new[] { "Forja2", "Templo", "Estabulo", "BarracaR", "Poste2", "Braseiro2" })
+            foreach (var kind in new[] { "Taverna4", "Loja4", "Ferraria4", "Capela4", "Guilda4", "Estabulo4" })
+                Assert.IsTrue(m.Houses.Exists(h => h.Kind == kind), $"falta {kind}");
+            foreach (var kind in new[] { "Barraca4R", "Poste4", "Braseiro4", "Poco4", "Estandarte4" })
                 Assert.IsTrue(m.Props.Exists(p => p.Kind == kind), $"falta {kind}");
+            Assert.AreEqual(12, m.Towers.Count, "4 torres de canto e 8 no meio dos trechos");
             var pf = new Pathfinder(m);
             // cada NPC é alcançável a pé da praça (ponto de conversa do lado da praça, como o cliente faz)
             foreach (var n in m.Npcs)
@@ -245,17 +246,21 @@ namespace Kezor.Tests
             var ilsa = m.Npcs.Single(n => n.Role == "vault");
             Assert.LessOrEqual(MathK.Dist(ilsa.X, ilsa.Z, MapDefinition.VaultChestX, MapDefinition.VaultChestZ), GameServer.VaultRange, "baú perto da guardiã");
             Assert.IsTrue(m.IsBlocked(MapDefinition.VaultChestX, MapDefinition.VaultChestZ));
-            // de fora de cada portão até a praça existe caminho
+            // de fora de cada portão até a praça existe caminho; os quatro cantos da rua da muralha também se alcançam
             for (int g = 0; g < 4; g++)
             {
                 double a = g * System.Math.PI / 2;
                 float ox = m.SafeX + (float)System.Math.Cos(a) * (m.WallRadius + 8), oz = m.SafeZ + (float)System.Math.Sin(a) * (m.WallRadius + 8);
                 Assert.IsFalse(m.IsBlocked(ox, oz));
                 Assert.IsNotNull(pf.Find(ox, oz, m.RespawnX, m.RespawnZ), $"portão {g}: sem caminho até a praça");
+                float lane = MapDefinition.LaneRadius + 0.3f;
+                float cx = m.SafeX + (g == 0 || g == 3 ? lane : -lane), cz = m.SafeZ + (g < 2 ? lane : -lane);
+                Assert.IsFalse(m.IsBlocked(cx, cz), $"canto {g} da rua da muralha bloqueado");
+                Assert.IsNotNull(pf.Find(m.RespawnX, m.RespawnZ, cx, cz), $"canto {g} da rua da muralha sem caminho");
             }
             foreach (var p in m.Portals)
             {
-                Assert.Greater(MathK.Dist(p.X, p.Z, m.SafeX, m.SafeZ), m.WallRadius + p.Radius + 4f, $"{p.Label}: colado na muralha");
+                Assert.Greater(m.TownDistance(p.X, p.Z), m.WallRadius + p.Radius + 4f, $"{p.Label}: colado na muralha");
                 Assert.IsFalse(m.IsBlocked(p.X, p.Z), $"{p.Label}: portal bloqueado");
                 var dest = MapDefinition.Get(p.TargetMap);
                 Assert.IsFalse(dest.IsBlocked(p.TargetX, p.TargetZ), $"{p.Label}: chegada bloqueada");
@@ -265,7 +270,7 @@ namespace Kezor.Tests
                     Assert.IsFalse(m.IsBlocked(p.TargetX, p.TargetZ), "chegada no Vale bloqueada");
             foreach (var g in m.Spawns)
             {
-                Assert.Greater(MathK.Dist(g.X, g.Z, m.SafeX, m.SafeZ) - g.Radius, m.WallRadius + 6f, $"{g.Monster.Name} encostado na muralha");
+                Assert.Greater(m.TownDistance(g.X, g.Z) - g.Radius, m.WallRadius + 6f, $"{g.Monster.Name} encostado na muralha");
                 Assert.IsTrue(g.X - g.Radius > 10 && g.Z - g.Radius > 10 && g.X + g.Radius < m.Size - 10 && g.Z + g.Radius < m.Size - 10, $"{g.Monster.Name} na borda");
             }
         }

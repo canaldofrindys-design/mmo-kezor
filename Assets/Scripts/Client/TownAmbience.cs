@@ -32,11 +32,16 @@ namespace Kezor.Client
                 var pos = new Vector3(p.X, 1.2f, p.Z);
                 switch (p.Kind)
                 {
-                    case "Forja2": a.Spot("Forja", pos, Clip("forja", Forge), 0.6f, 3f, 30f); break;
-                    case "Braseiro2": a.Spot("Braseiro", pos, Clip("brasa", Crackle), 0.22f, 1.5f, 9f); break;
-                    case "Poco": a.Spot("Poço", pos, Clip("poco", Well), 0.18f, 1.5f, 8f); break;
+                    case "Braseiro4": a.Spot("Braseiro", pos, Clip("brasa", Crackle), 0.22f, 1.5f, 9f); break;
+                    case "Poco4": a.Spot("Poço", pos, Clip("poco", Well), 0.18f, 1.5f, 8f); break;
                 }
             }
+            foreach (var h in map.Houses)
+                if (h.Kind == "Ferraria4")
+                {   // a forja fica no telheiro lateral da ferraria
+                    var (fx, fz) = MapDefinition.LocalToWorld(h.X, h.Z, h.Yaw, h.Scale, 6.8f, -0.9f);
+                    a.Spot("Forja", new Vector3(fx, 1.2f, fz), Clip("forja", Forge), 0.6f, 3f, 30f);
+                }
             if (map.Squares.Count > 0)   // a primeira pracinha é o mercado
             {
                 var m = map.Squares[0];

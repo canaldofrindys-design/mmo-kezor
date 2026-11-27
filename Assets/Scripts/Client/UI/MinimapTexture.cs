@@ -40,22 +40,29 @@ namespace Kezor.Client.UI
                     var c = Color.Lerp(baseLow, baseHigh, Mathf.Clamp01((h - hMin) / hRange));
                     c *= 1f + Mathf.Clamp(-hx * 0.6f, -0.25f, 0.25f);
 
-                    if (map.SafeRadius > 0)
+                    if (map.SafeRadius > 0 && map.HasWall)
+                    {   // vila quadrada murada: ruas calçadas, quarteirões e muralha
+                        float d = map.TownDistance(wx, wz);
+                        bool road = map.IsTownStreet(wx, wz) || (d > map.WallRadius && (Mathf.Abs(wx - map.SafeX) < 1.9f || Mathf.Abs(wz - map.SafeZ) < 1.9f));
+                        if (d < map.WallRadius) c = Color.Lerp(new Color(0.42f, 0.4f, 0.36f), c, road ? 0.4f : 0.15f);
+                        if (road) c = Color.Lerp(c, new Color(0.5f, 0.46f, 0.4f), 0.8f);
+                        bool gate = Mathf.Abs(wx - map.SafeX) < map.GateHalfWidth || Mathf.Abs(wz - map.SafeZ) < map.GateHalfWidth;
+                        if (Mathf.Abs(d - map.WallRadius) < map.WallHalfThickness + 0.6f && !gate) c = new Color(0.58f, 0.55f, 0.5f);
+                    }
+                    else if (map.SafeRadius > 0)
                     {
                         float d = Mathf.Sqrt((wx - map.SafeX) * (wx - map.SafeX) + (wz - map.SafeZ) * (wz - map.SafeZ));
-                        bool road = Mathf.Abs(wx - map.SafeX) < 1.9f || Mathf.Abs(wz - map.SafeZ) < 1.9f
-                                    || (map.HasWall && d < map.WallRadius && (Mathf.Abs(d - MapDefinition.RingRoadRadius) < 1.4f || Mathf.Abs(d - MapDefinition.OuterRingRadius) < 1.4f));
+                        bool road = Mathf.Abs(wx - map.SafeX) < 1.9f || Mathf.Abs(wz - map.SafeZ) < 1.9f;
                         if (road) c = Color.Lerp(c, new Color(0.42f, 0.33f, 0.21f), 0.85f);
                         if (d < map.SafeRadius) c = Color.Lerp(new Color(0.42f, 0.4f, 0.36f), c, road ? 0.4f : 0.15f);
-                        if (map.HasWall && Mathf.Abs(d - map.WallRadius) < map.WallHalfThickness + 0.6f) c = new Color(0.55f, 0.52f, 0.47f);
                     }
                     foreach (var f in map.Floors)
                         if (wx >= f.X0 && wx <= f.X1 && wz >= f.Z0 && wz <= f.Z1) { c = new Color(0.25f, 0.23f, 0.31f); break; }
                     if (swamp || frost)
                         foreach (var o in map.Obstacles)
                             if ((wx - o.X) * (wx - o.X) + (wz - o.Z) * (wz - o.Z) < o.R * o.R) { c = new Color(0.05f, 0.08f, 0.07f); break; }
-                    foreach (var house in map.Houses)
-                        if (Mathf.Abs(wx - house.X) < 3.2f * house.Scale && Mathf.Abs(wz - house.Z) < 3.2f * house.Scale) { c = new Color(0.36f, 0.22f, 0.16f); break; }
+                    foreach (var b in map.Boxes)
+                        if (b.Contains(wx, wz, 0f)) { c = new Color(0.36f, 0.22f, 0.16f); break; }
                     c.a = 1f;
                     px[(size - 1 - y) * size + x] = c;
                 }

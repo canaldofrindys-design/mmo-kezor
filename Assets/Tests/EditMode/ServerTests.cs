@@ -80,17 +80,18 @@ namespace Kezor.Tests
         {
             var gs = NewServer();
             var map = gs.Map;
-            // Muralha (16 m × escala da vila): bloqueia fora dos portões, livre no vão entre as torres; casas e fonte bloqueiam.
-            float d45 = map.WallRadius * 0.7071f;
-            Assert.IsTrue(map.IsBlocked(map.SafeX + d45, map.SafeZ + d45));       // muralha a 45°
-            Assert.IsFalse(map.IsBlocked(map.SafeX + map.WallRadius, map.SafeZ)); // portão leste
-            Assert.IsTrue(map.IsBlocked(map.SafeX, map.SafeZ));                   // fonte
+            // Muralha quadrada: bloqueia fora dos portões, livre no vão entre as torres; casas e fonte bloqueiam.
+            Assert.IsTrue(map.IsBlocked(map.SafeX + map.WallRadius, map.SafeZ + 20));   // muralha leste
+            Assert.IsTrue(map.IsBlocked(map.SafeX - 20, map.SafeZ - map.WallRadius));   // muralha sul
+            Assert.IsFalse(map.IsBlocked(map.SafeX + map.WallRadius, map.SafeZ));       // portão leste
+            Assert.IsTrue(map.IsBlocked(map.SafeX + map.WallRadius, map.SafeZ + MapDefinition.GateTowerOffset));   // torre do portão
+            Assert.IsTrue(map.IsBlocked(map.SafeX, map.SafeZ));                         // fonte
             foreach (var h in map.Houses) Assert.IsTrue(map.IsBlocked(h.X, h.Z));
-            // De dentro para fora pela diagonal: chega dando a volta pelo portão, sem cruzar a muralha.
+            // De dentro para fora, rumo a um ponto atrás da muralha: chega dando a volta pelo portão, sem cruzar nada.
             gs.Handle(1, "CREATE Mason GUA");
             var c = gs.GetCharacter(1)!;
-            c.X = map.SafeX + 8; c.Z = map.SafeZ + 8;
-            float tx = map.SafeX + d45 + 4, tz = map.SafeZ + d45 + 4;
+            c.X = map.SafeX + 6; c.Z = map.SafeZ + 2;
+            float tx = map.SafeX + map.WallRadius + 6, tz = map.SafeZ + 20;
             gs.Handle(1, $"MOVE {Protocol.F(tx)} {Protocol.F(tz)}");
             for (int i = 0; i < 1200 && MathK.Dist(c.X, c.Z, tx, tz) > 0.2f; i++)
             {
