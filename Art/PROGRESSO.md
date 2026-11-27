@@ -442,6 +442,23 @@ referência a arquivos de outros jogos).
   `midpoly_cidade_depois.png`, `midpoly_campo_depois.png`, `midpoly_pantano_depois.png`, `midpoly_cripta_depois.png`.
 - Falta: redesenho das silhuetas peça por peça (elmos curvos, ombreiras em camadas, capas com dobras, rosto e mãos).
 
+## Cidade v4 — Brasalume remodelada (etapa 26, 27/11/2026)
+- A vila antiga (circular, modelos v2) foi removida: 28 FBX da cidade v2 apagados e `kezor_town3.py` aposentado.
+- **Kit novo no Blender** (`Art/scripts/kezor_city4.py`, 28 modelos com AO assada e id de material na UV2): muralha de
+  cantaria com ameias, fiadas e hera; torre redonda com telhado cônico de ardósia; portão fortificado com duas torres,
+  grade, brasão e estandartes; quatro casas (pedra, enxaimel, sobrado de 3 andares, casa com telheiro); Taverna,
+  Loja, Ferraria com forja, Capela com campanário e rosácea, Salão das Guildas com pórtico e torreões, Estábulo;
+  Fonte da Brasa com gema, piso de lajes da praça; barracas (vermelha, azul, amarela), poste com lanterna, braseiro,
+  estandarte, poço, banco, canteiro, caixotes, barris e obelisco. Casas com ~25 mil triângulos.
+- **Planta nova**: cidade murada quadrada de 104 m de lado, portões nos quatro lados, 12 torres, praça circular calçada
+  com a fonte, avenidas em cruz, anel interno, rua junto à muralha, quarteirões fechados de casas, mercado (NE),
+  capela (NO), salão das guildas (SE), taverna (SO), ferraria e estábulo. 51 prédios, 80 peças, 13 NPCs.
+- Colisão por retângulos girados (`ObstacleBox`) para casas e torres de portão, zona segura quadrada, terreno/minimapa/
+  vegetação seguindo as ruas novas (`IsTownStreet`), som da forja na Ferraria. Caminhada na vila mantida em 2,2 m/s.
+- Testes: `CityV4IsWalledNavigableAndCoherent` e `WallBlocksAndGatesRoute` refeitos; 157 ok (dotnet).
+- Capturas (Blender, câmera do jogo): `cidade_v4_visao.png`, `cidade_v4_praca.png`, `cidade_v4_mercado.png`,
+  `cidade_v4_portao.png`, `cidade_v4_taverna.png`, `cidade_v4_capela.png` e as versões `_noite`.
+
 ## Pendências
 - Teclas ainda não são reconfiguráveis (a janela de opções só lista); rebinding fica para depois.
 - Duas skills básicas da mesma classe às vezes têm emblemas parecidos (ex.: Jab e Gancho); dá para diferenciar mais.

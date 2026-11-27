@@ -46,14 +46,19 @@ namespace Kezor.Client
         {
             if (_map.Id != MapDefinition.ValeId) return 0f;
             float c = _map.SafeX;
-            float d = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
-            if (d < TownWallRadius + 1f)
-            {
-                float r = Mathf.Max(Soft(Mathf.Abs(x - c), MapDefinition.AvenueHalfWidth), Soft(Mathf.Abs(z - _map.SafeZ), MapDefinition.AvenueHalfWidth));
-                r = Mathf.Max(r, Soft(Mathf.Abs(d - MapDefinition.RingRoadRadius), MapDefinition.RingHalfWidth));
-                r = Mathf.Max(r, Soft(Mathf.Abs(d - MapDefinition.OuterRingRadius), MapDefinition.RingHalfWidth));
+            if (_map.HasWall && TownDist(x, z) < TownWallRadius + 1f)
+            {   // vila quadrada: avenidas em cruz, anel interno, rua junto à muralha, praça, pátios e largos calçados
+                float dx = Mathf.Abs(x - c), dz = Mathf.Abs(z - _map.SafeZ), dq = Mathf.Max(dx, dz);
+                float r = Mathf.Max(Soft(dx, MapDefinition.AvenueHalfWidth), Soft(dz, MapDefinition.AvenueHalfWidth));
+                r = Mathf.Max(r, Soft(Mathf.Abs(dq - MapDefinition.RingRoadRadius), MapDefinition.RingHalfWidth));
+                r = Mathf.Max(r, Smooth(MapDefinition.LaneRadius - 0.9f, MapDefinition.LaneRadius + 0.9f, dq));
                 foreach (var sq in _map.Squares) r = Mathf.Max(r, Soft(Vector2.Distance(new Vector2(x, z), new Vector2(sq.X, sq.Z)), sq.R, 0.6f));
-                return Mathf.Max(r, Soft(d, MapDefinition.PlazaRadius, 0.6f));
+                foreach (var pv in _map.Paved)
+                {
+                    float ox = Mathf.Max(pv.X0 - x, x - pv.X1), oz = Mathf.Max(pv.Z0 - z, z - pv.Z1);
+                    r = Mathf.Max(r, 1f - Smooth(-0.6f, 0.6f, Mathf.Max(ox, oz)));
+                }
+                return Mathf.Max(r, Soft(Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ)), MapDefinition.PlazaRadius, 0.6f));
             }
             float wob = Mathf.Sin(z * 0.11f) * 1.5f, wob2 = Mathf.Sin(x * 0.09f) * 1.5f;
             return Mathf.Max(Soft(Mathf.Abs(x - c - wob), 2.2f, 1.2f), Soft(Mathf.Abs(z - _map.SafeZ - wob2), 2.2f, 1.2f));
@@ -71,7 +76,7 @@ namespace Kezor.Client
                 w = new Vector4(moss, 1f - moss, 0, slope * 0.5f);
                 return sc;
             }
-            float dTown = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
+            float dTown = TownDist(x, z);
             float road = RoadAmount(x, z);
             var grassNear = Color.Lerp(KezorLook.Hex("#4f6b34"), KezorLook.Hex("#5e7a3a"), jit);
             var grassDeep = Color.Lerp(KezorLook.Hex("#2f4a35"), KezorLook.Hex("#3a5238"), jit);
@@ -84,7 +89,7 @@ namespace Kezor.Client
             var gravel = Color.Lerp(KezorLook.Hex("#6e6a64"), KezorLook.Hex("#57534e"), jit);
             if (dTown < TownWallRadius + 0.5f)
             {   // vila: calçamento nas ruas e na praça, quintais de grama com terra
-                bool plaza = dTown < MapDefinition.PlazaRadius + 0.6f;
+                bool plaza = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ)) < MapDefinition.PlazaRadius + 0.6f;
                 var cobble = plaza ? Color.Lerp(KezorLook.Hex("#8a8174"), KezorLook.Hex("#7a7266"), jit) : Color.Lerp(KezorLook.Hex("#6f665a"), KezorLook.Hex("#5f574d"), jit);
                 float yardDirt = Smooth(0.35f, 0.7f, Mathf.PerlinNoise(x * 0.15f, z * 0.15f));
                 var yard = Color.Lerp(grass, dirt, yardDirt * 0.7f);

@@ -5,7 +5,7 @@ namespace Kezor.Client
 {
     /// <summary>
     /// Monta o mapa atual de forma procedural e determinística (mesma seed = mesmo mapa em todos os clientes):
-    /// Vale de Brasalume (vila murada, estradas, florestas), Pântano de Turfa Negra (charco, poças, juncos) e
+    /// Vale de Brasalume (cidade murada v4, estradas, florestas), Pântano de Turfa Negra (charco, poças, juncos) e
     /// Cripta de Vidro Negro (salões e corredores com paredes e cristais). Colisão e posições vêm do MapDefinition.
     /// </summary>
     public static partial class WorldBuilder
@@ -23,29 +23,25 @@ namespace Kezor.Client
             if (_map.Id == MapDefinition.EscarpId) return FrostHeight(x, z);
             float h = (Mathf.PerlinNoise(x * 0.045f + 11.3f, z * 0.045f + 7.1f) - 0.5f) * 3.2f
                     + (Mathf.PerlinNoise(x * 0.16f + 3.7f, z * 0.16f + 1.9f) - 0.5f) * 0.7f;
-            float dTown = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
-            h *= Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(TownWallRadius + 1f, TownWallRadius + 9f, dTown));
+            float dTown = TownDist(x, z);
+            h *= Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(TownWallRadius + 4f, TownWallRadius + 14f, dTown));
             if (IsRoad(x, z)) h *= 0.35f;
             float edge = Mathf.Min(Mathf.Min(x, z), Mathf.Min(_map.Size - x, _map.Size - z));
             if (edge < 10f) h += Mathf.Pow((10f - edge) / 10f, 1.6f) * (9f + Mathf.PerlinNoise(x * 0.2f, z * 0.2f) * 6f);
             return h;
         }
 
+        /// <summary>Distância "quadrada" ao centro da cidade (a muralha v4 é quadrada); nos mapas sem muralha, a distância comum.</summary>
+        public static float TownDist(float x, float z) =>
+            _map.HasWall ? _map.TownDistance(x, z) : Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
+
         public static bool IsRoad(float x, float z)
         {
             if (_map.Id != MapDefinition.ValeId) return false;
             float c = _map.SafeX;
-            float d = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
-            if (d < TownWallRadius + 1f)
-            {   // dentro da vila: quatro avenidas, duas ruas circulares, a praça e as pracinhas dos bairros
-                if (Mathf.Abs(x - c) < MapDefinition.AvenueHalfWidth || Mathf.Abs(z - _map.SafeZ) < MapDefinition.AvenueHalfWidth) return true;
-                if (Mathf.Abs(d - MapDefinition.RingRoadRadius) < MapDefinition.RingHalfWidth || Mathf.Abs(d - MapDefinition.OuterRingRadius) < MapDefinition.RingHalfWidth) return true;
-                if (d < MapDefinition.PlazaRadius) return true;
-                foreach (var sq in _map.Squares) if ((x - sq.X) * (x - sq.X) + (z - sq.Z) * (z - sq.Z) < sq.R * sq.R) return true;
-                return false;
-            }
+            if (TownDist(x, z) < TownWallRadius + 1f) return _map.IsTownStreet(x, z) || Mathf.Abs(TownDist(x, z) - TownWallRadius) < 1.5f;
             float wob = Mathf.Sin(z * 0.11f) * 1.5f, wob2 = Mathf.Sin(x * 0.09f) * 1.5f;
-            return Mathf.Abs(x - c - wob) < 2.2f || Mathf.Abs(z - _map.SafeZ - wob2) < 2.2f;
+            return Mathf.Abs(x - c - wob) < 2.6f || Mathf.Abs(z - _map.SafeZ - wob2) < 2.6f;
         }
 
         /// <summary>Prefab do Blender (Resources/Models/Environment) com malhas legíveis, ou null → usa o procedural.</summary>
@@ -90,85 +86,147 @@ namespace Kezor.Client
             return root;
         }
 
-        // Telhados variados: o vermelho original do Blender (K_Telhado) é trocado por uma destas cores, casa a casa.
+        // Telhados de telha variados, casa a casa: o vermelho original do Blender (Tint 0), telha queimada (1) e terracota escura (2).
         private static readonly Color32[] RoofColors =
         {
-            new Color32(122, 46, 37, 255),  // vermelho-tijolo (original)
-            new Color32(52, 66, 96, 255),   // ardósia azul
-            new Color32(66, 86, 52, 255),   // musgo
-            new Color32(92, 62, 42, 255),   // telha queimada
+            new Color32(142, 62, 43, 255),
+            new Color32(104, 64, 44, 255),
+            new Color32(120, 44, 36, 255),
         };
 
-        /// <summary>Vermelho de telhado: R domina G e B e não é emissivo (alfa ≥ 0,5).</summary>
-        private static bool IsRoofColor(Color32 c) => c.a >= 128 && c.r > 70 && c.g < c.r * 0.55f && c.b < c.r * 0.55f;
+        /// <summary>Vermelho de telha: R domina G e B e não é emissivo (alfa ≥ 0,5).</summary>
+        private static bool IsRoofColor(Color32 c) => c.a >= 128 && c.r > 60 && c.g < c.r * 0.55f && c.b < c.r * 0.55f;
+
+        /// <summary>Troca o vermelho da telha pela cor da variação, mantendo a sombra assada (proporção do brilho).</summary>
+        private static System.Func<Color32, Color32>? RoofRemap(int tint)
+        {
+            if (tint <= 0 || tint >= RoofColors.Length) return null;
+            var src = RoofColors[0]; var dst = RoofColors[tint];
+            return c =>
+            {
+                if (!IsRoofColor(c)) return c;
+                float k = c.r / (float)src.r;
+                return new Color32((byte)Mathf.Clamp(dst.r * k, 0, 255), (byte)Mathf.Clamp(dst.g * k, 0, 255), (byte)Mathf.Clamp(dst.b * k, 0, 255), c.a);
+            };
+        }
+
+        /// <summary>Porta de cada prédio (x local) para o lampião aceso; NaN = sem lampião (capela, guilda e estábulo têm braseiros/nenhum).</summary>
+        private static float DoorX(string kind) => kind switch
+        {
+            "Casa4A" => -0.8f, "Casa4B" => 0f, "Casa4C" => 0f, "Casa4D" => 1.2f, "Loja4" => -1.7f, "Taverna4" => 0f, "Ferraria4" => 0.6f,
+            _ => float.NaN,
+        };
+
+        /// <summary>Chaminés (posição local x, altura, z) de cada modelo, para a fumaça.</summary>
+        private static Vector3[] Chimneys(string kind) => kind switch
+        {
+            "Casa4A" => new[] { new Vector3(2.2f, 11.6f, -1.2f) },
+            "Casa4C" => new[] { new Vector3(-2.6f, 11.0f, -1.15f) },
+            "Taverna4" => new[] { new Vector3(4.2f, 14.6f, -1.6f) },
+            "Ferraria4" => new[] { new Vector3(-2.2f, 11.3f, -1.15f), new Vector3(6.8f, 6.9f, -1.15f) },
+            _ => System.Array.Empty<Vector3>(),
+        };
 
         /// <summary>
-        /// Vila de Brasalume v2 (modelos do Blender, kezor_town2.py): muralha em blocos, torres redondas e arcos nos quatro
-        /// portões, fonte na praça, casas e sobrados em dois anéis, distritos (mercado, forja, templo, estábulo) e postes
-        /// ao longo das ruas. Tudo vem do MapDefinition (o servidor usa os mesmos dados para a colisão).
+        /// Cidade de Brasalume v4 (modelos do Blender, Art/scripts/kezor_city4.py): muralha quadrada de cantaria com ameias,
+        /// torres redondas nos cantos e no meio dos trechos, portões fortificados nos quatro lados, piso de lajes e Fonte da
+        /// Brasa na praça, quarteirões de casas de pedra e enxaimel, taverna, loja, ferraria, capela, salão das guildas,
+        /// estábulo, barracas do mercado, postes e braseiros. Tudo vem do MapDefinition (o servidor usa os mesmos dados
+        /// para a colisão).
         /// </summary>
         private static void BuildTown(Transform parent)
         {
-            float cx = _map.SafeX, cz = _map.SafeZ;
+            float cx = _map.SafeX, cz = _map.SafeZ, W = _map.WallRadius;
             // 8 fatias (setores de 45°) em malhas separadas: a câmera só desenha as que vê (culling por fatia)
             var slices = new StaticBatch[8];
-            for (int q = 0; q < 8; q++) slices[q] = new StaticBatch { Building = true };
+            for (int q = 0; q < 8; q++) slices[q] = new StaticBatch();
             StaticBatch Slice(Vector3 p) { float ang = Mathf.Atan2(p.z - cz, p.x - cx) * Mathf.Rad2Deg; return slices[Mathf.Clamp((int)(Mathf.Repeat(ang, 360f) / 45f), 0, 7)]; }
-            var wallPf = Env("Muralha2"); var ivyPf = Env("Muralha2Hera") ?? wallPf; var towerPf = Env("Torre2"); var archPf = Env("PortaoArco");
-            float R = TownWallRadius;
-            // muralha: segmentos de 4 m (lado de fora = -Z local do modelo), deixando o vão de cada portão para o arco e as torres
-            int n = Mathf.RoundToInt(2f * Mathf.PI * R / 4f);
-            float len = 2f * Mathf.PI * R / n;
-            float skip = _map.TowerAngle + Mathf.Rad2Deg * (_map.TowerRadius + 0.6f) / R;
-            if (wallPf != null)
-                for (int i = 0; i < n; i++)
-                {
-                    float a = (i + 0.5f) / n * 360f;
-                    float rel = Mathf.Repeat(a + 45f, 90f) - 45f;
-                    if (Mathf.Abs(rel) < skip) continue;
-                    float rad = a * Mathf.Deg2Rad;
-                    var p = new Vector3(cx + Mathf.Cos(rad) * R, 0, cz + Mathf.Sin(rad) * R);
-                    Slice(p).Add(i % 3 == 1 ? ivyPf! : wallPf, p, Quaternion.Euler(0, 270f - a, 0), new Vector3(len / 4f * 1.03f, 1f, 1f), Color.white);
-                }
+            var wallPf = Env("Muralha4"); var ivyPf = Env("Muralha4Hera") ?? wallPf; var gatePf = Env("Portao4"); var towerPf = Env("Torre4");
+
+            // ---- muralha: em cada lado, o portão no meio e segmentos de 8 m esticados até o canto (lado de fora = +Z local)
+            float gateEnd = MapDefinition.GateTowerOffset + MapDefinition.GateTowerHalfW;
             for (int g = 0; g < 4; g++)
             {
-                float ga = g * 90f;
-                var gp = new Vector3(cx + Mathf.Cos(ga * Mathf.Deg2Rad) * R, 0, cz + Mathf.Sin(ga * Mathf.Deg2Rad) * R);
-                if (archPf != null) Slice(gp).Add(archPf, gp, Quaternion.Euler(0, 90f - ga, 0), Vector3.one, Color.white);
-                for (int s2 = -1; s2 <= 1; s2 += 2)
-                {
-                    float deg = ga + s2 * _map.TowerAngle, a = deg * Mathf.Deg2Rad;
-                    var p = new Vector3(cx + Mathf.Cos(a) * R, 0, cz + Mathf.Sin(a) * R);
-                    if (towerPf != null) Slice(p).Add(towerPf, p, Quaternion.Euler(0, 90f - deg, 0), Vector3.one * 1.1f, Color.white);
-                }
+                float nx = g == 0 ? 1 : g == 2 ? -1 : 0, nz = g == 1 ? 1 : g == 3 ? -1 : 0;
+                float tx = -nz, tz = nx;
+                var rot = Quaternion.Euler(0, MapDefinition.YawTo(nx, nz), 0);
+                var gp = new Vector3(cx + nx * W, 0, cz + nz * W);
+                if (gatePf != null) Slice(gp).Add(gatePf, Matrix4x4.TRS(gp, rot, Vector3.one), Color.white);
+                LocalLights.Add(gp + new Vector3(nx, 0, nz) * 4.8f + Vector3.up * 2.2f, new Color(1f, 0.6f, 0.28f), 9f);   // braseiros de fora do portão
+                if (wallPf == null) continue;
+                float L = W - gateEnd + 0.5f;
+                int n = Mathf.Max(1, Mathf.RoundToInt(L / 8f));
+                float len = L / n;
+                foreach (var s in new[] { -1f, 1f })
+                    for (int i = 0; i < n; i++)
+                    {
+                        float t = s * (gateEnd - 0.3f + (i + 0.5f) * len);
+                        var p = new Vector3(cx + nx * W + tx * t, 0, cz + nz * W + tz * t);
+                        var pf = (i + g) % 3 == 1 ? ivyPf! : wallPf;
+                        Slice(p).Add(pf, Matrix4x4.TRS(p, rot, new Vector3(len / 8f * 1.02f, 1f, 1f)), Color.white);
+                    }
             }
-            // casas
+            if (towerPf != null)
+                foreach (var tw in _map.Towers)
+                {
+                    var p = new Vector3(tw.X, 0, tw.Z);
+                    Slice(p).Add(towerPf, Matrix4x4.TRS(p, Quaternion.Euler(0, tw.Yaw, 0), Vector3.one * tw.Scale), Color.white);
+                }
+
+            // ---- prédios: telhado variado, lampião aceso na porta e fumaça nas chaminés
             foreach (var h in _map.Houses)
             {
-                var pf = Env(string.IsNullOrEmpty(h.Kind) ? "Casa2A" : h.Kind) ?? Env("CasaEnxaimel");
+                var pf = Env(h.Kind);
                 if (pf == null) continue;
-                var hp = new Vector3(h.X, 0, h.Z); var hr = Quaternion.Euler(0, -h.Angle - 90f, 0);
-                Slice(hp).Add(pf, Matrix4x4.TRS(hp, hr, Vector3.one * h.Scale), Color.white);
-                // vida: lampião aceso na porta de cada casa e fumaça em metade das chaminés
-                bool tall = h.Kind is "Sobrado2" or "Casa3B" or "Taverna3" or "Casarao3";
-                bool big = h.Kind is "Taverna3" or "Casarao3";
-                float front = big ? 3.4f : h.Kind is "Casa3A" or "Casa3C" ? 3.1f : 2.8f;
-                LocalLights.Add(hp + hr * (new Vector3(1.6f, 1.9f, front) * h.Scale), new Color(1f, 0.64f, 0.32f), big ? 8f : 5.5f);
-                int hash = Mathf.Abs(Mathf.RoundToInt(h.X * 7.3f + h.Z * 3.1f));
-                if (big || hash % 2 == 0)
-                    AmbientFx.Smoke(parent, hp + hr * (new Vector3(1.5f, tall ? 8.6f : 6.2f, -0.9f) * h.Scale), big ? 3f : 2.2f);
+                var hp = new Vector3(h.X, 0, h.Z); var hr = Quaternion.Euler(0, h.Yaw, 0);
+                Slice(hp).Add(pf, Matrix4x4.TRS(hp, hr, Vector3.one * h.Scale), Color.white, RoofRemap(h.Tint));
+                float hz = MapDefinition.HouseFootprint(h.Kind)[0].HZ;
+                float dx = DoorX(h.Kind);
+                if (!float.IsNaN(dx)) LocalLights.Add(hp + hr * (new Vector3(dx + 1.1f, 2.4f, hz + 0.55f) * h.Scale), new Color(1f, 0.64f, 0.32f), 5.5f);
+                foreach (var ch in Chimneys(h.Kind))
+                    if (h.Kind != "Casa4C" || Mathf.Abs(Mathf.RoundToInt(h.X * 7.3f + h.Z * 3.1f)) % 2 == 0)
+                        AmbientFx.Smoke(parent, hp + hr * (ch * h.Scale), h.Kind == "Taverna4" ? 3f : 2.2f);
+                switch (h.Kind)
+                {
+                    case "Ferraria4":
+                    {
+                        var forge = hp + hr * (new Vector3(6.8f, 1.3f, -0.9f) * h.Scale);
+                        LocalLights.Add(forge, new Color(1f, 0.45f, 0.15f), 8f);
+                        AmbientFx.Embers(parent, forge + Vector3.up * 0.2f, 0.3f, 9f);
+                        break;
+                    }
+                    case "Capela4":
+                        foreach (var sx in new[] { -2.6f, 2.6f }) LocalLights.Add(hp + hr * (new Vector3(sx, 1.9f, 8.4f) * h.Scale), new Color(1f, 0.55f, 0.22f), 7f);
+                        LocalLights.Add(hp + hr * (new Vector3(0, 6f, 7.4f) * h.Scale), new Color(1f, 0.55f, 0.3f), 7f);   // rosácea
+                        break;
+                    case "Guilda4":
+                        foreach (var sx in new[] { -4.2f, 4.2f }) LocalLights.Add(hp + hr * (new Vector3(sx, 1.9f, 6.9f) * h.Scale), new Color(1f, 0.55f, 0.22f), 7.5f);
+                        break;
+                    case "Taverna4":
+                        LocalLights.Add(hp + hr * (new Vector3(0f, 2.3f, 5.6f) * h.Scale), new Color(1f, 0.6f, 0.3f), 8f);   // varanda
+                        break;
+                }
             }
-            // fonte da praça (gema gira)
-            var fonte = ModelLibrary.Instantiate("Environment/Fonte2", "Fonte de Brasas", parent) ?? ModelLibrary.Instantiate("Environment/FonteDeBrasas", "Fonte de Brasas", parent);
+
+            // ---- praça: piso de lajes (malha própria) e a Fonte da Brasa com a gema girando
+            var pisoPf = Env("Praca4");
+            if (pisoPf != null)
+            {
+                var piso = new StaticBatch();
+                piso.Add(pisoPf, Matrix4x4.TRS(new Vector3(cx, 0.01f, cz), Quaternion.identity, Vector3.one), Color.white);
+                piso.Build("Praça da Fonte (piso)", parent, occluder: false);
+            }
+            var fonte = ModelLibrary.Instantiate("Environment/Fonte4", "Fonte da Brasa", parent);
             if (fonte != null)
             {
                 fonte.transform.localPosition = new Vector3(cx, 0, cz);
                 var gem = FindDeep(fonte.transform, "Gem");
                 if (gem != null) gem.gameObject.AddComponent<Spinner>();
             }
-            LocalLights.Add(new Vector3(cx, 4.2f, cz), new Color(1f, 0.6f, 0.25f), 11f);
-            // peças dos distritos, postes e braseiros
-            var lamps = new MeshBuilder();
+            LocalLights.Add(new Vector3(cx, 6.8f, cz), new Color(1f, 0.6f, 0.25f), 13f);
+            AmbientFx.Embers(parent, new Vector3(cx, 6.2f, cz), 0.3f, 7f);
+
+            // ---- peças: barracas, postes, braseiros, estandartes, poço, obelisco, árvores, caixotes
             foreach (var pr in _map.Props)
             {
                 var pf = Env(pr.Kind);
@@ -176,18 +234,18 @@ namespace Kezor.Client
                 var rot = Quaternion.Euler(0, pr.Yaw, 0);
                 var pos = new Vector3(pr.X, 0, pr.Z);
                 var sb = Slice(pos);
-                sb.Building = !(pr.Kind.StartsWith("Arvore") || pr.Kind.StartsWith("Pinheiro") || pr.Kind == "Arbusto");   // tronco é veio, não tábua
+                // modelos v4 já têm blocos e tábuas modelados: sem a textura extra de alvenaria/tábua (Building)
+                sb.Building = !(pr.Kind.EndsWith("4") || pr.Kind.StartsWith("Arvore") || pr.Kind.StartsWith("Pinheiro") || pr.Kind == "Arbusto");
                 sb.Add(pf, Matrix4x4.TRS(pos, rot, Vector3.one * pr.Scale), Color.white);
-                sb.Building = true;
+                sb.Building = false;
                 switch (pr.Kind)
                 {
-                    case "Poste2": LocalLights.Add(pos + rot * new Vector3(0, 3.3f, 0.78f), new Color(1f, 0.62f, 0.3f), 7.5f); break;
-                    case "Braseiro2": LocalLights.Add(pos + Vector3.up * 2f, new Color(1f, 0.55f, 0.22f), 8f); AmbientFx.Embers(parent, pos + Vector3.up * 1.6f, 0.25f, 6f); break;
-                    case "Forja2": LocalLights.Add(pos + rot * new Vector3(1.3f, 1.0f, 0.2f), new Color(1f, 0.45f, 0.15f), 7f); AmbientFx.Embers(parent, pos + rot * new Vector3(1.3f, 1.2f, 0.2f), 0.3f, 9f); break;
-                    case "Templo": LocalLights.Add(pos + rot * new Vector3(0, 2.0f, 3.4f), new Color(1f, 0.55f, 0.25f), 8f); break;
+                    case "Poste4": LocalLights.Add(pos + rot * new Vector3(0, 3.3f, 0.8f), new Color(1f, 0.62f, 0.3f), 7.5f); break;
+                    case "Braseiro4": LocalLights.Add(pos + Vector3.up * 2.0f, new Color(1f, 0.55f, 0.22f), 8f); AmbientFx.Embers(parent, pos + Vector3.up * 1.7f, 0.25f, 6f); break;
+                    case "Obelisco4": LocalLights.Add(pos + Vector3.up * 5.9f * pr.Scale, new Color(1f, 0.55f, 0.22f), 6f); break;
                 }
             }
-            for (int q = 0; q < 8; q++) slices[q].Build($"Vila de Brasalume {q}", parent, occluder: true);
+            for (int q = 0; q < 8; q++) slices[q].Build($"Cidade de Brasalume {q}", parent, occluder: true);
         }
 
         private static void BuildNature(Transform parent)
@@ -207,7 +265,7 @@ namespace Kezor.Client
             {
                 float x = (float)rnd.NextDouble() * _map.Size, z = (float)rnd.NextDouble() * _map.Size;
                 float dTown = Vector2.Distance(new Vector2(x, z), new Vector2(_map.SafeX, _map.SafeZ));
-                if (dTown < TownWallRadius + 5f || IsRoad(x, z) || IsRoad(x + 1.5f, z + 1.5f) || IsRoad(x - 1.5f, z - 1.5f) || NearPortal(x, z, 6f)) continue;
+                if (TownDist(x, z) < TownWallRadius + 8f || IsRoad(x, z) || IsRoad(x + 1.5f, z + 1.5f) || IsRoad(x - 1.5f, z - 1.5f) || NearPortal(x, z, 6f)) continue;
                 bool nearSpawn = false;
                 foreach (var g in _map.Spawns) if (Vector2.Distance(new Vector2(x, z), new Vector2(g.X, g.Z)) < g.Radius * 0.6f) { nearSpawn = true; break; }
                 if (nearSpawn && rnd.NextDouble() < 0.8) continue;

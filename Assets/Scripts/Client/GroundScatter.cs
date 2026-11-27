@@ -195,7 +195,7 @@ namespace Kezor.Client
 
         private bool Blocked(MapDefinition map, float x, float z, float pad)
         {
-            foreach (var h in map.Houses) { float hr = MapDefinition.HouseExtent(h.Kind) * h.Scale + pad; if ((h.X - x) * (h.X - x) + (h.Z - z) * (h.Z - z) < hr * hr) return true; }
+            foreach (var b in map.Boxes) if (b.Contains(x, z, pad)) return true;
             foreach (var p in map.Props) if ((p.X - x) * (p.X - x) + (p.Z - z) * (p.Z - z) < (1.2f + pad) * (1.2f + pad)) return true;
             foreach (var o in map.Obstacles) if ((o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) < (o.R + pad) * (o.R + pad)) return true;
             return false;
@@ -226,7 +226,7 @@ namespace Kezor.Client
                 float edge = Mathf.Min(Mathf.Min(x, z), Mathf.Min(size - x, size - z));
                 if (edge < 6f) continue;
                 float road = WorldBuilder.RoadAmount(x, z);
-                float dTown = Mathf.Sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz));
+                float dTown = WorldBuilder.TownDist(x, z);
                 bool town = map.Id == MapDefinition.ValeId && dTown < WorldBuilder.TownWallRadius + 1.5f;
                 if (town && Mathf.Abs(dTown - WorldBuilder.TownWallRadius) < 2.2f) continue;     // pé da muralha
                 if (Blocked(map, x, z, 0.4f)) continue;
