@@ -43,6 +43,15 @@ namespace Kezor.Client.UI
             set { PlayerPrefs.SetFloat(ScalePref, Mathf.Clamp(value, 0.8f, 1.4f)); ApplyScale(); }
         }
 
+        /// <summary>Tema clássico premium (molduras de ouro, Resources/UI/Premium + KezorPremium.uss). Ligado por padrão.</summary>
+        public const string PremiumPref = "kz.ui.premium";
+        public static bool PremiumOn => PlayerPrefs.GetInt(PremiumPref, 1) == 1;
+        public bool Premium
+        {
+            get => PremiumOn;
+            set { PlayerPrefs.SetInt(PremiumPref, value ? 1 : 0); Root.SetClass("kz-premium", value); }
+        }
+
         public static UiRoot Create(KezorGame game)
         {
             var go = new GameObject("Interface");
@@ -70,7 +79,10 @@ namespace Kezor.Client.UI
             Root = _doc.rootVisualElement;
             var sheet = Resources.Load<StyleSheet>("UI/Kezor");
             if (sheet != null) Root.styleSheets.Add(sheet);
+            var premium = Resources.Load<StyleSheet>("UI/KezorPremium");   // tema clássico premium, por cima do Kezor.uss
+            if (premium != null) Root.styleSheets.Add(premium);
             Root.AddToClassList("kz-root");
+            Root.SetClass("kz-premium", PremiumOn);
             Root.pickingMode = PickingMode.Ignore;
 
             WorldLayer = Kz.El("hud-layer", Root);

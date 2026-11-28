@@ -92,3 +92,22 @@ O tema fica em `Assets/Resources/UI/Kezor.uss`; as cores acima existem como vari
 - `KezorGame` (cliente): lógica, entrada e envio de comandos.
 - `Kezor.Client.UI`: só apresentação (UI Toolkit). As views leem o `ClientState` e chamam métodos do `KezorGame`; elas
   não falam com o servidor por conta própria.
+
+## Tema clássico premium (padrão desde a v6 da interface)
+Camada de acabamento no espírito dos MMOs clássicos de fantasia: **ferro escuro, ouro velho, pedra e gemas de brasa**,
+com filigrana nos cantos das janelas. A arte é original do Kezor, desenhada em código (nada copiado de outro jogo).
+
+- **Onde fica**: arte em `Assets/Resources/UI/Premium` (62 PNGs em 2x) e regras em `Assets/Resources/UI/KezorPremium.uss`,
+  carregada por cima do `Kezor.uss`. Tudo vale só quando a raiz tem a classe `.kz-premium`.
+- **Liga/desliga**: Opções ▸ Interface ▸ *Interface clássica (molduras de ouro)* (preferência `kz.ui.premium`, ligada por
+  padrão). Os glifos dos menus trocam ao entrar de novo no jogo.
+- **9-slice**: as texturas são 2x; toda regra usa `-unity-slice-scale: 0.5`, então as bordas na tela têm metade dos números
+  de `-unity-slice-*`. Janela 48 (24 px na tela), painel 32, slot 28, botão 24, console da barra 120/56/20.
+- **Enfeites do HUD** (`.kzp-decor`, só aparecem no tema): engaste hexagonal atrás dos cristais de Vida e Mana, moldura de
+  ouro nas barras de Vigor e Escudo e os remates de voluta nas pontas do console.
+- **Glifos**: `Kz.Art(nome)` procura primeiro `UI/Premium/<nome>` (glifos dourados já coloridos, sem tinta) e cai em
+  `UI/Art` se não houver.
+- **Refazer a arte**: `python Art/ui/kezor_ui_premium.py` (todas) ou com nomes (`window btn slot`); depois
+  `python Art/ui/make_meta.py` cria os `.meta` que faltarem (GUID fixo por caminho). Paleta e materiais em `Art/ui/kzpaint.py`.
+- **Prévia sem Unity**: `python Art/ui/preview_mock.py` monta as telas em HTML com as mesmas peças e medidas e grava
+  `Art/previews/ui_premium_*.jpg`.

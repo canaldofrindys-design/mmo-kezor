@@ -41,3 +41,4 @@ __pycache__/
 *.pyc
 
 Tools/servidor-local.txt
+Art/previews/_mock/
