@@ -73,8 +73,9 @@ Passo "Colocando '$nome' na lista de servidores do jogo"
 $lista = Join-Path $Projeto 'Assets\StreamingAssets\servers.json'
 try {
     $json = Get-Content $lista -Raw -Encoding UTF8 | ConvertFrom-Json
-    $outros = @($json.servers | Where-Object { $_.id -ne 'kezor-online' })
-    $novo = [pscustomobject]@{ id = 'kezor-online'; name = $nome; host = $ip; region = 'BR'; channels = @([pscustomobject]@{ name = 'Canal 1'; port = 55901 }) }
+    # o servidor principal ("kezor") passa a apontar para o VPS: o jogo ja conecta nele, sem digitar IP
+    $outros = @($json.servers | Where-Object { $_.id -ne 'kezor' -and $_.id -ne 'kezor-online' })
+    $novo = [pscustomobject]@{ id = 'kezor'; name = $nome; host = $ip; region = 'BR'; channels = @([pscustomobject]@{ name = 'Canal 1'; port = 55901 }) }
     $json.servers = @($novo) + $outros
     [IO.File]::WriteAllText($lista, ($json | ConvertTo-Json -Depth 6), (New-Object Text.UTF8Encoding $false))
     Write-Host "  pronto: o jogo mostra '$nome' no login."

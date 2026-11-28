@@ -9,8 +9,8 @@ using Kezor.Core.Server;
 
 namespace Kezor.Core.Net
 {
-    /// <summary>Host = servidor neste PC (o jogo abre se ainda não houver um rodando); Direct = digitar IP e porta de um
-    /// amigo; Remote = servidor do servers.json.</summary>
+    /// <summary>Remote = servidor da lista oficial (servers.json, que vai junto com o jogo). Host/Direct são do modo antigo
+    /// (servidor dentro do jogo / digitar IP) e não aparecem mais na tela de login.</summary>
     public enum ServerKind { Host, Direct, Remote }
 
     public sealed class ChannelEntry
@@ -32,8 +32,8 @@ namespace Kezor.Core.Net
     /// { "servers": [ { "id": "brasalume", "name": "Brasalume", "host": "jogo.exemplo.com", "region": "BR",
     ///                  "channels": [ { "name": "Canal 1", "port": 55901 }, { "name": "Canal 2", "port": 55902 } ] } ] }
     /// Sem "channels", usa "port" (ou a porta padrão) como canal único. Entradas sem nome/endereço ou com porta inválida
-    /// são ignoradas. A entrada "Servidor deste PC" entra sempre no topo. Não existe modo solo: todo jogador entra num servidor
-    /// com conta e senha, e todos os jogadores do canal dividem o mesmo mundo.
+    /// são ignoradas. Como nos MMOs clássicos, a lista (com o endereço do servidor) vai dentro do jogo: o jogador só escolhe o
+    /// servidor e o canal, entra com conta e senha, e todos os jogadores do canal dividem o mesmo mundo.
     /// </summary>
     public static class ServerList
     {
@@ -71,18 +71,16 @@ namespace Kezor.Core.Net
             return list;
         }
 
-        public const string HostId = "este-pc", DirectId = "por-ip";
+        public const string DefaultId = "kezor";
 
-        /// <summary>"Servidor deste PC" (127.0.0.1 na porta dada) e "Entrar por IP" no topo, depois os servidores do arquivo.</summary>
-        public static List<ServerEntry> WithBuiltins(IEnumerable<ServerEntry> remote, int hostPort = Protocol.DefaultPort)
+        /// <summary>A lista do arquivo; se estiver vazia (arquivo faltando ou estragado), o servidor padrão "Kezor" neste PC.</summary>
+        public static List<ServerEntry> WithDefault(List<ServerEntry> list)
         {
-            var all = new List<ServerEntry>
+            if (list.Count > 0) return list;
+            return new List<ServerEntry>
             {
-                new ServerEntry { Id = HostId, Name = "Servidor deste PC", Host = "127.0.0.1", Region = "você e sua rede", Kind = ServerKind.Host, Channels = { new ChannelEntry { Name = "Canal 1", Port = hostPort } } },
-                new ServerEntry { Id = DirectId, Name = "Entrar por IP", Host = "", Region = "servidor de um amigo", Kind = ServerKind.Direct, Channels = { new ChannelEntry { Name = "Canal 1", Port = Protocol.DefaultPort } } },
+                new ServerEntry { Id = DefaultId, Name = "Kezor", Host = "127.0.0.1", Region = "BR", Kind = ServerKind.Remote, Channels = { new ChannelEntry { Name = "Canal 1", Port = Protocol.DefaultPort } } },
             };
-            all.AddRange(remote);
-            return all;
         }
 
         /// <summary>Lê o arquivo (vazio se não existir).</summary>
