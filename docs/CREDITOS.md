@@ -31,6 +31,9 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Esgrimista (Lâmina, tier 1): armadura leve completa com elmo | Medieval Light Armor | frankestudios71 | CC BY 4.0 | https://sketchfab.com/3d-models/4dfb95c72f814d3fbe32e7ada8435fa9 |
 | Set Duelista (Lâmina, tier 3): placas gravadas completas com elmo | Medieval Knight Armour | GraphVFX | CC BY 4.0 | https://sketchfab.com/3d-models/5d076bc757674b94b55735791b35a995 |
 | Set Cervo de Prata (Lâmina, tier 4): placas, elmo com galhada, manoplas e botas | Eraden Paladin Armor - Male | EmClear | CC BY 4.0 | https://sketchfab.com/3d-models/3f437cd261b44ddeb0acfc2f58546ed1 |
+| Set Cruzado (Comandante, tier 1): placas completas com elmo | Medieval Knight - rigged for UE4/5 | Andywoodhead | CC BY 4.0 | https://sketchfab.com/3d-models/1c7a83c0832a4ab28d9f1a46d282fcf9 |
+| Set Marechal (Comandante, tier 3): placas com tabardo, elmo, manoplas e botas | Cavalry Armor Set | ulviaktas | CC BY 4.0 | https://sketchfab.com/3d-models/7621117443cc4c21ab90528fc399a944 |
+| Set Estandarte Negro (Comandante, tier 4): placas escuras completas com elmo | Modular Medieval Armor | jhonjpanesso | CC BY 4.0 | https://sketchfab.com/3d-models/f4156f249ea34c19afb57519f6b032af |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças

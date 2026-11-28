@@ -38,6 +38,9 @@ namespace Kezor.Core.Items
             ArmorSet.FencerGarb => "Couraça do Esgrimista",
             ArmorSet.DuelistPlate => "Placas do Duelista",
             ArmorSet.SilverStagPlate => "Placas do Cervo de Prata",
+            ArmorSet.CrusaderPlate => "Placas do Cruzado",
+            ArmorSet.MarshalPlate => "Placas do Marechal",
+            ArmorSet.BlackBannerPlate => "Placas do Estandarte Negro",
             // </kz-class-sets name>
             _ => "",
         };
@@ -65,6 +68,9 @@ namespace Kezor.Core.Items
             ArmorSet.FencerGarb => new SetBonus { Defense = 6, DamagePercent = 4, MagicPercent = 4 },
             ArmorSet.DuelistPlate => new SetBonus { Defense = 22, DamagePercent = 10, MagicPercent = 12 },
             ArmorSet.SilverStagPlate => new SetBonus { Defense = 32, DamagePercent = 14, MagicPercent = 16, ReductionPercent = 4 },
+            ArmorSet.CrusaderPlate => new SetBonus { Defense = 10, ReductionPercent = 3, DefenseRatePercent = 3 },
+            ArmorSet.MarshalPlate => new SetBonus { Defense = 28, ReductionPercent = 7, DefenseRatePercent = 8, DamagePercent = 4 },
+            ArmorSet.BlackBannerPlate => new SetBonus { Defense = 40, ReductionPercent = 9, DefenseRatePercent = 10, DamagePercent = 7 },
             // </kz-class-sets bonus>
             _ => default,
         };

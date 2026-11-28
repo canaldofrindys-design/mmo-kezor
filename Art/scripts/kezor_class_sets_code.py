@@ -60,6 +60,15 @@ SETS = [
     ('L', 4, 'SilverStagPlate', 'Astral', 'Placas do Cervo de Prata',
      ['Elmo do Cervo de Prata', 'Placas do Cervo de Prata', 'Grevas do Cervo de Prata', 'Manoplas do Cervo de Prata', 'Botas do Cervo de Prata'],
      'Defense = 32, DamagePercent = 14, MagicPercent = 16, ReductionPercent = 4', '#e6f2ff', 'Strength'),
+    ('C', 1, 'CrusaderPlate', 'Cruzado', 'Placas do Cruzado',
+     ['Elmo do Cruzado', 'Peitoral do Cruzado', 'Grevas do Cruzado', 'Manoplas do Cruzado', 'Botas do Cruzado'],
+     'Defense = 10, ReductionPercent = 3, DefenseRatePercent = 3', '#ffd34a', 'Strength'),
+    ('C', 3, 'MarshalPlate', 'Marechal', 'Placas do Marechal',
+     ['Elmo do Marechal', 'Peitoral do Marechal', 'Grevas do Marechal', 'Manoplas do Marechal', 'Botas do Marechal'],
+     'Defense = 28, ReductionPercent = 7, DefenseRatePercent = 8, DamagePercent = 4', '#ff5a5a', 'Strength'),
+    ('C', 4, 'BlackBannerPlate', 'Estandarte', 'Placas do Estandarte Negro',
+     ['Elmo do Estandarte Negro', 'Peitoral do Estandarte Negro', 'Grevas do Estandarte Negro', 'Manoplas do Estandarte Negro', 'Botas do Estandarte Negro'],
+     'Defense = 40, ReductionPercent = 9, DefenseRatePercent = 10, DamagePercent = 7', '#d9a648', 'Strength'),
 ]
 
 BASE_ENUM = ['None', 'Leather', 'Scale', 'Veil', 'RunePlate', 'ArcaneWeave', 'Bastion', 'EchoVeil', 'EmberHide']

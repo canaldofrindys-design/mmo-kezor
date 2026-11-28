@@ -9,7 +9,7 @@ namespace Kezor.Core.Items
     /// <summary>Habilidade do mascote (slot Pet), executada pelo servidor.</summary>
     public enum PetType { None, Collector, Guardian }
     /// <summary>Conjunto de armadura: com as 5 peças (elmo, armadura, calças, luvas e botas) ganha o bônus de conjunto.</summary>
-    public enum ArmorSet { None, Leather, Scale, Veil, RunePlate, ArcaneWeave, Bastion, EchoVeil, EmberHide, KnightPlate, TemplarPlate, SovereignPlate, ApprenticeRobe, SageRobe, ArchmageRobe, ArcherGarb, ScoutLeather, SentinelLeather, FencerGarb, DuelistPlate, SilverStagPlate }
+    public enum ArmorSet { None, Leather, Scale, Veil, RunePlate, ArcaneWeave, Bastion, EchoVeil, EmberHide, KnightPlate, TemplarPlate, SovereignPlate, ApprenticeRobe, SageRobe, ArchmageRobe, ArcherGarb, ScoutLeather, SentinelLeather, FencerGarb, DuelistPlate, SilverStagPlate, CrusaderPlate, MarshalPlate, BlackBannerPlate }
     /// <summary>Runas de aprimoramento de Kezor.</summary>
     public enum RuneType { None, Dawn, Eclipse, Vital, Vortex }
     public enum PotionType { None, Health, Mana }
