@@ -132,7 +132,7 @@ namespace Kezor.Client.UI
             _vigor = bar.Put(new HudVBar(KezorLook.Hex("#c9a23a"), KezorLook.Hex("#ffe08a")));
             _vigor.AddToClassList("hud4-vbar--vigor");
             _vigorText = Kz.Text("", "hud4-vbar__text", _vigor);
-            Tip(_vigor, () => $"<b>Vigor</b>  {S.Me.Vigor}/{S.Me.MaxVigor}\nCada skill gasta {Kezor.Core.Characters.Character.SkillVigorCost}; o ataque básico não gasta.\nVolta {Kezor.Core.Characters.Character.VigorRegenCombat:0}/s em combate e {Kezor.Core.Characters.Character.VigorRegenRest:0}/s fora dele.");
+            Tip(_vigor, () => $"<b>Vigor</b>  {S.Me.Vigor}/{S.Me.MaxVigor}\nAs skills iniciais não gastam; as outras gastam {Kezor.Core.Characters.Character.SkillVigorCost}. O ataque básico não gasta.\nVolta a cada {Kezor.Core.Characters.Character.RecoveryInterval:0} s (mais rápido na zona segura).");
 
             // atalhos de consumível
             var quick = Kz.El("hud4-group hud4-quick", bar, pick: true);
@@ -186,7 +186,7 @@ namespace Kezor.Client.UI
             _shield = bar.Put(new HudVBar(KezorLook.Hex("#3aa8c8"), KezorLook.Hex("#a8f0ff")));
             _shield.AddToClassList("hud4-vbar--shield");
             _shieldText = Kz.Text("", "hud4-vbar__text", _shield);
-            Tip(_shield, () => $"<b>Escudo</b>  {S.Me.Shield}/{S.Me.MaxShield}\nAbsorve o dano antes da vida ({Kezor.Core.Characters.Character.ShieldPercentOfHp}% da vida máxima).\nRecarrega depois de {Kezor.Core.Characters.Character.ShieldDelaySeconds:0} s sem levar dano.");
+            Tip(_shield, () => $"<b>Escudo</b>  {S.Me.Shield}/{S.Me.MaxShield}\nSó segura golpes de jogadores: {Kezor.Core.Characters.Character.ShieldRatioPercent}% vai no escudo e o resto na vida.\nRecarrega na zona segura, {Kezor.Core.Characters.Character.ShieldDelaySeconds:0} s depois de levar dano.");
             var manaBox = Kz.El("hud4-crystal hud4-crystal--mp", bar, pick: true);
             _mana = manaBox.Put(new HudCrystal(KezorLook.Hex("#081650"), KezorLook.Hex("#1c48c0"), KezorLook.Hex("#7ab8ff")));
             _mpText = Kz.Text("", "hud4-crystal__text", manaBox);
@@ -245,7 +245,7 @@ namespace Kezor.Client.UI
             int id = S.Me.Quick[q];
             var def = id != 0 ? ItemDatabase.Get(id) : null;
             if (def == null) return $"<b>Atalho {keys[q]}</b> (vazio)\nPegue uma poção na mochila e clique aqui.";
-            return $"<b>{def.Name}</b>  ({keys[q]})\nRecupera {def.PotionAmount} de {(def.Potion == PotionType.Health ? "vida" : "mana")}.\nNa mochila: <b>{G.ItemCount(id)}</b>\n<color=#7d7366>Clique direito limpa o atalho.</color>";
+            return $"<b>{def.Name}</b>  ({keys[q]})\nRecupera {def.PotionRecover(def.Potion == PotionType.Health ? S.Me.MaxHp : S.Me.MaxMp, S.Me.Level)} de {(def.Potion == PotionType.Health ? "vida" : "mana")} ({def.PotionDescription}).\nNa mochila: <b>{G.ItemCount(id)}</b>\n<color=#7d7366>Clique direito limpa o atalho.</color>";
         }
 
         private string ExpTip()
@@ -293,7 +293,7 @@ namespace Kezor.Client.UI
             if (sk.Duration > 0) tags.Add($"dura {sk.Duration:0} s");
             if (!sk.NeedsTarget) tags.Add("sem alvo");
             if (tags.Count > 0) lines.Add($"<color=#b9ad97>{string.Join(" · ", tags)}</color>");
-            lines.Add($"<color=#7d7366>Tecla {slot + 1} escolhe · botão direito usa · {Kezor.Core.Characters.Character.SkillVigorCost} de vigor</color>");
+            lines.Add($"<color=#7d7366>Tecla {slot + 1} escolhe · botão direito usa · {sk.VigorCost} de vigor</color>");
             return string.Join("\n", lines);
         }
 
@@ -423,7 +423,7 @@ namespace Kezor.Client.UI
             {
                 var cls = ClassDefinition.Get((CharacterClass)e.TypeId).DisplayName;
                 bool party = S.Me.PartyId != 0 && e.PartyId == S.Me.PartyId;
-                sub = $"Nível {e.Level} · {cls}" + (e.Guild != "" ? $" · ‹{e.Guild}›" : "") + (e.Infamy > 0 ? " · <color=#ff6a5a>infame</color>" : "");
+                sub = $"Nível {e.Level} · {cls}" + (e.Guild != "" ? $" · ‹{e.Guild}›" : "") + (e.Infamy >= 2 ? " · <color=#ff6a5a>assassino</color>" : e.Infamy == 1 ? " · <color=#ff9a3c>aviso de PK</color>" : "");
                 _targetBar.SetClass("kz-bar--ally", party); _targetBar.RemoveFromClassList("kz-bar--echo");
             }
             _target.SetClass("hud-target--boss", boss);
@@ -535,7 +535,7 @@ namespace Kezor.Client.UI
             if (skSprite != null) k.SetSprite(skSprite); else k.SetIcon(SkillIcons.Get(sk));
             bool ok = me.Level >= sk.ReqLevel && me.Ene >= sk.ReqEnergy;
             k.SetClass("kz-slot--locked", !ok);
-            k.SetClass("kz-slot--nomana", ok && (me.Mp < sk.ManaCost || me.Vigor < Kezor.Core.Characters.Character.SkillVigorCost));
+            k.SetClass("kz-slot--nomana", ok && (me.Mp < sk.ManaCost || me.Vigor < sk.VigorCost));
             k.SetClass("hud-skill--active", selected);
             k.Count.Set(ok ? "" : $"Nv{sk.ReqLevel}");
             float left = S.CooldownLeft(sk.Id);

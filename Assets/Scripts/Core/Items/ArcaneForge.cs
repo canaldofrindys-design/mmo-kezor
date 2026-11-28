@@ -36,7 +36,7 @@ namespace Kezor.Core.Items
     {
         public static readonly Dictionary<int, int> BaseRates = new Dictionary<int, int>
         { {10, 60}, {11, 55}, {12, 50}, {13, 45}, {14, 40}, {15, 35} };
-        public const int LuckBonus = 20;
+        public const int LuckBonus = 25;   // MU: Sorte +25%, máx. 75%
         public const int MaxRate = 75;
         public ForgeFailurePolicy FailurePolicy = ForgeFailurePolicy.DestroyItem;
 

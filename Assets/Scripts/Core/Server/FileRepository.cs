@@ -101,7 +101,7 @@ namespace Kezor.Core.Server
             var d = new Dictionary<string, object?>
             {
                 ["v"] = Version, ["name"] = c.Name, ["class"] = c.Class.ToString(), ["level"] = c.Level, ["exp"] = c.Experience,
-                ["rebirths"] = c.Rebirths, ["points"] = c.FreePoints, ["gold"] = c.Gold, ["infamy"] = c.Infamy,
+                ["rebirths"] = c.Rebirths, ["points"] = c.FreePoints, ["gold"] = c.Gold, ["infamy"] = c.Infamy, ["pksec"] = c.PkSeconds,
                 ["str"] = c.Stats.Strength, ["agi"] = c.Stats.Agility, ["vit"] = c.Stats.Vitality, ["ene"] = c.Stats.Energy,
                 ["account"] = c.AccountName, ["hp"] = c.Hp, ["mp"] = c.Mp, ["map"] = c.MapId, ["x"] = c.X, ["z"] = c.Z,
                 ["mapv"] = Kezor.Core.World.MapDefinition.Get(c.MapId).LayoutVersion, ["yaw"] = c.Facing,
@@ -123,7 +123,7 @@ namespace Kezor.Core.Server
             var c = new Character(id, o.S("name"), cls);
             c.RestoreProgress(o.I("level", 1), o.L("exp"), o.I("rebirths"), o.I("points"));
             c.Stats = new Attributes { Strength = o.I("str", c.Stats.Strength), Agility = o.I("agi", c.Stats.Agility), Vitality = o.I("vit", c.Stats.Vitality), Energy = o.I("ene", c.Stats.Energy) };
-            c.Gold = o.L("gold"); c.Infamy = o.I("infamy"); c.AccountName = o.S("account");
+            c.Gold = o.L("gold"); c.Infamy = o.I("infamy"); c.PkSeconds = o.I("pksec", c.Infamy > 0 ? Character.PkStageSeconds : 0); c.AccountName = o.S("account");
             c.MapId = o.I("map", 1); c.X = o.F("x"); c.Z = o.F("z");
             c.Facing = o.F("yaw");
             // (0, 0) = herói que ainda não entrou: nasce na praça. (1, 1) = herói novo que o erro antigo pôs no canto do mapa

@@ -5,61 +5,67 @@ a Fonte de Brasas, a última chama que repele as Cinzas. Heróis caçam no Bosqu
 que a próxima Invasão chegue ao portão sul.
 
 ## Classes
-| Classe | Código | FOR/AGI/VIT/ENE | HP base +nv +VIT | MP base +nv +ENE | Dano | Alcance básico |
-|---|---|---|---|---|---|---|
-| Guardião Rúnico | GUA | 28/20/25/10 | 110 +2 +3 | 20 +0,5 +1 | FOR/6 ~ FOR/4 | 2,3 (corpo a corpo) |
-| Arcanista do Véu | ARC | 18/18/15/30 | 60 +1 +2 | 60 +2 +2 | magia ENE/9 ~ ENE/4 | 7 |
-| Patrulheiro Selvagem | PAT | 22/25/20/15 | 80 +1 +2 | 30 +1,5 +1,5 | FOR/14+AGI/7 ~ FOR/8+AGI/4 | 8 |
-| Lâmina Arcana | LAM | 24/20/20/22 | 85 +1,5 +2,5 | 40 +1,5 +1,5 | FOR/7 ~ FOR/5 **+** magia ENE/15 ~ ENE/9 (skills híbridas somam os dois) | 2,4 |
-| Comandante do Estandarte | COM | 24/18/26/20 | 100 +1,8 +2,8 | 35 +1,2 +1,5 | FOR/7 ~ FOR/5 | 2,9 (lança) |
-| Invocadora de Ecos | INV | 15/18/18/32 | 60 +1 +2 | 65 +2 +2 | magia ENE/10 ~ ENE/5 | 6,5 |
-| Punho de Brasa | PUN | 26/27/22/10 | 95 +1,6 +2,6 | 25 +0,8 +1 | FOR/12+AGI/18 ~ FOR/9+AGI/12 | 1,9 · ataque a cada 0,5 s (os outros 0,6 s) · anda 5,8 |
+As regras e fórmulas das classes (atributos, pontos por nível, vida, mana, AG, dano, defesa, taxas e velocidade de ataque)
+são as do MU Online clássico. A tabela completa, com a equivalência de cada classe, está em `docs/MECANICAS_MU.md`.
+
+| Classe | Código | FOR/AGI/VIT/ENE | Pontos/nível | Alcance básico |
+|---|---|---|---|---|
+| Guardião Rúnico | GUA | 28/20/25/10 | 5 | 2,3 (corpo a corpo) |
+| Arcanista do Véu | ARC | 18/18/15/30 | 5 | 7 |
+| Patrulheiro Selvagem | PAT | 22/25/20/15 | 5 | 8 |
+| Lâmina Arcana | LAM | 26/26/26/26 | 7 | 2,4 |
+| Comandante do Estandarte | COM | 26/20/20/15 | 7 | 2,9 (lança) |
+| Invocadora de Ecos | INV | 21/21/18/23 | 5 | 6,5 |
+| Punho de Brasa | PUN | 32/27/25/20 | 7 | 1,9 |
 
 As quatro classes novas são **originais do Kezor** (arquétipos genéricos do gênero: híbrido, suporte de auras, invocador e lutador
 desarmado). Nenhuma copia nome, kit, visual ou regra de desbloqueio de outro jogo; todas podem ser criadas desde o início.
 
-5 pontos por nível · nível máx. 400 · exp para o próximo = 5·N²·(N+10)+100.
+Nível máx. 400 · tabela de experiência do MU (ver `docs/MECANICAS_MU.md`).
 **Renascimento**: no nível 400, custa 1.000.000 × (renascimentos+1) de ouro; volta ao nível 1 com atributos base e 500 pontos por renascimento (máx. 50).
-Taxa de ataque = 5·Nível + 1,5·AGI + FOR/4 · Taxa de defesa = AGI/3 · Acerto = TA/(TA+TD), entre 5% e 95%.
+Acerto (MU): se TA > TD, 1 − TD/TA; senão 3%. Skills somam o seu dano ao dano base e usam o multiplicador da classe.
 
 ### Skills
+Dano das skills (regra do MU): o valor soma de `dano` a `dano × 1,5` ao dano base e o total é multiplicado pela classe
+(Guardião 200% + ENE/10%, Lâmina 200%, Comandante 200% + ENE/20%, Punho 50% + ENE/10%, demais 100%).
+
 | Skill | Classe | MP | Efeito |
 |---|---|---|---|
-| Corte Rúnico | Guardião | 8 | 130% +15 |
-| Ciclone de Aço (nv 20) | Guardião | 18 | 110% +30, área raio 3 |
+| Corte Rúnico | Guardião | 8 | dano 15 |
+| Ciclone de Aço (nv 20) | Guardião | 18 | dano 30, área raio 3 |
 | Dardo Etéreo | Arcanista | 3 | magia +8 |
-| Chuva de Brasas (nv 15, ENE 50) | Arcanista | 16 | magia 110% +30, área 3,5 |
-| Disparo Perfurante | Patrulheiro | 5 | 115% +10 |
-| Saraivada (nv 15) | Patrulheiro | 14 | 100% +20, área 3 |
+| Chuva de Brasas (nv 15, ENE 50) | Arcanista | 16 | magia dano 30, área 3,5 |
+| Disparo Perfurante | Patrulheiro | 5 | dano 10 |
+| Saraivada (nv 15) | Patrulheiro | 14 | dano 20, área 3 |
 
 | **Lâmina Arcana** | | | |
-| Fio Encantado | LAM | 6 | híbrida 115% +12 |
-| Onda Arcana | LAM | 12 | híbrida 95% +20, área 2,5 |
+| Fio Encantado | LAM | 6 | híbrida dano 12 |
+| Onda Arcana | LAM | 12 | híbrida dano 20, área 2,5 |
 | Lâmina Ressonante (nv 10) | LAM | 20 | buff: +15% de dano por 15 s (recarga 20 s) |
-| Corte Estelar (nv 20) | LAM | 18 | híbrida 150% +25 |
-| Maré de Lâminas (nv 40) | LAM | 28 | híbrida 125% +40, área 3,5 |
-| Eclipse da Lâmina (nv 80) | LAM | 40 | híbrida 185% +50, lentidão 30% por 3 s |
+| Corte Estelar (nv 20) | LAM | 18 | híbrida dano 25 |
+| Maré de Lâminas (nv 40) | LAM | 28 | híbrida dano 40, área 3,5 |
+| Eclipse da Lâmina (nv 80) | LAM | 40 | híbrida dano 50, lentidão 30% por 3 s |
 | **Comandante do Estandarte** | | | |
-| Estocada de Lança | COM | 5 | 125% +12, alcance 3,1 |
+| Estocada de Lança | COM | 5 | dano 12, alcance 3,1 |
 | Estandarte da Fúria | COM | 25 | estandarte 20 s, raio 6: grupo +15% de dano (+1% a cada 50 ENE) |
-| Ordem: Investida! (nv 10) | COM | 14 | 115% +20, área 3 |
+| Ordem: Investida! (nv 10) | COM | 14 | dano 20, área 3 |
 | Estandarte da Muralha (nv 20) | COM | 25 | estandarte: grupo +20 de defesa (+1 a cada 50 ENE) e taxa de defesa |
 | Estandarte do Vento (nv 40) | COM | 25 | estandarte: grupo anda +20% |
-| Ordem: Cerco de Ferro (nv 80) | COM | 35 | 160% +60, área 4, lentidão 25% por 3 s |
+| Ordem: Cerco de Ferro (nv 80) | COM | 35 | dano 60, área 4, lentidão 25% por 3 s |
 | **Invocadora de Ecos** | | | |
-| Sussurro do Eco | INV | 4 | magia 100% +8 |
+| Sussurro do Eco | INV | 4 | magia dano 8 |
 | Eco Sombrio | INV | 30 | invoca um eco por 30 s (até 2; o mais antigo some) |
-| Maldição do Peso (nv 10) | INV | 10 | magia 80% +10, lentidão 40% por 5 s |
-| Chaga Ecoante (nv 20) | INV | 14 | magia 60% +10, mais 30% do golpe por segundo durante 6 s |
+| Maldição do Peso (nv 10) | INV | 10 | magia dano 10, lentidão 40% por 5 s |
+| Chaga Ecoante (nv 20) | INV | 14 | magia dano 10, mais 30% do golpe por segundo durante 6 s |
 | Eco Luminoso (nv 40) | INV | 40 | invoca um eco guardião mais resistente por 30 s |
-| Coro dos Ecos (nv 80) | INV | 38 | magia 140% +50, área 4, chaga 20% por 4 s |
+| Coro dos Ecos (nv 80) | INV | 38 | magia dano 50, área 4, chaga 20% por 4 s |
 | **Punho de Brasa** | | | |
-| Jab de Brasa | PUN | 3 | 105% +6 |
-| Gancho Ígneo | PUN | 7 | 130% +14 |
+| Jab de Brasa | PUN | 3 | dano 6 |
+| Gancho Ígneo | PUN | 7 | dano 14 |
 | Passo da Chama (nv 10) | PUN | 15 | buff: +25% de velocidade e +15% de dano por 10 s |
-| Rajada de Punhos (nv 20) | PUN | 14 | 3 golpes de 50% +4 (cada um conta para o Fluxo) |
-| Coluna de Cinzas (nv 40) | PUN | 22 | 135% +40, área 2,5 |
-| Fúria do Núcleo (nv 80) | PUN | 34 | 190% +50 |
+| Rajada de Punhos (nv 20) | PUN | 14 | 3 golpes de dano 4, cada um com 50% do golpe (cada um conta para o Fluxo) |
+| Coluna de Cinzas (nv 40) | PUN | 22 | dano 40, área 2,5 |
+| Fúria do Núcleo (nv 80) | PUN | 34 | dano 50 |
 
 **Estandartes** (Comandante): objetos no chão (`B` no snapshot), um de cada tipo por Comandante; a aura vale para o dono e o grupo
 dentro do raio de 6 m (não soma dois estandartes do mesmo tipo: vale o maior).
@@ -119,7 +125,7 @@ Falha destrói o item; runas sempre consumidas. Chance de levar +9 a +15 sem Sor
 - **Brilho de runa**: +7 brilho azulado, +9 dourado com faíscas, +11 alaranjado, +13 violeta, +15 ciano intenso
   (a arma brilha mais; armaduras e asas brilham pela metade; armadura +11 ou mais solta faíscas pelo corpo).
   Qualquer peça **Ascendente** acende uma aura verde nos pés.
-- **Asas** (slot próprio, aceitam runas): dano +12/+20/+32% e absorção 10/18/26% (+1% de dano e +0,5% de absorção por nível de runa)
+- **Asas** (slot próprio, aceitam runas): dano +12/+32/+39% e absorção 12/25/39% (valores do MU; +1% de dano e +0,5% de absorção por nível de runa)
   e defesa 8/16/28. Absorção total limitada a 80%.
 - **Montarias** (loja da Tália; **R** monta/desmonta): Lagarto de Basalto (nível 20, +35% de velocidade, 1,5 kk) e
   Lobo de Brasas (nível 50, +60%, 6 kk). O servidor move o herói, então a velocidade não pode ser forjada pelo cliente.
@@ -259,11 +265,13 @@ A troca confere se os itens recebidos cabem de verdade (simulação), e equipar 
 Saves antigos são reempacotados ao carregar; o que não couber na mochila vai para o baú.
 
 ## HUD v4: Vigor, Escudo e atalhos Q W E R
-- **Vigor** (barra vertical amarela ao lado do Cristal de Vida): máximo 100 + Agilidade/10 (até 200). Cada skill gasta 6;
-  o ataque básico não gasta. Volta 8 por segundo em combate e 25 fora dele (sai de combate 5 s depois do último golpe dado
-  ou recebido). Sem vigor a skill é recusada pelo servidor ("vigor insuficiente") e o herói segue no ataque básico.
-- **Escudo** (barra vertical azul ao lado do Cristal de Mana): 20% da vida máxima. Absorve o dano antes da vida (o número
-  mostrado é o dano inteiro). Começa vazio, recarrega 10% por segundo depois de 6 s sem levar dano e zera ao cair.
+- **Vigor** (AG do MU, barra vertical amarela ao lado do Cristal de Vida): máximo pela fórmula do MU de cada classe
+  (ex.: Guardião ENE + 0,3·VIT + 0,2·AGI + 0,15·FOR). Cada skill gasta 6; o ataque básico não gasta. A cada 3 s volta
+  2 + 5% do máximo (Guardião) ou 3% (demais), +3 na zona segura. Sem vigor a skill é recusada ("vigor insuficiente").
+- **Escudo** (SD do MU, barra vertical azul ao lado do Cristal de Mana): 1,2·(FOR+AGI+VIT+ENE) + defesa + Nv²/30. Só segura
+  golpes de **jogadores**: 90% vai no escudo e 10% na vida (o número mostrado é o dano inteiro). Monstros batem direto na vida.
+  Começa vazio, recarrega 10% por segundo **só na zona segura**, depois de 6 s sem apanhar, e zera ao cair.
+- **Vida e mana**: a vida não volta sozinha (poções); a mana volta 3,7% do máximo a cada 3 s.
 - **Atalhos Q W E R**: arraste uma poção da mochila para o atalho; o número é o total na mochila. O servidor valida (só
   consumíveis, sem repetir o item em dois atalhos) e guarda os atalhos com o personagem (`QUICK n id`, `USEQ n`). Padrão:
   Poção Rubra, Poção Cerúlea, Poção Rubra Maior e vazio. A montaria passou para a tecla X.

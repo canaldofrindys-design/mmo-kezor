@@ -20,9 +20,9 @@ namespace Kezor.Core.Items
         public static readonly ItemDefinition VortexCrystal = Add(new ItemDefinition { Id = 1003, Name = "Cristal do Vórtice", Kind = ItemKind.Rune, Rune = RuneType.Vortex, Value = 800_000 });
 
         // Poções
-        public static readonly ItemDefinition HealthPotion = Add(new ItemDefinition { Id = 2000, Name = "Poção Rubra", Kind = ItemKind.Potion, Potion = PotionType.Health, PotionAmount = 60, MaxStack = 50, ShopPrice = 40, DropLevel = 1, Value = 10 });
-        public static readonly ItemDefinition GreaterHealthPotion = Add(new ItemDefinition { Id = 2001, Name = "Poção Rubra Maior", Kind = ItemKind.Potion, Potion = PotionType.Health, PotionAmount = 250, MaxStack = 50, ShopPrice = 300, DropLevel = 20, Value = 75 });
-        public static readonly ItemDefinition ManaPotion = Add(new ItemDefinition { Id = 2002, Name = "Poção Cerúlea", Kind = ItemKind.Potion, Potion = PotionType.Mana, PotionAmount = 50, MaxStack = 50, ShopPrice = 50, DropLevel = 1, Value = 12 });
+        public static readonly ItemDefinition HealthPotion = Add(new ItemDefinition { Id = 2000, Name = "Poção Rubra", Kind = ItemKind.Potion, Potion = PotionType.Health, PotionTier = 1, PotionAmount = 60, MaxStack = 50, ShopPrice = 40, DropLevel = 1, Value = 10 });
+        public static readonly ItemDefinition GreaterHealthPotion = Add(new ItemDefinition { Id = 2001, Name = "Poção Rubra Maior", Kind = ItemKind.Potion, Potion = PotionType.Health, PotionTier = 2, PotionAmount = 250, MaxStack = 50, ShopPrice = 300, DropLevel = 20, Value = 75 });
+        public static readonly ItemDefinition ManaPotion = Add(new ItemDefinition { Id = 2002, Name = "Poção Cerúlea", Kind = ItemKind.Potion, Potion = PotionType.Mana, PotionTier = 1, PotionAmount = 50, MaxStack = 50, ShopPrice = 50, DropLevel = 1, Value = 12 });
 
         // Armas — Guardião
         public static readonly ItemDefinition IronBlade = Add(new ItemDefinition { Id = 1, Name = "Lâmina de Ferro", Kind = ItemKind.Sword, Slot = EquipSlot.RightHand, MinDamage = 6, MaxDamage = 11, ReqStrength = 22, BaseDurability = 22, AllowedClasses = W, DropLevel = 1, ShopPrice = 800 });
@@ -77,9 +77,9 @@ namespace Kezor.Core.Items
         public static readonly ItemDefinition EmberFeather = Add(new ItemDefinition { Id = 1010, Name = "Pena de Brasa", Kind = ItemKind.Material, MaxStack = 50, Value = 50_000 });
 
         // Asas (criadas na Forja Arcana): bônus de dano e absorção; aceitam runas como os equipamentos.
-        public static readonly ItemDefinition AshWings = Add(new ItemDefinition { Id = 300, Name = "Asas de Cinza", Kind = ItemKind.Wings, Slot = EquipSlot.Wings, Defense = 8, WingDamagePercent = 12, WingAbsorbPercent = 10, ReqLevel = 40, BaseDurability = 200, Tier = 1 });
-        public static readonly ItemDefinition DuskWings = Add(new ItemDefinition { Id = 301, Name = "Asas do Crepúsculo", Kind = ItemKind.Wings, Slot = EquipSlot.Wings, Defense = 16, WingDamagePercent = 20, WingAbsorbPercent = 18, ReqLevel = 80, BaseDurability = 220, Tier = 2 });
-        public static readonly ItemDefinition BrasalumeWings = Add(new ItemDefinition { Id = 302, Name = "Asas de Brasalume", Kind = ItemKind.Wings, Slot = EquipSlot.Wings, Defense = 28, WingDamagePercent = 32, WingAbsorbPercent = 26, ReqLevel = 150, BaseDurability = 250, Tier = 3 });
+        public static readonly ItemDefinition AshWings = Add(new ItemDefinition { Id = 300, Name = "Asas de Cinza", Kind = ItemKind.Wings, Slot = EquipSlot.Wings, Defense = 8, WingDamagePercent = 12, WingAbsorbPercent = 12, ReqLevel = 40, BaseDurability = 200, Tier = 1 });
+        public static readonly ItemDefinition DuskWings = Add(new ItemDefinition { Id = 301, Name = "Asas do Crepúsculo", Kind = ItemKind.Wings, Slot = EquipSlot.Wings, Defense = 16, WingDamagePercent = 32, WingAbsorbPercent = 25, ReqLevel = 80, BaseDurability = 220, Tier = 2 });
+        public static readonly ItemDefinition BrasalumeWings = Add(new ItemDefinition { Id = 302, Name = "Asas de Brasalume", Kind = ItemKind.Wings, Slot = EquipSlot.Wings, Defense = 28, WingDamagePercent = 39, WingAbsorbPercent = 39, ReqLevel = 150, BaseDurability = 250, Tier = 3 });
 
         // Montarias (loja da Mercadora Tália; tecla X monta/desmonta)
         public static readonly ItemDefinition BasaltLizard = Add(new ItemDefinition { Id = 400, Name = "Lagarto de Basalto", Kind = ItemKind.Mount, Slot = EquipSlot.Mount, MountSpeedPercent = 35, ReqLevel = 20, BaseDurability = 100, ShopPrice = 1_500_000, Value = 1_500_000, Tier = 1 });
@@ -151,8 +151,8 @@ namespace Kezor.Core.Items
         public static readonly ItemDefinition FrostboundCodex = Add(new ItemDefinition { Id = 75, Name = "Códice da Geada Eterna", Kind = ItemKind.Tome, Slot = EquipSlot.RightHand, MinDamage = 21, MaxDamage = 31, MagicPowerPercent = 58, ReqStrength = 12, ReqEnergy = 160, BaseDurability = 64, AllowedClasses = I, DropLevel = 78, Tier = 3 });
         public static readonly ItemDefinition RimeEmberFists = Add(new ItemDefinition { Id = 76, Name = "Punhos de Brasa Gélida", Kind = ItemKind.Gauntlet, Slot = EquipSlot.RightHand, MinDamage = 45, MaxDamage = 61, ReqStrength = 122, ReqAgility = 122, BaseDurability = 68, AllowedClasses = P, DropLevel = 78, Tier = 3 });
         // Poções fortes (caem de monstros nível 70+; a Tália também vende)
-        public static readonly ItemDefinition SupremeHealthPotion = Add(new ItemDefinition { Id = 2003, Name = "Poção Rubra Suprema", Kind = ItemKind.Potion, Potion = PotionType.Health, PotionAmount = 700, MaxStack = 50, ShopPrice = 1_500, DropLevel = 70, Value = 300 });
-        public static readonly ItemDefinition GreaterManaPotion = Add(new ItemDefinition { Id = 2004, Name = "Poção Cerúlea Maior", Kind = ItemKind.Potion, Potion = PotionType.Mana, PotionAmount = 220, MaxStack = 50, ShopPrice = 400, DropLevel = 40, Value = 90 });
+        public static readonly ItemDefinition SupremeHealthPotion = Add(new ItemDefinition { Id = 2003, Name = "Poção Rubra Suprema", Kind = ItemKind.Potion, Potion = PotionType.Health, PotionTier = 3, PotionAmount = 700, MaxStack = 50, ShopPrice = 1_500, DropLevel = 70, Value = 300 });
+        public static readonly ItemDefinition GreaterManaPotion = Add(new ItemDefinition { Id = 2004, Name = "Poção Cerúlea Maior", Kind = ItemKind.Potion, Potion = PotionType.Mana, PotionTier = 2, PotionAmount = 220, MaxStack = 50, ShopPrice = 400, DropLevel = 40, Value = 90 });
         // Joias da Escarpa
         public static readonly ItemDefinition CrimsonRimeRing = Add(new ItemDefinition { Id = 606, Name = "Anel da Geada Rubra", Kind = ItemKind.Ring, Slot = EquipSlot.Ring1, JewelHp = 150, JewelResistPercent = 7, ReqLevel = 80, BaseDurability = 100, DropLevel = 80, Value = 2_000_000, Tier = 3 });
         public static readonly ItemDefinition ColossusHeartAmulet = Add(new ItemDefinition { Id = 607, Name = "Amuleto do Coração do Colosso", Kind = ItemKind.Amulet, Slot = EquipSlot.Amulet, JewelHp = 220, JewelDamagePercent = 10, ReqLevel = 100, BaseDurability = 100, DropLevel = 999, Value = 6_000_000, Tier = 3 });

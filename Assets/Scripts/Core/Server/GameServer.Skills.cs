@@ -34,8 +34,8 @@ namespace Kezor.Core.Server
         {
             if (s.SkillReadyAt.TryGetValue(sk.Id, out var ready) && _time < ready) return $"ERR {sk.Name} recarregando ({ready - _time:0.0} s)";
             if (c.Mp < sk.ManaCost) return "ERR mana insuficiente";
-            if (c.Vigor < Character.SkillVigorCost) return "ERR vigor insuficiente";
-            if (_time - s.LastAttackTime < c.Def.AttackCooldown) { s.PendingUtility = sk.Id; return $"OK {sk.Name} (na fila)"; }
+            if (c.Vigor < sk.VigorCost) return "ERR vigor insuficiente";
+            if (_time - s.LastAttackTime < c.AttackCooldown) { s.PendingUtility = sk.Id; return $"OK {sk.Name} (na fila)"; }
             switch (sk.Kind)
             {
                 case SkillKind.SelfBuff:
@@ -70,7 +70,7 @@ namespace Kezor.Core.Server
                 default: return "ERR skill precisa de alvo";
             }
             c.Mp -= sk.ManaCost;
-            c.SpendVigor(Character.SkillVigorCost);
+            c.SpendVigor(sk.VigorCost);
             s.LastAttackTime = _time;
             if (sk.Cooldown > 0) s.SkillReadyAt[sk.Id] = _time + sk.Cooldown;
             BroadcastNear(c.MapId, c.X, c.Z, $"@EV CAST;{c.Id};{sk.Id};{F(c.X)};{F(c.Z)}");

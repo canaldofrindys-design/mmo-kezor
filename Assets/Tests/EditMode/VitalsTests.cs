@@ -25,10 +25,15 @@ namespace Kezor.Tests
             c.RestoreProgress(60, 0, 0, 0);
             c.Mp = c.MaxMp;
             Assert.AreEqual(c.MaxVigor, (int)c.Vigor, "começa com o vigor cheio");
-            Assert.AreEqual(100 + System.Math.Min(100, c.Stats.Agility / 10), c.MaxVigor);
+            // AG do MU (Dark Wizard): 0,2·ENE + 0,3·VIT + 0,4·AGI + 0,2·FOR
+            Assert.AreEqual((int)(0.2f * c.Stats.Energy + 0.3f * c.Stats.Vitality + 0.4f * c.Stats.Agility + 0.2f * c.Stats.Strength), c.MaxVigor);
             var slime = gs.Monsters.Values.First(m => m.Def == MonsterCatalog.MossSlime);
             c.X = slime.X + 1.5f; c.Z = slime.Z;
-            var skill = SkillCatalog.All.First(s => s.Id != 0 && s.NeedsTarget && (s.Classes & ClassMask.Arcanist) != 0 && s.ReqLevel <= c.Level);
+            var skill = SkillCatalog.All.First(s => s.Id != 0 && s.NeedsTarget && (s.Classes & ClassMask.Arcanist) != 0 && s.ReqLevel > 1 && s.ReqLevel <= c.Level);
+            c.Stats.Energy = 200;   // Chuva de Brasas pede ENE 50
+            var first = SkillCatalog.Find(3)!;
+            Assert.AreEqual(0, first.VigorCost, "skill inicial não gasta AG (MU)");
+            c.Mp = c.MaxMp;
             float v0 = c.Vigor;
             StringAssert.StartsWith("OK", gs.Handle(1, $"SKILL {skill.Id} {slime.Id}"));
             gs.Tick(0.05f);
@@ -45,40 +50,62 @@ namespace Kezor.Tests
         }
 
         [Test]
-        public void VigorRegeneratesFasterOutOfCombat()
+        public void ManaAndVigorRecoverEveryThreeSecondsButLifeDoesNot()
         {
-            var c = new Character(1, "Pausa", CharacterClass.Ranger);
-            c.Vigor = 0; c.EnterCombat();
-            c.TickVitals(1f);
-            Assert.AreEqual(Character.VigorRegenCombat, c.Vigor, 0.01f);
-            c.TickVitals(Character.CombatSeconds);       // sai de combate
-            c.Vigor = 0;
-            c.TickVitals(1f);
-            Assert.AreEqual(Character.VigorRegenRest, c.Vigor, 0.01f);
-            c.TickVitals(60f);
+            var c = new Character(1, "Pausa", CharacterClass.Warden);
+            c.RestoreProgress(50, 0, 0, 0);
+            c.Stats.Energy = 400;
+            c.Vigor = 0; c.Mp = 0; c.Hp = 10;
+            c.TickVitals(2.9f);
+            Assert.AreEqual(0f, c.Vigor, 0.01f, "nada antes do tique de 3 s");
+            c.TickVitals(0.1f);
+            // Guardião: 5% do AG máximo + 2 por tique; mana 3,7% do máximo
+            Assert.AreEqual(c.MaxVigor * 0.05f + Character.AgRecoveryAbsolute, c.Vigor, 0.01f);
+            Assert.AreEqual((int)(c.MaxMp * Character.ManaRecovery), c.Mp);
+            Assert.AreEqual(10, c.Hp, "a vida não volta sozinha (MU)");
+            c.Vigor = 0; c.InSafeZone = true;
+            c.TickVitals(3f);
+            Assert.AreEqual(c.MaxVigor * 0.05f + Character.AgRecoveryAbsolute + Character.AgRecoverySafeZone, c.Vigor, 0.01f, "zona segura: +3");
+            for (int i = 0; i < 200; i++) c.TickVitals(3f);
             Assert.AreEqual(c.MaxVigor, c.Vigor, 0.01f, "não passa do máximo");
+            Assert.AreEqual(c.MaxMp, c.Mp);
         }
 
         [Test]
-        public void ShieldAbsorbsBeforeLifeAndRechargesAfterADelay()
+        public void ShieldOnlyBlocksPlayersAndRechargesInTheSafeZone()
         {
             var c = new Character(1, "Muralha", CharacterClass.Warden);
             c.RestoreProgress(50, 0, 0, 0);
             c.Hp = c.MaxHp;
             Assert.AreEqual(0f, c.Shield, "começa vazio");
-            Assert.AreEqual(c.MaxHp * Character.ShieldPercentOfHp / 100, c.MaxShield);
+            var st = c.Stats;
+            Assert.AreEqual((int)(1.2f * (st.Strength + st.Agility + st.Vitality + st.Energy)) + c.GetCombatStats().Defense + 50 * 50 / 30, c.MaxShield, "SD do MU");
             for (int i = 0; i < 20; i++) c.TickVitals(1f);
-            Assert.AreEqual(c.MaxShield, c.Shield, 0.01f, "enche fora de perigo");
+            Assert.AreEqual(0f, c.Shield, 0.01f, "fora da zona segura não recarrega");
+            c.InSafeZone = true;
+            for (int i = 0; i < 20; i++) c.TickVitals(1f);
+            Assert.AreEqual(c.MaxShield, c.Shield, 0.01f, "na zona segura enche");
 
-            // um golpe: o escudo segura primeiro e só o resto sai da vida
-            var att = new CombatStats { Level = 50 };
+            // monstro: o escudo não segura
+            var monster = new CombatStats { Level = 50 };
             var def = new CombatStats();
-            int raw = c.MaxShield + 30;
-            int shown = CombatResolver.Apply(att, def, c, raw, out var killed);
-            Assert.AreEqual(raw, shown, "o número mostrado é o dano inteiro");
-            Assert.AreEqual(0f, c.Shield, 0.01f);
-            Assert.AreEqual(c.MaxHp - 30, c.Hp, "só o que passou do escudo tirou vida");
+            CombatResolver.Apply(monster, def, c, 40, out _);
+            Assert.AreEqual(c.MaxHp - 40, c.Hp, "golpe de monstro vai todo na vida");
+            Assert.AreEqual(c.MaxShield, c.Shield, 0.01f);
+
+            // jogador: 90% no escudo, 10% na vida
+            c.Hp = c.MaxHp;
+            var player = new CombatStats { Level = 50, IsPlayer = true };
+            int shown = CombatResolver.Apply(player, def, c, 100, out var killed);
+            Assert.AreEqual(100, shown, "o número mostrado é o dano inteiro");
+            Assert.AreEqual(c.MaxShield - 90, c.Shield, 0.01f);
+            Assert.AreEqual(c.MaxHp - 10, c.Hp);
             Assert.IsFalse(killed);
+            // o que passa do escudo vai para a vida
+            c.Shield = 20; c.Hp = c.MaxHp;
+            CombatResolver.Apply(player, def, c, 100, out _);
+            Assert.AreEqual(0f, c.Shield, 0.01f);
+            Assert.AreEqual(c.MaxHp - 80, c.Hp);
 
             // apanhar segura a recarga por ShieldDelaySeconds
             c.TickVitals(Character.ShieldDelaySeconds - 1f);

@@ -19,6 +19,8 @@ namespace Kezor.Client
         [SerializeField] private string serverName = "Kezor";
         [SerializeField] private int channel = 1;
         [SerializeField] private int maxPlayers = 500;
+        [Tooltip("Taxa de experiência (MU oficial = 1x)")]
+        [SerializeField] private float experienceRate = 1f;
         [Tooltip("Pasta dos saves JSON; vazio = Application.persistentDataPath/kezor-data")]
         [SerializeField] private string dataFolder = "";
 
@@ -30,7 +32,7 @@ namespace Kezor.Client
             Application.targetFrameRate = tickRate;
             Application.runInBackground = true;
             var folder = string.IsNullOrEmpty(dataFolder) ? System.IO.Path.Combine(Application.persistentDataPath, "kezor-data") : dataFolder;
-            var options = new ServerOptions { AllowGm = allowGm, RequireAccounts = true, ServerName = serverName, Channel = channel, MaxPlayers = maxPlayers };
+            var options = new ServerOptions { AllowGm = allowGm, RequireAccounts = true, ServerName = serverName, Channel = channel, MaxPlayers = maxPlayers, ExperienceRate = experienceRate > 0 ? experienceRate : 1f };
             foreach (var a in gmAccounts) if (!string.IsNullOrWhiteSpace(a)) options.GmAccounts.Add(a.Trim());
             _game = new GameServer(repo: new JsonFileRepository(folder), options: options);
             _host = new TcpServerHost(_game, port);

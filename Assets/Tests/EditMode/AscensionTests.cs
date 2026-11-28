@@ -65,7 +65,7 @@ namespace Kezor.Tests
             var c = new Character(1, "Arvore", CharacterClass.Warden);
             c.RestoreProgress(400, 0, 0, 0);
             c.Ascension.Unlocked = true; c.Ascension.Level = 12;
-            int hp0 = c.MaxHp; int def0 = c.GetCombatStats().Defense;
+            int hp0 = c.MaxHp; int def0 = c.GetCombatStats().DefenseBase;
             Assert.IsFalse(c.Ascension.Learn(c.Class, 1003, out var e1), "nó da linha 1 sem o de cima");
             for (int i = 0; i < 5; i++) Assert.IsTrue(c.Ascension.Learn(c.Class, 1000, out var e), e);   // Pele de Basalto 5/5
             Assert.IsFalse(c.Ascension.Learn(c.Class, 1000, out var eMax)); StringAssert.Contains("máximo", eMax);
@@ -74,7 +74,7 @@ namespace Kezor.Tests
             Assert.IsFalse(c.Ascension.Learn(c.Class, 1006, out var e3), "linha 2 pede 10 pontos no ramo");
             StringAssert.Contains("10 pontos", e3);
             Assert.IsTrue(c.Ascension.Learn(c.Class, 1001, out _));                                   // Postura Firme
-            Assert.AreEqual(def0 + 5, c.GetCombatStats().Defense);
+            Assert.AreEqual(def0 + 5, c.GetCombatStats().DefenseBase);
             Assert.IsFalse(c.Ascension.Learn(CharacterClass.Arcanist, 2000, out var e4), "ramo de outra classe");
             Assert.IsTrue(c.Ascension.Learn(c.Class, 2000, out var e5), e5);                          // ramo do Guardião
             Assert.AreEqual(12 - 8, c.Ascension.Points);

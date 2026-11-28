@@ -37,6 +37,8 @@ namespace Kezor.Core.Server
         public string ServerName = "Kezor";
         public int Channel = 1;
         public int MaxPlayers = 500;
+        /// <summary>Taxa de experiência do servidor (MU oficial = 1x). Multiplica toda a experiência de monstros.</summary>
+        public float ExperienceRate = 1f;
     }
 
     /// <summary>
@@ -66,7 +68,11 @@ namespace Kezor.Core.Server
         private readonly Dictionary<int, Party> _parties = new Dictionary<int, Party>();
         private readonly Dictionary<int, int> _partyOf = new Dictionary<int, int>(); // charId -> partyId
         private int _nextCharId = 1, _nextEntityId = 10_000, _nextPartyId = 1;
-        private double _time, _snapshotAcc, _regenAcc;
+        private double _time, _snapshotAcc;
+        /// <summary>Último golpe de um jogador em outro (atacante, vítima) → tempo. Base da legítima defesa do PK.</summary>
+        private readonly Dictionary<(int, int), double> _pvpHits = new Dictionary<(int, int), double>();
+        /// <summary>Legítima defesa: quem foi atacado nos últimos 60 s pode revidar e matar sem virar PK.</summary>
+        public const double SelfDefenseSeconds = 60;
 
         /// <summary>Mapa principal (Vale de Brasalume, onde fica a vila).</summary>
         public MapDefinition Map => _maps[MapDefinition.ValeId];
@@ -533,7 +539,7 @@ namespace Kezor.Core.Server
             if ((skill.Classes & ClassDefinition.MaskOf(c.Class)) == 0) return "ERR sua classe não usa essa skill";
             if (c.Level < skill.ReqLevel || c.Stats.Energy < skill.ReqEnergy) return $"ERR requer nível {skill.ReqLevel}" + (skill.ReqEnergy > 0 ? $" e energia {skill.ReqEnergy}" : "");
             if (c.Mp < skill.ManaCost) return "ERR mana insuficiente";
-            if (c.Vigor < Character.SkillVigorCost) return "ERR vigor insuficiente";
+            if (c.Vigor < skill.VigorCost) return "ERR vigor insuficiente";
             if (!skill.NeedsTarget) { c.Dismount(); return UseUtilitySkill(s, c, skill); }
             int id = Int(p, 2);
             if (!TryGetTarget(id, out var t) || t!.MapId != c.MapId) return "ERR alvo inválido";
@@ -623,16 +629,13 @@ namespace Kezor.Core.Server
             if (dt > 0.5f) dt = 0.5f;
             _time += dt;
 
-            _regenAcc += dt;
-            bool regen = _regenAcc >= 1.0;
-            if (regen) _regenAcc -= 1.0;
-
             foreach (var s in _sessions.Values.ToList())
             {
                 var c = s.Character;
                 if (c == null) continue;
-                if (regen) Regen(c);
+                c.InSafeZone = MapOf(c.MapId).InSafeZone(c.X, c.Z);
                 c.TickVitals(dt);
+                c.TickPk(dt);
                 TickPlayer(s, c, dt);
                 if (s.Character == c && !c.IsDead) CheckPortals(s, c);
             }
@@ -658,13 +661,6 @@ namespace Kezor.Core.Server
                 _snapshotAcc = 0;
                 SendSnapshots();
             }
-        }
-
-        private void Regen(Character c)
-        {
-            bool safe = MapOf(c.MapId).InSafeZone(c.X, c.Z);
-            c.Hp = Math.Min(c.MaxHp, c.Hp + Math.Max(1, c.MaxHp * (safe ? 5 : 1) / 100));
-            c.Mp = Math.Min(c.MaxMp, c.Mp + Math.Max(1, c.MaxMp * (safe ? 8 : 3) / 100));
         }
 
         /// <summary>
@@ -742,7 +738,7 @@ namespace Kezor.Core.Server
 
         private void TickPlayer(Session s, Character c, float dt)
         {
-            if (s.PendingUtility >= 0 && _time - s.LastAttackTime >= c.Def.AttackCooldown)
+            if (s.PendingUtility >= 0 && _time - s.LastAttackTime >= c.AttackCooldown)
             {   // skill sem alvo que chegou no meio do golpe: lança agora, sem interromper o ataque automático
                 var u = SkillCatalog.Find(s.PendingUtility);
                 s.PendingUtility = -1;
@@ -764,9 +760,9 @@ namespace Kezor.Core.Server
                 float d = MathK.Dist(c.X, c.Z, t!.X, t.Z);
                 if (t.MapId != c.MapId) { s.AutoTargetId = 0; s.PendingSkill = -1; return; }
                 if (d > range) { StepChar(s, c, t.X, t.Z, dt, range * 0.9f); return; }
-                if (_time - s.LastAttackTime < c.Def.AttackCooldown) return;
+                if (_time - s.LastAttackTime < c.AttackCooldown) return;
                 if (c.Mp < skill.ManaCost) { Sys(s, "Mana insuficiente."); s.PendingSkill = -1; return; }
-                if (skill.Id != 0 && c.Vigor < Character.SkillVigorCost) { Sys(s, "Vigor insuficiente."); s.PendingSkill = -1; return; }
+                if (c.Vigor < skill.VigorCost) { Sys(s, "Vigor insuficiente."); s.PendingSkill = -1; return; }
                 DoAttack(s, c, t, skill);
                 s.PendingSkill = -1;
                 return;
@@ -778,7 +774,7 @@ namespace Kezor.Core.Server
         {
             s.LastAttackTime = _time;
             c.Mp -= skill.ManaCost;
-            if (skill.Id != 0) c.SpendVigor(Character.SkillVigorCost);
+            c.SpendVigor(skill.VigorCost);
             c.EnterCombat();
             var killed = new List<Monster>();
 
@@ -794,6 +790,8 @@ namespace Kezor.Core.Server
                 else if (t is Character v)
                 {
                     v.WearEquipment(false, _rng);
+                    if (h.Type != HitType.Miss) _pvpHits[(c.Id, v.Id)] = _time;   // para a legítima defesa
+                    if (h.Damage > 0) Reflect(v, c, h.Damage);
                     if (h.Killed) OnPlayerKilled(v, c);
                 }
             }
@@ -842,7 +840,8 @@ namespace Kezor.Core.Server
             int ownerId = m.TopDamager();
             var owner = CharById(ownerId) ?? killer;
 
-            // Experiência: dividida no grupo (proporcional ao nível) com bônus por membro.
+            // Experiência (MU): base pelo nível do monstro; no grupo, pela média de nível, com o bônus do grupo,
+            // dividida pelo nível de cada membro. Sorteio de 100% a 150% e taxa do servidor.
             var recipients = new List<Character> { owner };
             if (_partyOf.TryGetValue(owner.Id, out var pid) && _parties.TryGetValue(pid, out var party))
             {
@@ -850,11 +849,16 @@ namespace Kezor.Core.Server
                     MathK.Dist(ch.X, ch.Z, m.X, m.Z) <= Party.ShareRange).Select(ch => ch!).ToList();
                 if (!recipients.Contains(owner)) recipients.Add(owner);
             }
-            float pool = ExpFor(owner.Level, m.Def) * Party.ExpBonus(recipients.Count);
             int sumLv = recipients.Sum(r => r.Level);
+            bool setParty = recipients.Select(r => r.Class).Distinct().Count() == recipients.Count;
+            double pool = BaseExpFor(sumLv / recipients.Count, m.Def.Level) * Party.ExpPercent(recipients.Count, setParty) / 100.0;
+            pool *= 1.0 + _rng.Next(0, 501) / 1000.0;
+            pool *= _opt.ExperienceRate;
+            long ownerExp = 0;
             foreach (var r in recipients)
             {
                 long exp = Math.Max(1, (long)(pool * r.Level / sumLv));
+                if (r == owner) ownerExp = exp;
                 int ascBefore = r.Ascension.Level;
                 int lv = r.GainExperience(exp);
                 if (r.Ascension.Level > ascBefore)
@@ -871,12 +875,20 @@ namespace Kezor.Core.Server
                 }
             }
 
-            long gold = _rng.Next(m.Def.GoldDropMax / 4, m.Def.GoldDropMax + 1);
-            if (owner.ActivePet == PetType.Collector) gold += gold * CollectorGoldBonusPercent / 100;
-            owner.Gold += gold;
-            Push(owner, $"@EV GOLD;{gold}");
+            // Ouro (zen do MU): metade das mortes, experiência ganha + 7; +40% por opção excelente de zen.
             var ks = killer.GetCombatStats();
+            var os = owner == killer ? ks : owner.GetCombatStats();
+            if (m.Def.Boss || _rng.Roll(DropSystem.ZenChancePercent))
+            {
+                long gold = ownerExp + DropSystem.ZenBase;
+                if (os.ZenBonusPercent > 0) gold += gold * os.ZenBonusPercent / 100;
+                if (owner.ActivePet == PetType.Collector) gold += gold * CollectorGoldBonusPercent / 100;
+                owner.Gold += gold;
+                Push(owner, $"@EV GOLD;{gold}");
+            }
+            // Opções excelentes: vida/8 e mana/8 ao matar
             if (ks.LifeOnKill > 0) killer.Hp = Math.Min(killer.MaxHp, killer.Hp + killer.MaxHp * ks.LifeOnKill / 8);
+            if (ks.ManaOnKill > 0) killer.Mp = Math.Min(killer.MaxMp, killer.Mp + killer.MaxMp * ks.ManaOnKill / 8);
 
             foreach (var it in DropSystem.Roll(m.Def, _rng))
             {
@@ -901,7 +913,9 @@ namespace Kezor.Core.Server
             BroadcastNear(victim.MapId, victim.X, victim.Z, $"@EV DIE;{victim.Id}");
             if (killer != null)
             {
-                if (!CountWarKill(killer, victim)) killer.Infamy++;   // abate de guerra não dá infâmia
+                // PK do MU: matar um inocente sobe um grau; guerra de guilda, legítima defesa e matar assassinos não contam
+                bool selfDefense = _pvpHits.TryGetValue((victim.Id, killer.Id), out var t0) && _time - t0 <= SelfDefenseSeconds;
+                if (!CountWarKill(killer, victim) && !victim.IsMurderer && !selfDefense) killer.AddPlayerKill();
                 SysAll($"{killer.Name} derrotou {victim.Name} em combate!");
             }
             else Sys(victim, "Você caiu em combate e despertou na vila.");
@@ -922,12 +936,29 @@ namespace Kezor.Core.Server
             }
         }
 
-        /// <summary>Exp de monstro ajustada pela diferença de nível (penalidade se monstro muito fraco).</summary>
-        public static long ExpFor(int playerLevel, MonsterDefinition m)
+        /// <summary>
+        /// Experiência base de um monstro (MU): (NvM+25)·NvM/3; se o herói passa o monstro em mais de 10 níveis, × (NvM+10)/Nv;
+        /// monstro 65+ soma (NvM−64)·(NvM/4). O servidor sorteia de 100% a 150% disso.
+        /// </summary>
+        public static double BaseExpFor(int playerLevel, int monsterLevel)
         {
-            int diff = playerLevel - m.Level;
-            if (diff <= 10) return m.Experience;
-            return Math.Max(1, m.Experience * 10 / diff);
+            double exp = (monsterLevel + 25) * monsterLevel / 3.0;
+            if (playerLevel > monsterLevel + 10) exp *= (monsterLevel + 10) / (double)playerLevel;
+            if (monsterLevel >= 65) exp += (monsterLevel - 64) * (monsterLevel / 4);
+            return Math.Max(0, exp);
+        }
+
+        /// <summary>Reflete a parte do golpe das opções excelentes de quem apanhou (5% por opção) em quem bateu.</summary>
+        private void Reflect(Character victim, ICombatant attacker, int damage)
+        {
+            int pct = victim.GetCombatStats().ReflectPercent;
+            if (pct <= 0 || attacker.IsDead) return;
+            int back = Math.Max(1, damage * pct / 100);
+            attacker.Hp = Math.Max(0, attacker.Hp - back);
+            BroadcastNear(attacker.MapId, attacker.X, attacker.Z, $"@EV HIT;{victim.Id};{attacker.Id};{(int)HitType.Normal};{back};0");
+            if (attacker.Hp > 0) return;
+            if (attacker is Monster rm) OnMonsterKilled(rm, victim);
+            else if (attacker is Character rc) OnPlayerKilled(rc, victim);
         }
 
         private void TickMonsters(float dt)
@@ -961,6 +992,7 @@ namespace Kezor.Core.Server
                             var h = CombatResolver.Resolve(m, t, SkillCatalog.BasicAttack, _rng);
                             BroadcastNear(t.MapId, t.X, t.Z, $"@EV HIT;{m.Id};{t.Id};{(int)h.Type};{h.Damage};0");
                             t.WearEquipment(false, _rng);
+                            if (h.Damage > 0) Reflect(t, m, h.Damage);
                             if (h.Killed) OnPlayerKilled(t, null);
                         }
                         break;

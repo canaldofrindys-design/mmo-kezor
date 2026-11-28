@@ -43,7 +43,7 @@ namespace Kezor.Tests
             var s5 = five.GetCombatStats();
             var bonus = ArmorSets.Bonus(ArmorSet.RunePlate);
             int lastPieceDef = new Item(rune[4]).Defense;
-            Assert.AreEqual(s4.Defense + lastPieceDef + bonus.Defense, s5.Defense);
+            Assert.AreEqual(s4.DefenseBase + lastPieceDef + bonus.Defense, s5.DefenseBase);
             Assert.AreEqual(s4.DamageReductionPercent + bonus.ReductionPercent, s5.DamageReductionPercent);
             Assert.AreEqual(bonus.DamagePercent, s5.DamageBonusPercent);
 
