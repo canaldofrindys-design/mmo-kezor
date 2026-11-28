@@ -1,7 +1,7 @@
 /*
  * Kezor: tema "clássico premium" (molduras de ferro e ouro velho, gemas de brasa, pedra escura).
  * Vem por cima do Kezor.uss quando a raiz tem a classe .kz-premium (Opções ▸ Interface clássica, ligada por padrão).
- * Arte em Resources/UI/Premium, gerada por Art/ui/kezor_ui_premium.py em 2x: por isso todo 9-slice usa
+ * Arte em Resources/UI/Premium, modelada e renderizada em 3D no Blender por Art/ui/blender/kit.py (e glyphs.py) em 2x: por isso todo 9-slice usa
  * -unity-slice-scale: 0.5 (as bordas ficam na metade do número de pixels da textura).
  * Guia: docs/UI_GUIDE.md, seção "Tema clássico premium".
  */
@@ -17,25 +17,27 @@
 /* ------------------------------------------------------------------ painéis e janelas */
 .kz-premium .kz-panel {
     background-image: resource("UI/Premium/panel");
-    -unity-slice-left: 32; -unity-slice-right: 32; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
+    -unity-slice-left: 72; -unity-slice-right: 72; -unity-slice-top: 72; -unity-slice-bottom: 72; -unity-slice-scale: 0.5;
     -unity-background-image-tint-color: #ffffff;
-    padding: 12px 16px;
+    padding: 16px 20px;
 }
 .kz-premium .kz-panel-dark {
     background-image: resource("UI/Premium/panel_dark");
-    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
     padding: 8px 10px;
 }
 .kz-premium .kz-window {
     background-image: resource("UI/Premium/window");
-    -unity-slice-left: 48; -unity-slice-right: 48; -unity-slice-top: 48; -unity-slice-bottom: 48; -unity-slice-scale: 0.5;
-    padding: 0 0 18px 0;
+    -unity-slice-left: 128; -unity-slice-right: 128; -unity-slice-top: 128; -unity-slice-bottom: 128; -unity-slice-scale: 0.5;
+    padding: 0 0 24px 0;
 }
 .kz-premium .kz-window__header {
-    height: 36px; margin: 5px 24px 0 24px; padding: 0 8px 0 28px;
+    height: 38px; margin: 34px 30px 0 30px; padding: 0 10px 0 34px;
     background-image: resource("UI/Premium/header");
-    -unity-slice-left: 72; -unity-slice-right: 72; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    -unity-slice-left: 112; -unity-slice-right: 112; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
 }
+.kz-premium .kz-window__body { padding: 0 20px; }
+.kzp-crown { position: absolute; top: -54px; left: 50%; width: 240px; height: 96px; margin-left: -120px; background-image: resource("UI/Premium/crown"); }
 .kz-premium .kz-window__title { font-size: 17px; letter-spacing: 2px; padding-left: 0; -unity-text-align: middle-center; flex-grow: 1; }
 .kz-premium .kz-window__crest { height: 22px; margin: -4px 0 4px 0; background-image: resource("UI/Premium/crest"); -unity-background-scale-mode: scale-to-fit; }
 .kz-premium .kz-close {
@@ -48,7 +50,7 @@
 /* ------------------------------------------------------------------ botões */
 .kz-premium .kz-btn {
     background-image: resource("UI/Premium/btn");
-    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
     color: #f0e2c4; min-height: 30px; padding: 2px 16px;
     -unity-text-outline-width: 0.4px; -unity-text-outline-color: rgba(0, 0, 0, 0.9); text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9);
 }
@@ -70,7 +72,7 @@
 
 .kz-premium .kz-field > .unity-base-text-field__input {
     background-image: resource("UI/Premium/field");
-    -unity-slice-left: 14; -unity-slice-right: 14; -unity-slice-top: 14; -unity-slice-bottom: 14; -unity-slice-scale: 0.5;
+    -unity-slice-left: 12; -unity-slice-right: 12; -unity-slice-top: 12; -unity-slice-bottom: 12; -unity-slice-scale: 0.5;
     padding: 4px 10px; min-height: 28px;
 }
 
@@ -99,7 +101,7 @@
 /* ------------------------------------------------------------------ slots */
 .kz-premium .kz-slot {
     background-image: resource("UI/Premium/slot");
-    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+    -unity-slice-left: 32; -unity-slice-right: 32; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
 }
 .kz-premium .kz-slot:hover { background-image: resource("UI/Premium/slot_hover"); }
 .kz-premium .kz-slot--sel, .kz-premium .hud-skill--active { background-image: resource("UI/Premium/slot_sel"); }
@@ -112,7 +114,7 @@
 /* equipamento do inventário: poço com aro de ouro; o código pinta a borda na cor da raridade quando há item */
 .kz-premium .inv4-slot {
     background-image: resource("UI/Premium/slot"); background-color: rgba(0, 0, 0, 0);
-    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+    -unity-slice-left: 32; -unity-slice-right: 32; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
     border-width: 1px; border-color: rgba(0, 0, 0, 0); border-radius: 4px;
 }
 .kz-premium .inv4-slot:hover { background-image: resource("UI/Premium/slot_hover"); }
@@ -123,7 +125,7 @@
 .kz-premium .kz-grid {
     background-color: rgba(0, 0, 0, 0); border-width: 0;
     background-image: resource("UI/Premium/panel_dark");
-    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
 }
 .kz-premium .kz-grid__cell, .kz-premium .inv4-bag .kz-grid__cell {
     background-image: resource("UI/Premium/cell"); background-color: rgba(0, 0, 0, 0); border-width: 0;
@@ -149,7 +151,7 @@
 .kz-premium .inv4-ibtn {
     background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 0; color: #ffd58a;
     background-image: resource("UI/Premium/ibtn");
-    -unity-slice-left: 22; -unity-slice-right: 22; -unity-slice-top: 22; -unity-slice-bottom: 22; -unity-slice-scale: 0.5;
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
 }
 .kz-premium .inv4-ibtn:hover { background-image: resource("UI/Premium/ibtn_hover"); }
 .kz-premium .inv4-ibtn--ember { background-image: resource("UI/Premium/ibtn_on"); color: #fff3e0; }
@@ -172,7 +174,7 @@
 .kz-premium .hud-portrait__lvl {
     bottom: -8px; left: 8px; right: 8px; height: 20px;
     background-image: resource("UI/Premium/lvl_badge");
-    -unity-slice-left: 16; -unity-slice-right: 16; -unity-slice-top: 16; -unity-slice-bottom: 16; -unity-slice-scale: 0.5;
+    -unity-slice-left: 12; -unity-slice-right: 12; -unity-slice-top: 12; -unity-slice-bottom: 12; -unity-slice-scale: 0.5;
 }
 .kz-premium .hud-player__name { color: #f2e6cc; -unity-text-outline-width: 0.5px; -unity-text-outline-color: rgba(0, 0, 0, 0.9); }
 .kz-premium .hud-coin { width: 16px; height: 16px; }
@@ -181,7 +183,7 @@
 .kz-premium .hud-target__name { color: #f2d48c; }
 .kz-premium .hud-buff {
     background-image: resource("UI/Premium/slot");
-    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+    -unity-slice-left: 32; -unity-slice-right: 32; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
 }
 .kz-premium .hud-party__member { margin-bottom: 4px; }
 
@@ -195,7 +197,7 @@
 .kz-premium .hud4-bar {
     background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 0;
     background-image: resource("UI/Premium/hudbar");
-    -unity-slice-left: 120; -unity-slice-right: 120; -unity-slice-top: 56; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    -unity-slice-left: 160; -unity-slice-right: 160; -unity-slice-top: 72; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
     padding: 18px 30px 6px 30px;
 }
 .kz-premium .hud4-slot { width: 52px; height: 52px; }
@@ -211,8 +213,9 @@
 .kzp-vframe {
     position: absolute; left: -5px; top: -5px; right: -5px; bottom: -5px;
     background-image: resource("UI/Premium/vbar_frame");
-    -unity-slice-left: 8; -unity-slice-right: 8; -unity-slice-top: 18; -unity-slice-bottom: 18; -unity-slice-scale: 0.5;
+    -unity-slice-left: 12; -unity-slice-right: 12; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
 }
+.kzp-hudcrest { position: absolute; top: -60px; left: 50%; width: 300px; height: 84px; margin-left: -150px; background-image: resource("UI/Premium/hud_crest"); }
 .kzp-wing { position: absolute; bottom: -2px; width: 120px; height: 110px; }
 .kzp-wing--l { left: -102px; background-image: resource("UI/Premium/hud_wing_l"); }
 .kzp-wing--r { right: -102px; background-image: resource("UI/Premium/hud_wing_r"); }
@@ -220,7 +223,7 @@
 .kz-premium .hud4-menu__btn, .kz-premium .hud-menu__btn {
     width: 42px; height: 50px; margin: 0 1px; border-width: 0; background-color: rgba(0, 0, 0, 0);
     background-image: resource("UI/Premium/menu_btn");
-    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
 }
 .kz-premium .hud4-menu__btn:hover, .kz-premium .hud-menu__btn:hover { background-image: resource("UI/Premium/menu_btn_hover"); background-color: rgba(0, 0, 0, 0); }
 .kz-premium .hud4-menu__btn.hud-menu__btn--on, .kz-premium .hud-menu__btn.hud-menu__btn--on { background-image: resource("UI/Premium/menu_btn_on"); background-color: rgba(0, 0, 0, 0); }
@@ -241,7 +244,7 @@
 .kz-premium .hud-toast {
     min-width: 340px; height: 42px; padding: 0 48px;
     background-image: resource("UI/Premium/toast");
-    -unity-slice-left: 64; -unity-slice-right: 64; -unity-slice-top: 18; -unity-slice-bottom: 18; -unity-slice-scale: 0.5;
+    -unity-slice-left: 72; -unity-slice-right: 72; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
 }
 .kz-premium .hud-tip {
     padding: 10px 14px;
@@ -253,14 +256,14 @@
 /* ------------------------------------------------------------------ telas de entrada (login, seleção, criação) */
 .kz-premium .entry__class, .kz-premium .entry__char {
     background-image: resource("UI/Premium/btn");
-    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
 }
 .kz-premium .entry__class:hover, .kz-premium .entry__char:hover { background-image: resource("UI/Premium/btn_hover"); }
 .kz-premium .entry__class--on, .kz-premium .entry__char--on { background-image: resource("UI/Premium/btn_down"); }
 .kz-premium .login__row, .kz-premium .sel__slot, .kz-premium .cr__class {
     background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 0;
     background-image: resource("UI/Premium/btn");
-    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
 }
 .kz-premium .login__row:hover, .kz-premium .sel__slot:hover, .kz-premium .cr__class:hover { background-image: resource("UI/Premium/btn_hover"); background-color: rgba(0, 0, 0, 0); }
 .kz-premium .login__row--on, .kz-premium .sel__slot--on, .kz-premium .cr__class--on { background-image: resource("UI/Premium/btn_ember"); background-color: rgba(0, 0, 0, 0); border-width: 0; }
@@ -275,18 +278,18 @@
 .kz-premium .asc-branch {
     background-color: rgba(0, 0, 0, 0); border-width: 0;
     background-image: resource("UI/Premium/panel_dark");
-    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
 }
 .kz-premium .asc-branch__title {
     background-color: rgba(0, 0, 0, 0); border-width: 0;
     background-image: resource("UI/Premium/header");
-    -unity-slice-left: 72; -unity-slice-right: 72; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    -unity-slice-left: 112; -unity-slice-right: 112; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
     color: #f2d48c;
 }
 .kz-premium .asc-node {
     border-width: 0; background-color: rgba(0, 0, 0, 0);
     background-image: resource("UI/Premium/slot");
-    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+    -unity-slice-left: 32; -unity-slice-right: 32; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
 }
 .kz-premium .asc-node--available { background-image: resource("UI/Premium/slot_ember"); background-color: rgba(0, 0, 0, 0); }
 .kz-premium .asc-node--learned { background-image: resource("UI/Premium/slot_hover"); background-color: rgba(0, 0, 0, 0); }
@@ -295,6 +298,6 @@
 .kz-premium .asc-hbox {
     background-color: rgba(0, 0, 0, 0); border-width: 0;
     background-image: resource("UI/Premium/field");
-    -unity-slice-left: 14; -unity-slice-right: 14; -unity-slice-top: 14; -unity-slice-bottom: 14; -unity-slice-scale: 0.5;
+    -unity-slice-left: 12; -unity-slice-right: 12; -unity-slice-top: 12; -unity-slice-bottom: 12; -unity-slice-scale: 0.5;
 }
 .kz-premium .win-trow--head { border-bottom-width: 1px; border-color: rgba(201, 160, 88, 0.6); }

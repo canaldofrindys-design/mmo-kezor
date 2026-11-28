@@ -258,6 +258,7 @@ namespace Kezor.Client.UI
             close.tooltip = "Fechar (Esc)";
             Kz.El("kz-window__crest", this);                                   // brasão sob o título
             Body = Kz.El("kz-window__body", this, pick: true);
+            Kz.El("kzp-decor kzp-crown", this);                                 // coroa alada do tema premium, por cima do aro
             var pos = new Vector2(PlayerPrefs.GetFloat(_key + ".x", defaultPos.x), PlayerPrefs.GetFloat(_key + ".y", defaultPos.y));
             style.left = pos.x; style.top = pos.y;
 

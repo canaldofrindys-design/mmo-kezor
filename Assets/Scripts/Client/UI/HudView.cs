@@ -203,6 +203,7 @@ namespace Kezor.Client.UI
             // asas de lâminas nas pontas do console (só no tema premium; atrás do conteúdo)
             var wingL = Kz.El("kzp-decor kzp-wing kzp-wing--l", bar); wingL.SendToBack();
             var wingR = Kz.El("kzp-decor kzp-wing kzp-wing--r", bar); wingR.SendToBack();
+            Kz.El("kzp-decor kzp-hudcrest", bar);                          // brasão alado no meio, por cima da borda
 
             // ---------------- chat
             var chat = Kz.El("hud-chat", hud);

@@ -69,45 +69,47 @@ body {{ margin:0; width:1600px; height:900px; overflow:hidden; font-family: Inte
 .amber {{ color:#ffb347; }} .gold {{ color:#e8c27a; }}
 .out {{ text-shadow: 1px 1px 1px #000, -1px 0 1px #000, 0 -1px 1px #000; }}
 
-.window {{ position:absolute; padding:0 0 18px 0; z-index:1; }}
-.window::before {{ content:''; position:absolute; inset:0; {slice9('window', 48)} z-index:0; }}
+.window {{ position:absolute; padding:0 0 24px 0; z-index:1; }}
+.window::before {{ content:''; position:absolute; inset:0; {slice9('window', 128)} z-index:0; }}
 .window > * {{ position:relative; z-index:1; }}
-.whead {{ height:36px; margin:5px 24px 0 24px; padding:0 8px 0 28px; display:flex; align-items:center; position:relative; }}
-.whead::before {{ content:''; position:absolute; inset:0; {slice9('header', (20, 72, 20, 72))} }}
+.window > .crown {{ position:absolute; top:-54px; left:50%; width:240px; height:96px; margin-left:-120px; background:url({P}/crown.png) 0 0/100% 100%; z-index:2; }}
+.hudcrest {{ position:absolute !important; top:-60px; left:50%; width:300px; height:84px; margin-left:-150px; background:url({P}/hud_crest.png) 0 0/100% 100%; }}
+.whead {{ height:38px; margin:34px 30px 0 30px; padding:0 10px 0 34px; display:flex; align-items:center; position:relative; }}
+.whead::before {{ content:''; position:absolute; inset:0; {slice9('header', (32, 112, 32, 112))} }}
 .whead .title {{ flex:1; text-align:center; font-size:17px; letter-spacing:2px; position:relative; }}
 .close {{ width:26px; height:26px; background:url({P}/close.png) center/contain no-repeat; position:relative; }}
 .crest {{ height:22px; margin:-4px 0 4px 0; background:url({P}/crest.png) center/contain no-repeat; }}
-.wbody {{ padding:0 12px; display:flex; flex-direction:column; }}
+.wbody {{ padding:0 20px; display:flex; flex-direction:column; }}
 .divider {{ height:12px; margin:6px 0; background:url({P}/divider.png) center/contain no-repeat; }}
 
-.panel {{ position:absolute; padding:12px 16px; }}
-.panel::before {{ content:''; position:absolute; inset:0; {slice9('panel', 32)} z-index:0; }}
+.panel {{ position:absolute; padding:16px 20px; }}
+.panel::before {{ content:''; position:absolute; inset:0; {slice9('panel', 72)} z-index:0; }}
 .panel > * {{ position:relative; z-index:1; }}
-.pdark {{ position:relative; {slice9('panel_dark', 20)} }}
+.pdark {{ position:relative; {slice9('panel_dark', 24)} }}
 
 .btn {{ display:inline-flex; align-items:center; justify-content:center; min-height:30px; padding:0 16px; margin:2px; font-weight:700; font-size:13px; color:#f0e2c4;
         text-shadow:0 1px 1px #000; position:relative; }}
-.btn::before {{ content:''; position:absolute; inset:0; {slice9('btn', 24)} z-index:0; }}
+.btn::before {{ content:''; position:absolute; inset:0; {slice9('btn', 28)} z-index:0; }}
 .btn span {{ position:relative; z-index:1; }}
 .btn.small {{ min-height:26px; font-size:12px; padding:0 12px; }}
-.btn.hover::before {{ {slice9('btn_hover', 24)} }}
-.btn.primary::before {{ {slice9('btn_ember', 24)} }}
-.btn.on::before {{ {slice9('btn_down', 24)} }} .btn.on {{ color:#ffcf7a; }}
-.btn.off::before {{ {slice9('btn_off', 24)} }} .btn.off {{ color:#55504a; }}
+.btn.hover::before {{ {slice9('btn_hover', 28)} }}
+.btn.primary::before {{ {slice9('btn_ember', 28)} }}
+.btn.on::before {{ {slice9('btn_down', 28)} }} .btn.on {{ color:#ffcf7a; }}
+.btn.off::before {{ {slice9('btn_off', 28)} }} .btn.off {{ color:#55504a; }}
 
 .tab {{ display:inline-flex; align-items:center; height:26px; padding:0 12px; margin-right:2px; font-weight:700; font-size:12px; color:#b9ad97; position:relative; }}
 .tab::before {{ content:''; position:absolute; inset:0; {slice9('tab', (18, 20, 6, 20))} }}
 .tab.on {{ color:#ffd58a; }} .tab.on::before {{ {slice9('tab_on', (18, 20, 6, 20))} }}
 .tab span {{ position:relative; }}
 .field {{ position:relative; height:28px; padding:0 10px; display:flex; align-items:center; color:#7d7366; font-style:italic; }}
-.field::before {{ content:''; position:absolute; inset:0; {slice9('field', 14)} }}
+.field::before {{ content:''; position:absolute; inset:0; {slice9('field', 16)} }}
 .field span {{ position:relative; }}
 
 .slot {{ position:absolute; }}
-.slot::before {{ content:''; position:absolute; inset:0; {slice9('slot', 28)} }}
-.slot.hover::before {{ {slice9('slot_hover', 28)} }}
-.slot.sel::before {{ {slice9('slot_sel', 28)} }}
-.slot.ember::before {{ {slice9('slot_ember', 28)} }}
+.slot::before {{ content:''; position:absolute; inset:0; {slice9('slot', 32)} }}
+.slot.hover::before {{ {slice9('slot_hover', 32)} }}
+.slot.sel::before {{ {slice9('slot_sel', 32)} }}
+.slot.ember::before {{ {slice9('slot_ember', 32)} }}
 .slot > * {{ position:absolute; }}
 .slot .ic {{ left:6px; top:6px; }}
 .key {{ left:5px; top:3px; font-size:12px; font-weight:700; color:#ffd58a; }}
@@ -117,7 +119,7 @@ body {{ margin:0; width:1600px; height:900px; overflow:hidden; font-family: Inte
 .rel {{ position:relative; }}
 
 .grid {{ position:relative; }}
-.grid::before {{ content:''; position:absolute; inset:0; {slice9('panel_dark', 20)} }}
+.grid::before {{ content:''; position:absolute; inset:0; {slice9('panel_dark', 24)} }}
 .cell {{ position:absolute; width:40px; height:40px; background:url({P}/cell.png) 0 0/40px 40px; }}
 .item {{ position:absolute; }}
 .item::before {{ content:''; position:absolute; inset:0; {slice9('item_bg', 12)} }}
@@ -135,27 +137,27 @@ body {{ margin:0; width:1600px; height:900px; overflow:hidden; font-family: Inte
 .tip::before {{ content:''; position:absolute; inset:0; {slice9('tooltip', 28)} }}
 .tip > * {{ position:relative; }}
 .toast {{ position:absolute; height:42px; padding:0 48px; display:flex; align-items:center; justify-content:center; }}
-.toast::before {{ content:''; position:absolute; inset:0; {slice9('toast', (18, 64, 18, 64))} }}
+.toast::before {{ content:''; position:absolute; inset:0; {slice9('toast', (20, 72, 20, 72))} }}
 .toast span {{ position:relative; }}
 .ibtn {{ position:relative; width:46px; height:40px; margin:0 2px; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:#ffd58a; }}
-.ibtn::before {{ content:''; position:absolute; inset:0; {slice9('ibtn', 22)} }}
-.ibtn.ember::before {{ {slice9('ibtn_on', 22)} }} .ibtn.ember {{ color:#fff3e0; }}
+.ibtn::before {{ content:''; position:absolute; inset:0; {slice9('ibtn', 24)} }}
+.ibtn.ember::before {{ {slice9('ibtn_on', 24)} }} .ibtn.ember {{ color:#fff3e0; }}
 .ibtn > * {{ position:relative; }}
 .glyph {{ background-size:contain; background-repeat:no-repeat; background-position:center; }}
 .mbtn {{ position:relative; width:42px; height:50px; margin:0 1px; display:flex; align-items:center; justify-content:center; }}
-.mbtn::before {{ content:''; position:absolute; inset:0; {slice9('menu_btn', 20)} }}
-.mbtn.on::before {{ {slice9('menu_btn_on', 20)} }}
-.mbtn.hover::before {{ {slice9('menu_btn_hover', 20)} }}
+.mbtn::before {{ content:''; position:absolute; inset:0; {slice9('menu_btn', 24)} }}
+.mbtn.on::before {{ {slice9('menu_btn_on', 24)} }}
+.mbtn.hover::before {{ {slice9('menu_btn_hover', 24)} }}
 .mbtn > * {{ position:relative; }}
 .hud4bar {{ position:relative; display:flex; align-items:center; padding:18px 30px 6px 30px; }}
-.hud4bar::before {{ content:''; position:absolute; inset:0; {slice9('hudbar', (56, 120, 20, 120))} }}
+.hud4bar::before {{ content:''; position:absolute; inset:0; {slice9('hudbar', (72, 160, 24, 160))} }}
 .hud4bar > * {{ position:relative; }}
 .crystal {{ position:relative; width:80px; height:88px; margin:0 4px; }}
 .socket {{ position:absolute !important; left:-14px; top:-16px; width:108px; height:124px; background:url({P}/socket.png) 0 0/100% 100%; }}
 .vbar {{ position:relative; width:14px; height:70px; margin:-6px 7px 0 7px; background:rgba(5,5,5,.9); }}
 .vbar .vf {{ position:absolute; left:2px; right:2px; bottom:2px; }}
 .vframe {{ position:absolute; inset:-5px; }}
-.vframe::before {{ content:''; position:absolute; inset:0; {slice9('vbar_frame', (18, 8, 18, 8))} }}
+.vframe::before {{ content:''; position:absolute; inset:0; {slice9('vbar_frame', (20, 12, 20, 12))} }}
 .vtext {{ position:absolute; bottom:-16px; left:-22px; right:-22px; text-align:center; font-size:11px; font-weight:700; }}
 .wing {{ position:absolute !important; bottom:-2px; width:120px; height:110px; }}
 .chatlog {{ position:relative; height:150px; padding:8px 12px; display:flex; flex-direction:column; justify-content:flex-end; font-size:13px; }}
@@ -175,7 +177,7 @@ def window(x, y, w, title, body, h=None):
     hh = f'height:{h}px;' if h else ''
     return (f'<div class="window" style="left:{x}px;top:{y}px;width:{w}px;{hh}">'
             f'<div class="whead"><div class="title">{title}</div><div class="close"></div></div>'
-            f'<div class="crest"></div><div class="wbody">{body}</div></div>')
+            f'<div class="crest"></div><div class="wbody">{body}</div><div class="crown"></div></div>')
 
 
 def slot(x, y, w, h, inner='', cls='', key='', cnt=''):
@@ -283,7 +285,7 @@ def hud(selected_menu='bag'):
                 f'<div class="vframe"></div><div class="vtext out">{text}</div></div>')
     wings = (f'<div class="wing" style="left:-102px;background:url({P}/hud_wing_l.png) 0 0/100% 100%"></div>'
              f'<div class="wing" style="right:-102px;background:url({P}/hud_wing_r.png) 0 0/100% 100%"></div>')
-    bar_html = f'<div class="hud4bar">{wings}<div class="row">{quick}</div>{life}{vbar(0.8, "#c9a23a", "#ffe08a", "64")}<div class="row" style="padding:0 3px">{skills}</div>{active}{vbar(0.45, "#3aa8c8", "#a8f0ff", "210")}{mana}<div class="row" style="margin-left:6px">{menu}</div></div>'
+    bar_html = f'<div class="hud4bar">{wings}<div class="hudcrest"></div><div class="row">{quick}</div>{life}{vbar(0.8, "#c9a23a", "#ffe08a", "64")}<div class="row" style="padding:0 3px">{skills}</div>{active}{vbar(0.45, "#3aa8c8", "#a8f0ff", "210")}{mana}<div class="row" style="margin-left:6px">{menu}</div></div>'
     segs = ''.join(f'<div class="bar" style="flex:1;height:12px;padding:2px 3px;margin-right:1px"><div class="fill" style="width:{100 if i < 13 else (40 if i == 13 else 0)}%;background-color:#d4a94a"></div></div>' for i in range(20))
     exp = f'<div class="row" style="width:1010px;height:12px;margin-bottom:2px;position:relative">{segs}<div class="out" style="position:absolute;right:-46px;font-size:10px;color:#e8c27a">65,4%</div></div>'
     return f'<div class="abs" style="left:0;right:0;bottom:0;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end">{bar_html}{exp}</div>'
@@ -293,7 +295,7 @@ def frame_top():
     player = (f'<div class="panel" style="left:14px;top:14px;display:flex;align-items:center;padding:10px 18px 10px 12px">'
               f'<div class="rel" style="width:64px;height:64px;margin-right:12px;background:url({P}/portrait.png) 0 0/100% 100%;display:flex;align-items:center;justify-content:center">'
               f'<div class="glyph" style="width:40px;height:40px;background-image:url({P}/g_char.png)"></div>'
-              f'<div class="out" style="position:absolute;left:8px;right:8px;bottom:-8px;height:20px;{slice9("lvl_badge", 16)}border-width:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff3e0;line-height:0">'
+              f'<div class="out" style="position:absolute;left:8px;right:8px;bottom:-8px;height:20px;{slice9("lvl_badge", 12)}display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff3e0;line-height:0">'
               f'<span style="margin-top:-8px">152</span></div></div>'
               f'<div><div class="title" style="font-size:17px;color:#f2e6cc">Heroi817</div><div class="gold" style="font-size:12px">Lâmina Arcana</div>'
               f'<div class="t2" style="font-size:12px;margin-top:2px"><span style="color:#8fe08f">Vale de Brasalume</span> · área segura</div>'
@@ -414,9 +416,9 @@ def main():
     tmp = os.path.join(OUT, '_mock')
     os.makedirs(tmp, exist_ok=True)
     scenes = {
-        'ui_premium_hud': page(bg, frame_top() + chat() + hud('bag') + character(744, 150) + inventory(1212, 2, 'item_22') + item_tip(890, 380)),
+        'ui_premium_hud': page(bg, frame_top() + chat() + hud('bag') + character(744, 150) + inventory(1212, 46, 'item_22') + item_tip(890, 380)),
         'ui_premium_barra': page(bg, frame_top() + chat() + hud('char')),
-        'ui_premium_lojas': page(bg2, frame_top() + chat() + hud('bag') + shop(20, 236) + vault(430, 150) + inventory(1212, 2) + options(842, 560 - 300)),
+        'ui_premium_lojas': page(bg2, frame_top() + chat() + hud('bag') + shop(20, 236) + vault(430, 150) + inventory(1212, 46) + options(842, 560 - 300)),
     }
     for name, html in scenes.items():
         hp = os.path.join(tmp, name + '.html')
