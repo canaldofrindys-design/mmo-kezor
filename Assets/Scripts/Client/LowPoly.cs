@@ -141,11 +141,25 @@ namespace Kezor.Client
             get
             {
                 if (_mat != null) return _mat;
-                var sh = Shader.Find("Kezor/LowPoly");
-                if (sh == null) { Debug.LogWarning("[Kezor] Shader Kezor/LowPoly não encontrado; usando fallback."); sh = Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit"); }
-                _mat = new Material(sh) { name = "KezorLowPoly", enableInstancing = true };
+                var sh = LoadShader("KezorLowPoly", "Kezor/LowPoly");
+                if (sh == null) sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                _mat = new Material(sh!) { name = "KezorLowPoly", enableInstancing = true };
                 return _mat;
             }
+        }
+
+        /// <summary>
+        /// Shaders do Kezor ficam em Resources/Shaders para irem junto no build do jogo: nenhum material salvo usa esses
+        /// shaders (o material é criado no código), então fora de Resources o Unity os deixava de fora do .exe e
+        /// Shader.Find voltava nulo (cenário todo branco, sem cor de vértice nem janelas acesas).
+        /// </summary>
+        public static Shader? LoadShader(string resource, string name)
+        {
+            var sh = Resources.Load<Shader>("Shaders/" + resource);
+            if (sh == null) sh = Shader.Find(name);
+            if (sh == null) Debug.LogError($"[Kezor] Shader {name} não encontrado (Resources/Shaders/{resource}.shader); o cenário vai ficar sem cor.");
+            else if (!sh.isSupported) Debug.LogError($"[Kezor] Shader {name} não compilou nesta placa/plataforma; veja os erros do shader no Console.");
+            return sh;
         }
 
         private static Material? _occluder;
