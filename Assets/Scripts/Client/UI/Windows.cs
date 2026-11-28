@@ -722,6 +722,9 @@ namespace Kezor.Client.UI
             scale.RegisterValueChangedCallback(e => ui.UserScale = Mathf.Round(e.newValue * 20f) / 20f);
             _minimap = new Toggle("Mostrar minimapa") { value = true }; _minimap.AddToClassList("kz-toggle"); Body.Add(_minimap);
             _minimap.RegisterValueChangedCallback(e => G.MinimapOn = e.newValue);
+            var premium = new Toggle("Interface clássica (molduras de ouro)") { value = ui.Premium }; premium.AddToClassList("kz-toggle"); Body.Add(premium);
+            premium.RegisterValueChangedCallback(e => ui.Premium = e.newValue);
+            premium.tooltip = "Os ícones dos menus trocam ao entrar de novo no jogo.";
             Kz.El("kz-divider", Body);
 
             Kz.Text("Áudio", "kz-h2", Body);

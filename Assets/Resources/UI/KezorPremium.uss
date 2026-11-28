@@ -1,0 +1,300 @@
+/*
+ * Kezor: tema "clássico premium" (molduras de ferro e ouro velho, gemas de brasa, pedra escura).
+ * Vem por cima do Kezor.uss quando a raiz tem a classe .kz-premium (Opções ▸ Interface clássica, ligada por padrão).
+ * Arte em Resources/UI/Premium, gerada por Art/ui/kezor_ui_premium.py em 2x: por isso todo 9-slice usa
+ * -unity-slice-scale: 0.5 (as bordas ficam na metade do número de pixels da textura).
+ * Guia: docs/UI_GUIDE.md, seção "Tema clássico premium".
+ */
+
+/* enfeites que só existem neste tema (asas da barra, engastes dos cristais, molduras das barras verticais) */
+.kzp-decor { display: none; }
+.kz-premium .kzp-decor { display: flex; }
+
+/* ------------------------------------------------------------------ tipografia */
+.kz-premium .kz-title { color: #f2d48c; -unity-text-outline-width: 0.6px; -unity-text-outline-color: rgba(40, 14, 0, 0.95); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95); }
+.kz-premium .kz-h2 { color: #e8c27a; -unity-text-outline-width: 0.4px; -unity-text-outline-color: rgba(30, 10, 0, 0.9); letter-spacing: 1px; }
+
+/* ------------------------------------------------------------------ painéis e janelas */
+.kz-premium .kz-panel {
+    background-image: resource("UI/Premium/panel");
+    -unity-slice-left: 32; -unity-slice-right: 32; -unity-slice-top: 32; -unity-slice-bottom: 32; -unity-slice-scale: 0.5;
+    -unity-background-image-tint-color: #ffffff;
+    padding: 12px 16px;
+}
+.kz-premium .kz-panel-dark {
+    background-image: resource("UI/Premium/panel_dark");
+    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    padding: 8px 10px;
+}
+.kz-premium .kz-window {
+    background-image: resource("UI/Premium/window");
+    -unity-slice-left: 48; -unity-slice-right: 48; -unity-slice-top: 48; -unity-slice-bottom: 48; -unity-slice-scale: 0.5;
+    padding: 0 0 18px 0;
+}
+.kz-premium .kz-window__header {
+    height: 36px; margin: 5px 24px 0 24px; padding: 0 8px 0 28px;
+    background-image: resource("UI/Premium/header");
+    -unity-slice-left: 72; -unity-slice-right: 72; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+}
+.kz-premium .kz-window__title { font-size: 17px; letter-spacing: 2px; padding-left: 0; -unity-text-align: middle-center; flex-grow: 1; }
+.kz-premium .kz-window__crest { height: 22px; margin: -4px 0 4px 0; background-image: resource("UI/Premium/crest"); -unity-background-scale-mode: scale-to-fit; }
+.kz-premium .kz-close {
+    width: 26px; height: 26px; margin-right: 2px;
+    background-image: resource("UI/Premium/close"); -unity-background-image-tint-color: #ffffff;
+}
+.kz-premium .kz-close:hover { background-image: resource("UI/Premium/close_hover"); -unity-background-image-tint-color: #ffffff; }
+.kz-premium .kz-divider { height: 12px; margin: 6px 0; background-image: resource("UI/Premium/divider"); -unity-background-scale-mode: scale-to-fit; }
+
+/* ------------------------------------------------------------------ botões */
+.kz-premium .kz-btn {
+    background-image: resource("UI/Premium/btn");
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
+    color: #f0e2c4; min-height: 30px; padding: 2px 16px;
+    -unity-text-outline-width: 0.4px; -unity-text-outline-color: rgba(0, 0, 0, 0.9); text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9);
+}
+.kz-premium .kz-btn:hover { background-image: resource("UI/Premium/btn_hover"); color: #fff6e0; }
+.kz-premium .kz-btn:active { background-image: resource("UI/Premium/btn_down"); color: #ffcf7a; }
+.kz-premium .kz-btn:disabled { background-image: resource("UI/Premium/btn_off"); color: var(--text-off); }
+.kz-premium .kz-btn--primary { background-image: resource("UI/Premium/btn_ember"); color: #fff3e0; }
+.kz-premium .kz-btn--primary:hover { background-image: resource("UI/Premium/btn_ember_hover"); }
+.kz-premium .kz-btn--on { background-image: resource("UI/Premium/btn_down"); color: #ffcf7a; }
+.kz-premium .kz-btn--small { min-height: 26px; font-size: 12px; padding: 0 12px; }
+
+.kz-premium .kz-tab {
+    background-image: resource("UI/Premium/tab");
+    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 18; -unity-slice-bottom: 6; -unity-slice-scale: 0.5;
+    height: 26px; padding: 0 12px; color: #b9ad97;
+}
+.kz-premium .kz-tab:hover { background-image: resource("UI/Premium/tab_hover"); color: #efe6d4; }
+.kz-premium .kz-tab--on { background-image: resource("UI/Premium/tab_on"); color: #ffd58a; }
+
+.kz-premium .kz-field > .unity-base-text-field__input {
+    background-image: resource("UI/Premium/field");
+    -unity-slice-left: 14; -unity-slice-right: 14; -unity-slice-top: 14; -unity-slice-bottom: 14; -unity-slice-scale: 0.5;
+    padding: 4px 10px; min-height: 28px;
+}
+
+/* caixas de marcar e barras de rolagem */
+.kz-premium .kz-toggle .unity-toggle__checkmark {
+    width: 18px; height: 18px; background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/check"); -unity-background-image-tint-color: #ffffff;
+}
+.kz-premium .kz-toggle:checked .unity-toggle__checkmark { background-image: resource("UI/Premium/check_on"); }
+.kz-premium .unity-scroller--vertical .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/scroll_track");
+    -unity-slice-top: 10; -unity-slice-bottom: 10; -unity-slice-left: 4; -unity-slice-right: 4; -unity-slice-scale: 0.5;
+}
+.kz-premium .unity-scroller--vertical .unity-base-slider__dragger {
+    background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/scroll_drag");
+    -unity-slice-top: 10; -unity-slice-bottom: 10; -unity-slice-left: 4; -unity-slice-right: 4; -unity-slice-scale: 0.5;
+}
+.kz-premium .kz-slider .unity-base-slider__tracker { background-color: #070505; border-color: #8a6a3e; border-width: 1px; height: 6px; margin-top: -3px; border-radius: 3px; }
+.kz-premium .kz-slider .unity-base-slider__dragger {
+    width: 18px; height: 18px; margin-top: -9px; border-width: 0; background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Premium/check_on");
+}
+
+/* ------------------------------------------------------------------ slots */
+.kz-premium .kz-slot {
+    background-image: resource("UI/Premium/slot");
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+}
+.kz-premium .kz-slot:hover { background-image: resource("UI/Premium/slot_hover"); }
+.kz-premium .kz-slot--sel, .kz-premium .hud-skill--active { background-image: resource("UI/Premium/slot_sel"); }
+.kz-premium .kz-slot--forge { background-image: resource("UI/Premium/slot_ember"); -unity-background-image-tint-color: #ffffff; }
+.kz-premium .kz-slot__icon { left: 6px; top: 6px; right: 6px; bottom: 6px; }
+.kz-premium .kz-slot__cd { left: 5px; top: 5px; right: 5px; bottom: 5px; }
+.kz-premium .kz-slot__rarity { left: 4px; top: 4px; right: 4px; bottom: 4px; }
+.kz-premium .kz-slot__key { color: #ffd58a; }
+
+/* equipamento do inventário: poço com aro de ouro; o código pinta a borda na cor da raridade quando há item */
+.kz-premium .inv4-slot {
+    background-image: resource("UI/Premium/slot"); background-color: rgba(0, 0, 0, 0);
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+    border-width: 1px; border-color: rgba(0, 0, 0, 0); border-radius: 4px;
+}
+.kz-premium .inv4-slot:hover { background-image: resource("UI/Premium/slot_hover"); }
+.kz-premium .inv4-slot__guide { opacity: 0.18; }
+.kz-premium .inv4-slot__name { color: #8a7a60; -unity-font: resource("Fonts/Cinzel"); -unity-font-definition: initial; font-size: 9px; bottom: 4px; }
+
+/* grade da mochila, baú, loja e troca */
+.kz-premium .kz-grid {
+    background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/panel_dark");
+    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+}
+.kz-premium .kz-grid__cell, .kz-premium .inv4-bag .kz-grid__cell {
+    background-image: resource("UI/Premium/cell"); background-color: rgba(0, 0, 0, 0); border-width: 0;
+}
+.kz-premium .kz-grid__item, .kz-premium .inv4-bag .kz-grid__item {
+    background-image: resource("UI/Premium/item_bg"); background-color: rgba(0, 0, 0, 0);
+    -unity-slice-left: 12; -unity-slice-right: 12; -unity-slice-top: 12; -unity-slice-bottom: 12; -unity-slice-scale: 0.5;
+    border-width: 0;
+}
+.kz-premium .kz-grid__item:hover { background-color: rgba(255, 179, 71, 0.10); }
+.kz-premium .kz-grid__item--sel, .kz-premium .inv4-bag .kz-grid__item--sel { border-width: 2px; border-color: #ffb347; background-color: rgba(255, 179, 71, 0.16); }
+.kz-premium .kz-grid__item--mark, .kz-premium .inv4-bag .kz-grid__item--mark { border-width: 2px; border-color: #ff8a3a; background-color: rgba(255, 106, 26, 0.18); }
+.kz-premium .kz-ghost { background-color: rgba(20, 14, 10, 0.55); border-color: #ffb347; }
+
+/* rodapé do inventário */
+.kz-premium .inv4-goldbox {
+    background-color: rgba(0, 0, 0, 0); border-width: 0; height: 42px;
+    background-image: resource("UI/Premium/goldbox");
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
+}
+.kz-premium .inv4-goldbox__coin { width: 30px; height: 30px; margin: 0 8px 0 10px; }
+.kz-premium .inv4-goldbox__value { color: #ffd58a; font-size: 16px; -unity-text-outline-width: 0.5px; -unity-text-outline-color: rgba(30, 12, 0, 1); }
+.kz-premium .inv4-ibtn {
+    background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 0; color: #ffd58a;
+    background-image: resource("UI/Premium/ibtn");
+    -unity-slice-left: 22; -unity-slice-right: 22; -unity-slice-top: 22; -unity-slice-bottom: 22; -unity-slice-scale: 0.5;
+}
+.kz-premium .inv4-ibtn:hover { background-image: resource("UI/Premium/ibtn_hover"); }
+.kz-premium .inv4-ibtn--ember { background-image: resource("UI/Premium/ibtn_on"); color: #fff3e0; }
+.kz-premium .inv4-ibtn--blue { background-image: resource("UI/Premium/ibtn_blue"); }
+.kz-premium .inv4-ibtn__glyph { width: 26px; height: 26px; -unity-background-image-tint-color: #ffffff; }
+
+/* ------------------------------------------------------------------ barras */
+.kz-premium .kz-bar {
+    height: 16px; padding: 4px 6px;
+    background-image: resource("UI/Premium/bar_frame");
+    -unity-slice-left: 18; -unity-slice-right: 18; -unity-slice-top: 12; -unity-slice-bottom: 12; -unity-slice-scale: 0.5;
+}
+.kz-premium .kz-bar__fill { background-image: resource("UI/Premium/bar_fill"); }
+.kz-premium .hud-target .kz-bar { height: 20px; }
+.kz-premium .hud4-exp__seg { padding: 2px 3px; }
+
+/* ------------------------------------------------------------------ HUD: quadro do herói, alvo, buffs, minimapa */
+.kz-premium .hud-portrait { width: 64px; height: 64px; background-image: resource("UI/Premium/portrait"); }
+.kz-premium .hud-portrait__glyph { width: 40px; height: 40px; -unity-background-image-tint-color: #ffffff; }
+.kz-premium .hud-portrait__lvl {
+    bottom: -8px; left: 8px; right: 8px; height: 20px;
+    background-image: resource("UI/Premium/lvl_badge");
+    -unity-slice-left: 16; -unity-slice-right: 16; -unity-slice-top: 16; -unity-slice-bottom: 16; -unity-slice-scale: 0.5;
+}
+.kz-premium .hud-player__name { color: #f2e6cc; -unity-text-outline-width: 0.5px; -unity-text-outline-color: rgba(0, 0, 0, 0.9); }
+.kz-premium .hud-coin { width: 16px; height: 16px; }
+.kz-premium .hud-target { padding: 12px 22px 14px 22px; }
+.kz-premium .hud-target--boss { -unity-background-image-tint-color: #ffc890; }
+.kz-premium .hud-target__name { color: #f2d48c; }
+.kz-premium .hud-buff {
+    background-image: resource("UI/Premium/slot");
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+}
+.kz-premium .hud-party__member { margin-bottom: 4px; }
+
+.kz-premium .hud-minimap__clip { left: 14px; top: 14px; width: 168px; height: 168px; border-radius: 84px; }
+.kz-premium .hud-minimap__map { width: 168px; height: 168px; }
+.kz-premium .hud-minimap__frame { background-image: resource("UI/Premium/minimap_frame"); }
+.kz-premium .hud-minimap__name { -unity-text-outline-width: 0.5px; -unity-text-outline-color: rgba(0, 0, 0, 1); color: #f2d48c; }
+
+/* ------------------------------------------------------------------ HUD: barra de baixo (console de pedra, ferro e ouro) */
+.kz-premium .hud4 { height: 150px; }
+.kz-premium .hud4-bar {
+    background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 0;
+    background-image: resource("UI/Premium/hudbar");
+    -unity-slice-left: 120; -unity-slice-right: 120; -unity-slice-top: 56; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    padding: 18px 30px 6px 30px;
+}
+.kz-premium .hud4-slot { width: 52px; height: 52px; }
+.kz-premium .hud4-slot--active {
+    width: 60px; height: 60px; border-width: 0;
+    background-image: resource("UI/Premium/slot_sel");
+}
+.kz-premium .hud4-crystal { width: 80px; height: 88px; margin: 0 4px; }
+.kz-premium .hud4-crystal__gem { left: 6px; top: 6px; right: 6px; bottom: 6px; }
+.kz-premium .hud4-crystal__text { top: 32px; font-size: 15px; }
+.kz-premium .hud4-vbar { width: 14px; height: 70px; margin: -6px 7px 0 7px; }
+.kzp-socket { position: absolute; left: -14px; top: -16px; width: 108px; height: 124px; background-image: resource("UI/Premium/socket"); }
+.kzp-vframe {
+    position: absolute; left: -5px; top: -5px; right: -5px; bottom: -5px;
+    background-image: resource("UI/Premium/vbar_frame");
+    -unity-slice-left: 8; -unity-slice-right: 8; -unity-slice-top: 18; -unity-slice-bottom: 18; -unity-slice-scale: 0.5;
+}
+.kzp-wing { position: absolute; bottom: -2px; width: 120px; height: 110px; }
+.kzp-wing--l { left: -102px; background-image: resource("UI/Premium/hud_wing_l"); }
+.kzp-wing--r { right: -102px; background-image: resource("UI/Premium/hud_wing_r"); }
+
+.kz-premium .hud4-menu__btn, .kz-premium .hud-menu__btn {
+    width: 42px; height: 50px; margin: 0 1px; border-width: 0; background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Premium/menu_btn");
+    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+}
+.kz-premium .hud4-menu__btn:hover, .kz-premium .hud-menu__btn:hover { background-image: resource("UI/Premium/menu_btn_hover"); background-color: rgba(0, 0, 0, 0); }
+.kz-premium .hud4-menu__btn.hud-menu__btn--on, .kz-premium .hud-menu__btn.hud-menu__btn--on { background-image: resource("UI/Premium/menu_btn_on"); background-color: rgba(0, 0, 0, 0); }
+.kz-premium .hud4-menu__glyph, .kz-premium .hud-menu__glyph { width: 26px; height: 26px; -unity-background-image-tint-color: #ffffff; }
+.kz-premium .hud4-menu__btn:hover .hud4-menu__glyph { -unity-background-image-tint-color: #fff2d0; }
+.kz-premium .hud4-exp { height: 12px; margin: 0 0 2px 0; }
+.kz-premium .hud4-exp__text { color: #e8c27a; }
+.kz-premium .hud4-rmb { width: 22px; height: 22px; right: -8px; top: -10px; }
+
+/* ------------------------------------------------------------------ chat, avisos e tooltip */
+.kz-premium .hud-chat { bottom: 158px; }
+.kz-premium .hud-chat__tabs { padding-left: 8px; }
+.kz-premium .hud-chat__log {
+    background-color: rgba(0, 0, 0, 0); border-width: 0; padding: 8px 12px;
+    background-image: resource("UI/Premium/chat_bg");
+    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+}
+.kz-premium .hud-toast {
+    min-width: 340px; height: 42px; padding: 0 48px;
+    background-image: resource("UI/Premium/toast");
+    -unity-slice-left: 64; -unity-slice-right: 64; -unity-slice-top: 18; -unity-slice-bottom: 18; -unity-slice-scale: 0.5;
+}
+.kz-premium .hud-tip {
+    padding: 10px 14px;
+    background-image: resource("UI/Premium/tooltip");
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+}
+.kz-premium .hud-tip--item { padding: 12px 16px; }
+
+/* ------------------------------------------------------------------ telas de entrada (login, seleção, criação) */
+.kz-premium .entry__class, .kz-premium .entry__char {
+    background-image: resource("UI/Premium/btn");
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
+}
+.kz-premium .entry__class:hover, .kz-premium .entry__char:hover { background-image: resource("UI/Premium/btn_hover"); }
+.kz-premium .entry__class--on, .kz-premium .entry__char--on { background-image: resource("UI/Premium/btn_down"); }
+.kz-premium .login__row, .kz-premium .sel__slot, .kz-premium .cr__class {
+    background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 0;
+    background-image: resource("UI/Premium/btn");
+    -unity-slice-left: 24; -unity-slice-right: 24; -unity-slice-top: 24; -unity-slice-bottom: 24; -unity-slice-scale: 0.5;
+}
+.kz-premium .login__row:hover, .kz-premium .sel__slot:hover, .kz-premium .cr__class:hover { background-image: resource("UI/Premium/btn_hover"); background-color: rgba(0, 0, 0, 0); }
+.kz-premium .login__row--on, .kz-premium .sel__slot--on, .kz-premium .cr__class--on { background-image: resource("UI/Premium/btn_ember"); background-color: rgba(0, 0, 0, 0); border-width: 0; }
+.kz-premium .sel__bar { background-color: rgba(4, 3, 3, 0.92); border-top-width: 2px; border-color: #8e6630; }
+.kz-premium .sel__arrow, .kz-premium .sel__plate {
+    background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/tooltip");
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+}
+
+/* ------------------------------------------------------------------ Árvore da Ascensão e tabelas */
+.kz-premium .asc-branch {
+    background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/panel_dark");
+    -unity-slice-left: 20; -unity-slice-right: 20; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+}
+.kz-premium .asc-branch__title {
+    background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/header");
+    -unity-slice-left: 72; -unity-slice-right: 72; -unity-slice-top: 20; -unity-slice-bottom: 20; -unity-slice-scale: 0.5;
+    color: #f2d48c;
+}
+.kz-premium .asc-node {
+    border-width: 0; background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Premium/slot");
+    -unity-slice-left: 28; -unity-slice-right: 28; -unity-slice-top: 28; -unity-slice-bottom: 28; -unity-slice-scale: 0.5;
+}
+.kz-premium .asc-node--available { background-image: resource("UI/Premium/slot_ember"); background-color: rgba(0, 0, 0, 0); }
+.kz-premium .asc-node--learned { background-image: resource("UI/Premium/slot_hover"); background-color: rgba(0, 0, 0, 0); }
+.kz-premium .asc-node--max { background-image: resource("UI/Premium/slot_sel"); background-color: rgba(0, 0, 0, 0); }
+.kz-premium .asc-node__icon { -unity-background-image-tint-color: #ffffff; }
+.kz-premium .asc-hbox {
+    background-color: rgba(0, 0, 0, 0); border-width: 0;
+    background-image: resource("UI/Premium/field");
+    -unity-slice-left: 14; -unity-slice-right: 14; -unity-slice-top: 14; -unity-slice-bottom: 14; -unity-slice-scale: 0.5;
+}
+.kz-premium .win-trow--head { border-bottom-width: 1px; border-color: rgba(201, 160, 88, 0.6); }

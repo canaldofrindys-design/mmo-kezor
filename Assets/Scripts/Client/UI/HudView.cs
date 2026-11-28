@@ -125,12 +125,14 @@ namespace Kezor.Client.UI
             var bar = Kz.El("hud4-bar", bottom, pick: true);
             // vida
             var lifeBox = Kz.El("hud4-crystal hud4-crystal--hp", bar, pick: true);
+            Kz.El("kzp-decor kzp-socket", lifeBox);                         // engaste do tema premium (atrás do cristal)
             _life = lifeBox.Put(new HudCrystal(KezorLook.Hex("#4a0805"), KezorLook.Hex("#b01c10"), KezorLook.Hex("#ff7a4a")));
             _hpText = Kz.Text("", "hud4-crystal__text", lifeBox);
             Kz.Text("VIDA", "hud4-crystal__cap", lifeBox);
             Tip(lifeBox, () => $"<b>Cristal de Vida</b>  {S.Me.Hp}/{S.Me.MaxHp}\nPoções nos atalhos Q W E R.");
             _vigor = bar.Put(new HudVBar(KezorLook.Hex("#c9a23a"), KezorLook.Hex("#ffe08a")));
             _vigor.AddToClassList("hud4-vbar--vigor");
+            Kz.El("kzp-decor kzp-vframe", _vigor);                          // moldura de ouro por cima do tubo
             _vigorText = Kz.Text("", "hud4-vbar__text", _vigor);
             Tip(_vigor, () => $"<b>Vigor</b>  {S.Me.Vigor}/{S.Me.MaxVigor}\nAs skills iniciais não gastam; as outras gastam {Kezor.Core.Characters.Character.SkillVigorCost}. O ataque básico não gasta.\nVolta a cada {Kezor.Core.Characters.Character.RecoveryInterval:0} s (mais rápido na zona segura).");
 
@@ -185,9 +187,11 @@ namespace Kezor.Client.UI
             // escudo e mana
             _shield = bar.Put(new HudVBar(KezorLook.Hex("#3aa8c8"), KezorLook.Hex("#a8f0ff")));
             _shield.AddToClassList("hud4-vbar--shield");
+            Kz.El("kzp-decor kzp-vframe", _shield);
             _shieldText = Kz.Text("", "hud4-vbar__text", _shield);
             Tip(_shield, () => $"<b>Escudo</b>  {S.Me.Shield}/{S.Me.MaxShield}\nSó segura golpes de jogadores: {Kezor.Core.Characters.Character.ShieldRatioPercent}% vai no escudo e o resto na vida.\nRecarrega na zona segura, {Kezor.Core.Characters.Character.ShieldDelaySeconds:0} s depois de levar dano.");
             var manaBox = Kz.El("hud4-crystal hud4-crystal--mp", bar, pick: true);
+            Kz.El("kzp-decor kzp-socket", manaBox);
             _mana = manaBox.Put(new HudCrystal(KezorLook.Hex("#081650"), KezorLook.Hex("#1c48c0"), KezorLook.Hex("#7ab8ff")));
             _mpText = Kz.Text("", "hud4-crystal__text", manaBox);
             Kz.Text("MANA", "hud4-crystal__cap", manaBox);
@@ -196,6 +200,9 @@ namespace Kezor.Client.UI
             // ordem da barra (HUD v5): Q W E R · Vida · Vigor · skills 1–5 · magia ativa · Escudo · Mana · menu; experiência embaixo
             foreach (var el in new VisualElement[] { quick, lifeBox, _vigor, skills, _active, _shield, manaBox, menu }) { el.RemoveFromHierarchy(); bar.Add(el); }
             exp.RemoveFromHierarchy(); bottom.Add(exp);
+            // asas de lâminas nas pontas do console (só no tema premium; atrás do conteúdo)
+            var wingL = Kz.El("kzp-decor kzp-wing kzp-wing--l", bar); wingL.SendToBack();
+            var wingR = Kz.El("kzp-decor kzp-wing kzp-wing--r", bar); wingR.SendToBack();
 
             // ---------------- chat
             var chat = Kz.El("hud-chat", hud);

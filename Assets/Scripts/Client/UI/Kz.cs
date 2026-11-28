@@ -12,7 +12,15 @@ namespace Kezor.Client.UI
 
         public static Texture2D? Art(string name)
         {
-            if (!ArtCache.TryGetValue(name, out var t)) ArtCache[name] = t = Resources.Load<Texture2D>("UI/Art/" + name);
+            // no tema clássico premium, os glifos redesenhados (UI/Premium/g_*) substituem os de UI/Art
+            bool premium = UiRoot.PremiumOn;
+            string key = premium ? "p:" + name : name;
+            if (!ArtCache.TryGetValue(key, out var t))
+            {
+                t = premium ? Resources.Load<Texture2D>("UI/Premium/" + name) : null;
+                if (t == null) t = Resources.Load<Texture2D>("UI/Art/" + name);
+                ArtCache[key] = t;
+            }
             return t;
         }
 
