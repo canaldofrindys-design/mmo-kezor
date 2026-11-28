@@ -85,6 +85,11 @@ referência de 1600×900.
 ## Arte
 Toda a arte da interface é desenhada em código (`UiArtBaker`, menu **Kezor ▸ Gerar arte da UI**) e gravada em
 `Assets/Resources/UI/Art`. Os ícones de itens e skills vêm de `Kezor ▸ Gerar ícones` (atlas em `Resources/UI/Icons`).
+Desde a v7 os ícones dos itens com modelo (armas, escudos, peças dos sets, asas, montarias e mascotes) são renderizados
+no Blender a partir dos mesmos FBX do jogo, com a luz do kit da interface: `python Art/ui/blender/icons.py` grava
+`Art/icons/items/item_<id>.png` no tamanho exato da grade (96 px por casa), e o `Gerar ícones` usa esses PNGs quando
+existem. Peças com texturas assadas (sets de classe, `Resources/Textures/Equip`) só saem do Blender se as texturas
+estiverem no repositório; sem elas, o Unity continua renderizando o ícone como antes.
 O tema fica em `Assets/Resources/UI/Kezor.uss`; as cores acima existem como variáveis USS.
 
 ## Arquitetura
@@ -93,21 +98,31 @@ O tema fica em `Assets/Resources/UI/Kezor.uss`; as cores acima existem como vari
 - `Kezor.Client.UI`: só apresentação (UI Toolkit). As views leem o `ClientState` e chamam métodos do `KezorGame`; elas
   não falam com o servidor por conta própria.
 
-## Tema clássico premium (padrão desde a v6 da interface)
-Camada de acabamento no espírito dos MMOs clássicos de fantasia: **ferro escuro, ouro velho, pedra e gemas de brasa**,
-com filigrana nos cantos das janelas. A arte é original do Kezor, desenhada em código (nada copiado de outro jogo).
+## Tema clássico premium (padrão desde a v6 da interface; arte 3D desde a v7)
+Camada de acabamento no espírito dos MMOs clássicos de fantasia: **ferro escuro, ouro velho, couro, pedra e gemas de
+rubi**, com ornamentos de verdade nos cantos. Desde a v7 cada peça é **modelada em 3D e renderizada no Blender (Cycles)**:
+aros moldados com perfil (lábio de ferro, cordão de ouro, faixa martelada, filete), arabescos em tubo, gemas facetadas
+com garras, rebites, asas de penas metálicas. A arte é original do Kezor, gerada por código (nada copiado de outro jogo).
 
-- **Onde fica**: arte em `Assets/Resources/UI/Premium` (62 PNGs em 2x) e regras em `Assets/Resources/UI/KezorPremium.uss`,
+- **Onde fica**: arte em `Assets/Resources/UI/Premium` (PNGs em 2x) e regras em `Assets/Resources/UI/KezorPremium.uss`,
   carregada por cima do `Kezor.uss`. Tudo vale só quando a raiz tem a classe `.kz-premium`.
 - **Liga/desliga**: Opções ▸ Interface ▸ *Interface clássica (molduras de ouro)* (preferência `kz.ui.premium`, ligada por
   padrão). Os glifos dos menus trocam ao entrar de novo no jogo.
-- **9-slice**: as texturas são 2x; toda regra usa `-unity-slice-scale: 0.5`, então as bordas na tela têm metade dos números
-  de `-unity-slice-*`. Janela 48 (24 px na tela), painel 32, slot 28, botão 24, console da barra 120/56/20.
-- **Enfeites do HUD** (`.kzp-decor`, só aparecem no tema): engaste hexagonal atrás dos cristais de Vida e Mana, moldura de
-  ouro nas barras de Vigor e Escudo e os remates de voluta nas pontas do console.
-- **Glifos**: `Kz.Art(nome)` procura primeiro `UI/Premium/<nome>` (glifos dourados já coloridos, sem tinta) e cai em
+- **9-slice** (números em px da textura; na tela é a metade por causa de `-unity-slice-scale: 0.5`): janela 128,
+  painel 72, poço escuro 24, faixa do título 112/32, botão 28, botão de ícone e do menu 24, aba 20/18/6, campo 16,
+  slot 32, fundo do item 12, tubo de barra 18/12, moldura vertical 12/20, console da barra 160/72/24, aviso 72/20,
+  caixa do ouro 24, tooltip 28.
+- **Enfeites** (`.kzp-decor`, só aparecem no tema): coroa alada com rubi no topo de cada janela (`.kzp-crown`), brasão
+  alado no meio do console (`.kzp-hudcrest`), engaste hexagonal atrás dos cristais de Vida e Mana, moldura de ouro nas
+  barras de Vigor e Escudo e os remates de voluta nas pontas do console.
+- **Glifos**: `Kz.Art(nome)` procura primeiro `UI/Premium/<nome>` (ícones em relevo de ouro, sem tinta) e cai em
   `UI/Art` se não houver.
-- **Refazer a arte**: `python Art/ui/kezor_ui_premium.py` (todas) ou com nomes (`window btn slot`); depois
-  `python Art/ui/make_meta.py` cria os `.meta` que faltarem (GUID fixo por caminho). Paleta e materiais em `Art/ui/kzpaint.py`.
+- **Refazer a arte** (precisa só de Python 3.11+, sem instalar o Blender):
+  `python -m pip install bpy numpy pillow`, depois `python Art/ui/blender/kit.py` (todas as peças) ou com nomes
+  (`window btn slot`) e `python Art/ui/blender/glyphs.py` (ícones). `KZ_SAMPLES=32` deixa o render rápido para testes
+  (o padrão é 128). Materiais, luz e geometria ficam em `Art/ui/blender/kzb.py`; as peças em `kit.py`. Depois
+  `python Art/ui/make_meta.py` cria os `.meta` que faltarem (GUID fixo por caminho). O gerador 2D antigo
+  (`Art/ui/kezor_ui_premium.py`) ainda fornece o desenho dos ícones e as peças pequenas que não foram para o 3D
+  (preenchimento das barras, fundo do chat, barra de rolagem).
 - **Prévia sem Unity**: `python Art/ui/preview_mock.py` monta as telas em HTML com as mesmas peças e medidas e grava
   `Art/previews/ui_premium_*.jpg`.
