@@ -86,7 +86,7 @@ namespace Kezor.Client.UI
             foreach (var w in _all)
             {
                 bool want = w.Wanted;
-                if (want != _shown[w]) { _shown[w] = want; w.Show(want); CombatAudio.Ensure().Ui(want ? "ui_open" : "ui_close", 0.4f); if (want) { w.Opened(); w.BringToFront(); } }
+                if (want != _shown[w]) { _shown[w] = want; w.Show(want); CombatAudio.Ensure().Ui(want ? "ui_open" : "ui_close", 0.8f); if (want) { w.Opened(); w.BringToFront(); } }
                 if (want) w.Refresh();
             }
         }
@@ -699,7 +699,7 @@ namespace Kezor.Client.UI
     public sealed class OptionsWindow : GameWindow
     {
         public const string VolumePref = "kz.volume", QualityPref = "kz.quality", FpsPref = "kz.fps", VsyncPref = "kz.vsync";
-        private readonly Label _scaleLabel, _volLabel, _bloomLabel;
+        private readonly Label _scaleLabel, _volLabel, _bloomLabel, _sfxLabel, _ambLabel, _uiLabel;
         private readonly Toggle _bloom;
         private readonly List<Button> _quality = new List<Button>(), _fps = new List<Button>();
         private readonly Toggle _minimap, _vsync, _full;
@@ -728,6 +728,15 @@ namespace Kezor.Client.UI
             _volLabel = Kz.Text("", "kz-text", Body);
             var vol = new Slider(0f, 1f) { value = PlayerPrefs.GetFloat(VolumePref, 1f) }; vol.AddToClassList("kz-slider"); Body.Add(vol);
             vol.RegisterValueChangedCallback(e => { AudioListener.volume = e.newValue; PlayerPrefs.SetFloat(VolumePref, e.newValue); });
+            _sfxLabel = Kz.Text("", "kz-text", Body);
+            var sfx = new Slider(0f, 1f) { value = KezorAudio.Sfx }; sfx.AddToClassList("kz-slider"); Body.Add(sfx);
+            sfx.RegisterValueChangedCallback(e => KezorAudio.Sfx = e.newValue);
+            _ambLabel = Kz.Text("", "kz-text", Body);
+            var amb = new Slider(0f, 1f) { value = KezorAudio.Ambient }; amb.AddToClassList("kz-slider"); Body.Add(amb);
+            amb.RegisterValueChangedCallback(e => KezorAudio.Ambient = e.newValue);
+            _uiLabel = Kz.Text("", "kz-text", Body);
+            var uiv = new Slider(0f, 1f) { value = KezorAudio.Ui }; uiv.AddToClassList("kz-slider"); Body.Add(uiv);
+            uiv.RegisterValueChangedCallback(e => KezorAudio.Ui = e.newValue);
             Kz.El("kz-divider", Body);
 
             Kz.Text("Gráficos", "kz-h2", Body);
@@ -769,6 +778,9 @@ namespace Kezor.Client.UI
                                (G.PingMs >= 0 ? $"{G.PingMs} ms" : "medindo...") + (G.Hosting ? $"  ·  você hospeda ({G.HostPlayers} online)" : ""));
             _scaleLabel.Set($"Escala da interface: <b>{Ui.UserScale * 100f:0}%</b>");
             _volLabel.Set($"Volume geral: <b>{AudioListener.volume * 100f:0}%</b>");
+            _sfxLabel.Set($"Efeitos (combate, monstros, passos): <b>{KezorAudio.Sfx * 100f:0}%</b>");
+            _ambLabel.Set($"Ambiente (vila e natureza): <b>{KezorAudio.Ambient * 100f:0}%</b>");
+            _uiLabel.Set($"Interface (cliques e janelas): <b>{KezorAudio.Ui * 100f:0}%</b>");
             _bloomLabel.Set(KezorBloom.On ? $"Intensidade do brilho: <b>{KezorBloom.Intensity * 100f:0}%</b>" : "Intensidade do brilho: <b>desligado</b>");
             _bloom.SetValueWithoutNotify(KezorBloom.On);
             int ql = QualitySettings.GetQualityLevel();

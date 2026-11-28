@@ -116,6 +116,10 @@ namespace Kezor.Client.UI
             "<b>Fontes</b>\n" +
             "· Cinzel — Natanael Gama. SIL Open Font License 1.1 (Resources/Fonts/Cinzel_OFL.txt).\n" +
             "· Inter — Rasmus Andersson. SIL Open Font License 1.1 (Resources/Fonts/Inter_OFL.txt).\n\n" +
+            "<b>Sons</b>\n" +
+            "· \"Oculus Audio Pack 01\" by Oculus VR, LLC, licensed under CC BY 4.0 (developers.meta.com/vr/downloads/package/oculus-audio-pack-1). Sons cortados, em camadas e remixados.\n" +
+            "· Kenney (kenney.nl), lentikula, MedicineStorm, Zane Little Music, Someoneman, Nocturnal_Vanguard e outros autores do OpenGameArt: CC0.\n" +
+            "  Lista completa em docs/SONS_LICENCAS.md.\n\n" +
             "<b>Tecnologia</b>\n" +
             "· Unity 6 (UI Toolkit, Input System). · .NET (servidor dedicado sem Unity).\n" +
             "· Blender (modelos, assados de oclusão e cor por vértice).\n\n" +

@@ -58,6 +58,7 @@ Alterações feitas: um ciclo de cada tomada, transferido para o esqueleto de 15
 
 ## Sons
 
-Todos os efeitos sonoros e o ambiente da vila vêm de gravações livres CC0 (domínio público, sem exigência de
-crédito) de Kenney e OpenGameArt. A lista completa, com autor, link e onde cada som é usado, está em
-[SONS_LICENCAS.md](SONS_LICENCAS.md). Nenhum arquivo de áudio de outro jogo é usado.
+A base dos sons é o "Oculus Audio Pack 01" by Oculus VR, LLC, licensed under CC BY 4.0
+(https://developers.meta.com/vr/downloads/package/oculus-audio-pack-1/), com sons cortados, em camadas e remixados.
+O resto vem de pacotes CC0 de Kenney, lentikula e outros autores do OpenGameArt. A lista completa, com onde cada som
+é usado, está em [SONS_LICENCAS.md](SONS_LICENCAS.md). Nenhum arquivo de áudio de outro jogo é usado.
