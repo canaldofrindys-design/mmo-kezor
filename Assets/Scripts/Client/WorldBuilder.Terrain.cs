@@ -29,7 +29,7 @@ namespace Kezor.Client
             get
             {
                 if (_terrainMat != null) return _terrainMat;
-                var sh = Shader.Find("Kezor/Terrain");
+                var sh = KezorLook.LoadShader("KezorTerrain", "Kezor/Terrain");
                 _terrainMat = sh != null ? new Material(sh) { name = "Kezor Terrain" } : KezorLook.Material;
                 if (sh != null) _terrainMat.SetFloat("_Tiling", 0.5f);
                 return _terrainMat;
