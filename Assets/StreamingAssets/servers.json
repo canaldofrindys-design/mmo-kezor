@@ -1,14 +1,14 @@
 {
-  "_comentario": "Servidores extras da tela de login (o 'Servidor deste PC' e o 'Entrar por IP' ja vem sempre). Para ter a sua lista, copie este arquivo para <persistentDataPath>/kezor/servers.json e coloque os servidores em 'servers'. Cada canal e uma porta do mesmo endereco.",
-  "_exemplo": {
-    "id": "brasalume",
-    "name": "Brasalume",
-    "host": "jogo.exemplo.com",
-    "region": "BR",
-    "channels": [
-      { "name": "Canal 1", "port": 55901 },
-      { "name": "Canal 2", "port": 55902 }
-    ]
-  },
-  "servers": []
+  "_comentario": "Lista oficial de servidores que vai dentro do jogo (como nos MMOs classicos: o jogador so escolhe o servidor e o canal, nunca digita IP). 'host' e o endereco do servidor: 127.0.0.1 = servidor ligado neste PC pelo Tools/Iniciar-Servidor.bat. O Tools/Publicar-Servidor.bat troca pelo IP do VPS. Cada canal e uma porta do mesmo endereco.",
+  "servers": [
+    {
+      "id": "kezor",
+      "name": "Kezor",
+      "host": "127.0.0.1",
+      "region": "BR",
+      "channels": [
+        { "name": "Canal 1", "port": 55901 }
+      ]
+    }
+  ]
 }

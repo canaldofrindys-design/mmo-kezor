@@ -11,11 +11,11 @@ itens Ascendentes, combos, PvP, grupo, evento de invasão), com **mundo, classes
 1. Abra a pasta `C:\MuProtoUnity` no **Unity Hub** (Add ▸ Add project from disk). Testado para Unity **2021.3 LTS ou mais novo** (inclusive Unity 6).
 2. Abra qualquer cena (a vazia serve) e aperte **Play**. O jogo se monta sozinho (`KezorGame` se cria automaticamente).
    - Opcional: menu **Kezor ▸ Criar cena do jogo (cliente)** salva `Assets/Scenes/Kezor.unity` e coloca no Build Settings.
-3. O jogo é **só multiplayer** (como os MMOs clássicos): escolha **Servidor deste PC** e clique **Continuar**. O jogo abre um
-   servidor de verdade no seu PC e você entra nele pela rede, como qualquer outro jogador.
+3. O jogo é **só multiplayer** (como os MMOs clássicos). Antes do Play, ligue o servidor: duplo clique em
+   `Tools\Iniciar-Servidor.bat` e deixe a janela preta aberta. No jogo, escolha o servidor **Kezor** na lista e clique **Continuar**.
+   O endereço do servidor vai dentro do jogo (`Assets/StreamingAssets/servers.json`): ninguém digita IP.
 4. Na primeira vez marque **Criar conta nova**, digite conta e senha (6+ caracteres) e clique **Criar conta e entrar**.
    Depois crie seu herói na tela de seleção e clique **Entrar**. Nas próximas vezes é só conta e senha.
-   - Se o Windows perguntar sobre o firewall, clique **Permitir** (é o que deixa os amigos entrarem).
    - Heróis do antigo “Jogar local” foram copiados para o servidor deste PC na conta **jogadorlocal**, senha **kezor-local**.
 
 Se a Unity pedir para mudar o *Active Input Handling*, deixe em **Input Manager (Old)** ou **Both** (o cliente usa `UnityEngine.Input`).
@@ -65,22 +65,21 @@ Arte da interface e ícones são gerados em código: menus **Kezor ▸ Gerar art
 ### Multiplayer (o único modo)
 Todo mundo entra do mesmo jeito: **servidor → conta e senha → seleção de personagem → mundo** dividido com os outros jogadores
 do canal (todos se veem, conversam, formam grupo, trocam itens, fazem guilda e PvP). O servidor é autoritativo: toda regra roda
-nele e os saves ficam no servidor. A tela de login lista:
-- **Servidor deste PC**: o jogo abre o servidor aqui (porta 55901, muda no campo Porta) e entra nele. Ele continua ligado
-  enquanto o jogo estiver aberto, mesmo voltando para o login, e salva tudo ao fechar. A sua conta neste servidor tem comandos GM:
-  `/gm level 50`, `/gm gold 10000000`, `/gm runes`, `/gm event` (inicia a Invasão), `/gm heal`, `/gm item <id> [nível]` (ex.: `/gm item 302 9`).
-  Saves em `%USERPROFILE%\AppData\LocalLow\<empresa>\<projeto>\kezor\servidor`.
-- **Entrar por IP**: digite o IP e a porta de um amigo que está com o “Servidor deste PC” aberto (a tela dele mostra o IP).
-- Os servidores do `servers.json` (com canais, população e ping).
+nele e os saves ficam no servidor. A tela de login mostra a lista oficial de servidores, que vai dentro do jogo
+(`Assets/StreamingAssets/servers.json`: nome, endereço e canais), com população e ping de cada canal.
+- Para testar, o servidor roda neste PC (`Tools/Iniciar-Servidor.bat`, endereço `127.0.0.1`). A conta GM informada nele tem
+  `/gm level 50`, `/gm gold 10000000`, `/gm runes`, `/gm event`, `/gm rift`, `/gm heal`, `/gm item <id> [nível]` e os comandos de moderação.
+- Para os amigos, publique no VPS (`Tools/Publicar-Servidor.bat`): ele troca o endereço do servidor Kezor no `servers.json` pelo IP do
+  VPS. Gere o build depois disso e mande a pasta.
 
-**Testar com 2 jogadores sozinho:** dê Play no Unity (Servidor deste PC) e abra também um build do jogo (File ▸ Build And Run);
-no build escolha **Servidor deste PC** de novo: ele percebe que o servidor já está aberto e só entra. Use outra conta.
+**Testar com 2 jogadores sozinho:** com o servidor ligado, dê Play no Unity e abra também um build do jogo (File ▸ Build And Run).
+Entre com outra conta no build.
 
 Se ninguém mandar nada por 60 s (cabo puxado, jogo travado) o servidor derruba a conexão e salva o herói; o jogo manda um PING a
 cada 10 s, então isso só acontece quando a conexão morreu de verdade. Uma conta só pode estar conectada uma vez.
 
 ## Servidor dedicado
-- **Ligar o servidor neste PC**: duplo clique em `Tools/Iniciar-Servidor.bat` e entre no jogo por "Servidor deste PC" (guia, e o que deixa a conexão robusta: `docs/SERVIDOR-E-CLIENTE.md`).
+- **Ligar o servidor neste PC**: duplo clique em `Tools/Iniciar-Servidor.bat` e escolha o servidor Kezor na lista do jogo (o endereço vai dentro do jogo, em `StreamingAssets/servers.json`) (guia, e o que deixa a conexão robusta: `docs/SERVIDOR-E-CLIENTE.md`).
 - **Online 24h num VPS**: duplo clique em `Tools/Publicar-Servidor.bat` (monta, envia e instala; guia completo em `docs/SERVIDOR-ONLINE.md`).
 - **Moderação**: contas GM usam `/gm kick|ban|unban|mute|unmute|info|goto|bring|aviso` no chat; tudo vai para o registro diário do servidor (veja "Moderação (GM) e registros" em `docs/SERVIDOR-ONLINE.md`).
 - **Sem Unity** (recomendado para deixar ligado): `cd Build && dotnet run --project Headless -- 55901 --gm-account SuaConta`

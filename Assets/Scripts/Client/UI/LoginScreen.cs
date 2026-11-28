@@ -9,9 +9,9 @@ using Kezor.Core.Server;
 namespace Kezor.Client.UI
 {
     /// <summary>
-    /// Login com lista de servidores: fundo 3D cinematográfico (a câmera passeia pela vila à noite), logotipo e um painel
-    /// pequeno com o "Servidor deste PC" e os servidores do servers.json (canais, status por ping TCP com o comando
-    /// STATUS, população e latência). Só multiplayer: servidor → conta e senha → seleção em fileira → mundo com os outros
+    /// Login com lista de servidores, como nos MMOs clássicos: fundo 3D cinematográfico, logotipo e um painel com os servidores
+    /// da lista oficial que vai dentro do jogo (StreamingAssets/servers.json: nome, endereço e canais; status por ping TCP com
+    /// o comando STATUS, população e latência). O jogador não digita IP. Só multiplayer: servidor → conta e senha → seleção em fileira → mundo com os outros
     /// jogadores. Lembra o último servidor, canal e conta (nunca a senha). Menu com Opções, Créditos e Sair.
     /// </summary>
     public sealed class LoginScreen
@@ -133,18 +133,15 @@ namespace Kezor.Client.UI
         }
 
         // ------------------------------------------------------------------ lista
-        /// <summary>servers.json: primeiro o do usuário (persistentDataPath/kezor), senão o que vem com o jogo (StreamingAssets).</summary>
+        /// <summary>servers.json que vai dentro do jogo (StreamingAssets): a lista oficial, com o endereço do servidor.</summary>
         public static string ServersPath()
         {
-            var user = Path.Combine(Application.persistentDataPath, "kezor", "servers.json");
-            return File.Exists(user) ? user : Path.Combine(Application.streamingAssetsPath, "servers.json");
+            return Path.Combine(Application.streamingAssetsPath, "servers.json");
         }
 
         private void LoadServers()
         {
-            var remote = ServerList.Load(ServersPath(), out _listError);
-            int.TryParse(G._port, out var lanPort);
-            _servers = ServerList.WithBuiltins(remote, lanPort > 0 ? lanPort : Protocol.DefaultPort);
+            _servers = ServerList.WithDefault(ServerList.Load(ServersPath(), out _listError));
             _list.Clear(); _rows.Clear();
             for (int i = 0; i < _servers.Count; i++)
             {
@@ -160,7 +157,7 @@ namespace Kezor.Client.UI
                 row.RegisterCallback<ClickEvent>(e => { Select(idx); if (e.clickCount >= 2) Continue(); });
                 _rows.Add((row, dot, pop, ping));
             }
-            var last = PlayerPrefs.GetString(PrefServer, ServerList.HostId);
+            var last = PlayerPrefs.GetString(PrefServer, ServerList.DefaultId);
             _sel = Mathf.Max(0, _servers.FindIndex(x => x.Id == last));
             _chan = Mathf.Clamp(PlayerPrefs.GetInt(PrefChannel, 0), 0, _servers[_sel].Channels.Count - 1);
             BuildChannels();
@@ -255,6 +252,7 @@ namespace Kezor.Client.UI
             {
                 var st = StatusOf(s, _chan);
                 if (st != null && st.Online && st.Load == "lotado") { G._loginError = "Este canal está lotado. Escolha outro."; return; }
+                if (st != null && !st.Online) { G._loginError = "Servidor desligado no momento. Tente de novo em instantes."; return; }
             }
             _accountStep = true;
             _password.value = "";

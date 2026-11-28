@@ -1,7 +1,7 @@
 # Liga o servidor dedicado do Kezor neste PC (o mesmo que roda no VPS), sem precisar do Unity aberto.
 # Uso: duplo clique em Iniciar-Servidor.bat. A janela que abrir E o servidor: deixe aberta enquanto jogam.
 # Para desligar: digite "sair" na janela (salva todo mundo) ou feche a janela.
-# Depois: abra o jogo, escolha "Servidor deste PC" e entre com a sua conta. Amigos na mesma rede usam "Entrar por IP".
+# Depois: abra o jogo, escolha o servidor Kezor na lista (o endereco ja vem no jogo) e entre com a sua conta.
 
 $ErrorActionPreference = 'Continue'
 $Projeto = Split-Path -Parent $PSScriptRoot
@@ -36,7 +36,7 @@ else {
 
 # 3. Porta livre? (o jogo com "Servidor deste PC" aberto ja usa a mesma porta)
 $ocupada = Get-NetTCPConnection -LocalPort $Porta -State Listen -ErrorAction SilentlyContinue
-if ($ocupada) { Falha "A porta $Porta ja esta em uso (o jogo esta aberto como servidor, ou outro servidor ja esta ligado). Feche o outro e rode de novo." }
+if ($ocupada) { Falha "A porta $Porta ja esta em uso (outro servidor ja esta ligado). Feche o outro e rode de novo." }
 
 # 4. Monta o servidor (so recompila o que mudou)
 Passo "Montando o servidor"
@@ -55,7 +55,7 @@ if (-not (Test-Path $Dados)) {
 
 # 6. Liga (a janela vira o console do servidor: ajuda, online, aviso, banir, sair...)
 Passo "Servidor ligado na porta $Porta"
-Write-Host "  Agora abra o jogo e escolha 'Servidor deste PC'. Amigos na mesma rede: 'Entrar por IP' com o IP deste PC."
+Write-Host "  Agora abra o jogo, escolha o servidor Kezor na lista e entre com a sua conta."
 Write-Host "  Saves em $Dados"
 Write-Host "  Para desligar com seguranca, digite: sair"
 $serv = @("$Porta", '--data', $Dados, '--name', "Servidor de $env:USERNAME")

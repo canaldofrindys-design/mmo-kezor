@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,14 +40,12 @@ namespace Kezor.Tests
             Assert.AreEqual(Protocol.DefaultPort, list[2].Channels.Single().Port, "sem porta: a padrão");
             Assert.AreEqual("cinzas", list[1].Id, "id gerado do nome");
 
-            var all = ServerList.WithBuiltins(list);
-            Assert.AreEqual(ServerKind.Host, all[0].Kind, "o servidor deste PC vem primeiro");
-            Assert.AreEqual("127.0.0.1", all[0].Host);
-            Assert.AreEqual(Protocol.DefaultPort, all[0].Channels.Single().Port);
-            Assert.IsFalse(all.Any(s => s.Channels.Any(c => c.Port == 0)), "não existe mais modo solo (porta 0)");
-            Assert.AreEqual(ServerKind.Direct, all[1].Kind, "depois, entrar pelo IP de um amigo");
-            Assert.AreEqual(ServerKind.Remote, all[2].Kind);
-            Assert.AreEqual(5, all.Count);
+            Assert.AreSame(list, ServerList.WithDefault(list), "com servidores no arquivo, a lista é só a dele (sem servidor local nem IP digitado)");
+            Assert.IsTrue(list.All(s => s.Kind == ServerKind.Remote));
+            var fallback = ServerList.WithDefault(new List<ServerEntry>());
+            Assert.AreEqual(1, fallback.Count, "arquivo vazio ou faltando: o servidor padrão");
+            Assert.AreEqual(ServerList.DefaultId, fallback[0].Id);
+            Assert.AreEqual(Protocol.DefaultPort, fallback[0].Channels.Single().Port);
 
             Assert.AreEqual(0, ServerList.Parse("{ isto não é json", out var bad).Count);
             StringAssert.Contains("inválido", bad);

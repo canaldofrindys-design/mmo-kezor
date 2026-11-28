@@ -1,32 +1,35 @@
 # Servidor e cliente
 
-O Kezor é só multiplayer: **o servidor manda em tudo** (movimento, combate, drops, ouro, trocas) e o jogo (cliente) só pede
-e mostra. Os dois conversam por TCP, na porta **55901**. Dá para ligar o servidor de três jeitos, e o jogo entra em qualquer um
-deles do mesmo modo.
+O Kezor é só multiplayer e funciona como os MMOs clássicos: **o servidor manda em tudo** (movimento, combate, drops, ouro,
+trocas) e o jogo (cliente) só pede e mostra. **O endereço do servidor vai dentro do jogo**, em
+`Assets/StreamingAssets/servers.json`. O jogador abre o jogo, escolhe o servidor e o canal na lista, entra com conta e senha
+e escolhe o herói. Ninguém digita IP.
 
-| Jeito | Para quê | Como |
+| Onde o servidor roda | Como ligar | O que fica no `servers.json` |
 |---|---|---|
-| **Servidor dedicado neste PC** | jogar com amigos ou testar com o servidor separado do jogo | duplo clique em `Tools\Iniciar-Servidor.bat` |
-| **Servidor deste PC (dentro do jogo)** | testar rápido, sozinho | no login, escolha "Servidor deste PC" sem nada ligado |
-| **Servidor online 24h (VPS)** | servidor de verdade para todo mundo | `Tools\Publicar-Servidor.bat` (guia em [SERVIDOR-ONLINE.md](SERVIDOR-ONLINE.md)) |
+| **Neste PC** (testes) | duplo clique em `Tools\Iniciar-Servidor.bat` | `"host": "127.0.0.1"` (já vem assim) |
+| **VPS online 24h** (para todo mundo) | `Tools\Publicar-Servidor.bat` (guia em [SERVIDOR-ONLINE.md](SERVIDOR-ONLINE.md)) | o próprio script troca pelo IP do VPS |
 
-## Ligar o servidor dedicado neste PC
+## Jogar com o servidor neste PC
 1. Dê duplo clique em `C:\MuProtoUnity\Tools\Iniciar-Servidor.bat`.
    - Na primeira vez ele instala o .NET 8 (se faltar) e pergunta a sua conta GM. A resposta fica em `Tools\servidor-local.txt`.
-   - Também na primeira vez, ele copia as contas e os heróis do "Servidor deste PC" do jogo. Os arquivos originais não são apagados.
+   - Também na primeira vez, ele copia as contas e os heróis do antigo "Servidor deste PC" do jogo. Os arquivos originais não são apagados.
 2. Vai abrir uma janela preta escrito **"Servidor ligado na porta 55901"**. **Essa janela é o servidor**: deixe aberta.
-3. Abra o jogo (Play no Unity ou o build), escolha **Servidor deste PC** e entre com a sua conta.
-   O jogo percebe que já tem um servidor ligado na porta e só conecta nele.
-4. Amigos na mesma rede: no login, escolha **Entrar por IP** e digite o IP do seu PC (aparece na tela do "Servidor deste PC").
-   De fora de casa, é preciso liberar a porta 55901 no roteador, ou usar o VPS.
-5. Para desligar, digite `sair` na janela, ou só feche a janela. Nos dois casos todo mundo é salvo antes.
+3. Abra o jogo (Play no Unity ou o build). Na lista aparece o servidor **Kezor** com a bolinha verde e quantos estão online.
+   Escolha o canal, clique em **Continuar** e entre com a sua conta. Na primeira vez, marque "Criar conta nova".
+   - Se o servidor estiver desligado, a lista mostra "offline" e o jogo avisa "Servidor desligado no momento".
+4. Para desligar, digite `sair` na janela, ou só feche a janela. Nos dois casos todo mundo é salvo antes.
+
+Para os amigos jogarem, o servidor precisa estar num endereço que eles alcancem: o VPS (recomendado). Rode o
+`Publicar-Servidor.bat`, gere o build do jogo (File ▸ Build) **depois** disso e mande a pasta do build. O IP do VPS já vai
+dentro do jogo.
 
 Na janela do servidor dá para digitar `ajuda`, `online`, `aviso <texto>`, `info <nome>`, `expulsar`, `banir`, `silenciar`,
 `evento`, `fenda`, `backup` e `sair`. Os saves (banco SQLite) e o registro diário ficam em
 `%USERPROFILE%\AppData\LocalLow\DefaultCompany\MuProtoUnity\kezor\servidor-dedicado`.
 
-> O "Servidor deste PC" de dentro do jogo e o servidor dedicado têm saves separados. Escolha um dos dois para jogar de verdade
-> (o recomendado é o dedicado).
+Para ter mais de um servidor ou canal na lista, adicione entradas ou canais no `servers.json`. Cada canal é um servidor
+ligado numa porta diferente (por exemplo `Iniciar-Servidor` na 55901 e outro na 55902).
 
 ## O que deixa a conexão robusta
 - **Versão conferida na entrada:** o jogo se apresenta com a versão (`HELLO`). Se o jogo estiver desatualizado, a tela de
