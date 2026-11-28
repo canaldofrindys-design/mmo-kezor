@@ -18,18 +18,21 @@ namespace Kezor.Client
     /// com várias variações por som, e cada toque sorteia uma. Cobre o golpe de cada classe, o impacto no alvo
     /// (carne, crítico, pedra, cristal, magia, flecha, fogo do combo, errou), a dor e a queda do herói e quatro sons
     /// por família de monstro (alerta, ataque, dor, morte).
-    /// O volume e o pan saem da distância até o herói e da posição na tela, porque a câmera isométrica fica longe dele.
+    /// O volume, o pan e o abafado (passa-baixas) saem da distância até o herói e da posição na tela: perto soa cheio
+    /// e brilhante, longe soa baixo e abafado, como num MMO de câmera isométrica. Volume final = canal de efeitos do
+    /// <see cref="KezorAudio"/> × volume geral das Opções. Os arquivos já vêm mixados no mesmo padrão de loudness
+    /// (Tools/Sons/montar_sons.py), então os volumes aqui só fazem o equilíbrio de jogo.
     /// </summary>
     public sealed class CombatAudio : MonoBehaviour
     {
         private const int Voices = 24;
-        /// <summary>Volume geral dos efeitos de combate (0..1), separado do ambiente da vila.</summary>
-        public static float Volume = 0.85f;
         public static CombatAudio? I { get; private set; }
         /// <summary>De onde se "ouve" (o herói); sem ele, a câmera.</summary>
         public static Transform? Focus;
 
         private readonly AudioSource[] _pool = new AudioSource[Voices];
+        private readonly AudioLowPassFilter[] _lp = new AudioLowPassFilter[Voices];
+        private float _lastHeroVoice = -9f;
         private int _next;
         private readonly Dictionary<string, float> _lastKey = new Dictionary<string, float>();
         private readonly Dictionary<int, float> _lastHurt = new Dictionary<int, float>();
@@ -43,10 +46,14 @@ namespace Kezor.Client
             DontDestroyOnLoad(go);
             var a = go.AddComponent<CombatAudio>();
             for (int i = 0; i < Voices; i++)
-            {
-                var s = go.AddComponent<AudioSource>();
+            {   // uma voz por objeto: cada uma tem o seu passa-baixas (o filtro do Unity vale para o objeto inteiro)
+                var v = new GameObject("Voz " + i);
+                v.transform.SetParent(go.transform, false);
+                var s = v.AddComponent<AudioSource>();
                 s.playOnAwake = false; s.loop = false; s.spatialBlend = 0f; s.dopplerLevel = 0f;
                 a._pool[i] = s;
+                a._lp[i] = v.AddComponent<AudioLowPassFilter>();
+                a._lp[i].cutoffFrequency = 22000f;
             }
             return I = a;
         }
@@ -72,13 +79,27 @@ namespace Kezor.Client
 
             var clip = Get(key);
             if (clip == null) return;
-            var s = _pool[_next]; _next = (_next + 1) % Voices;
+            int vi = NextVoice();
+            var s = _pool[vi];
             s.Stop();
             s.clip = clip;
-            s.volume = Mathf.Clamp01(vol * att * att * Volume);
-            s.pitch = pitch * Random.Range(0.94f, 1.06f);
+            s.volume = Mathf.Clamp01(vol * att * att * KezorAudio.Sfx);
+            s.pitch = pitch * Random.Range(0.95f, 1.05f);
             s.panStereo = pan;
+            // longe = abafado: 20 kHz até 8 m, cai até ~2,5 kHz aos 40 m
+            _lp[vi].cutoffFrequency = Mathf.Lerp(20000f, 2500f, Mathf.Pow(Mathf.Clamp01((dist - 8f) / 32f), 0.6f));
             if (delay > 0f) s.PlayDelayed(delay); else s.Play();
+        }
+
+        /// <summary>Próxima voz livre; se todas tocam, rouba a que começou primeiro (rodízio).</summary>
+        private int NextVoice()
+        {
+            for (int k = 0; k < Voices; k++)
+            {
+                int i = (_next + k) % Voices;
+                if (!_pool[i].isPlaying) { _next = (i + 1) % Voices; return i; }
+            }
+            int r = _next; _next = (_next + 1) % Voices; return r;
         }
 
         /// <summary>O gesto do herói: som do golpe/disparo conforme a classe (e a skill usada).</summary>
@@ -86,13 +107,13 @@ namespace Kezor.Client
         {
             switch (cls)
             {
-                case CharacterClass.Warden: Play("swing_heavy", pos, 0.75f, skillId != 0 ? 0.85f : 1f); break;
-                case CharacterClass.Commander: Play("swing_spear", pos, 0.7f); break;
-                case CharacterClass.Bladeweaver: Play("swing_light", pos, 0.7f); if (skillId != 0) Play("swing_light2", pos, 0.6f, 1.15f, 0.08f); break;
-                case CharacterClass.Ranger: Play("bow", pos, 0.8f); break;
-                case CharacterClass.Arcanist: Play(skillId == 4 ? "spell_fire" : "spell_arcane", pos, 0.6f); break;
-                case CharacterClass.Invoker: Play("spell_summon", pos, 0.55f); break;
-                case CharacterClass.EmberFist: Play("punch", pos, 0.7f); break;
+                case CharacterClass.Warden: Play("swing_heavy", pos, 0.9f, skillId != 0 ? 0.9f : 1f); break;
+                case CharacterClass.Commander: Play("swing_spear", pos, 0.9f); break;
+                case CharacterClass.Bladeweaver: Play("swing_light", pos, 0.9f); if (skillId != 0) Play("swing_light2", pos, 0.75f, 1.05f, 0.08f); break;
+                case CharacterClass.Ranger: Play("bow", pos, 0.9f); break;
+                case CharacterClass.Arcanist: Play(skillId == 4 ? "spell_fire" : "spell_arcane", pos, 0.85f); break;
+                case CharacterClass.Invoker: Play("spell_summon", pos, 0.8f); break;
+                case CharacterClass.EmberFist: Play("punch", pos, 0.9f); break;
             }
         }
 
@@ -107,17 +128,20 @@ namespace Kezor.Client
         /// <summary>O impacto no alvo. <paramref name="targetVoice"/> muda o material (pedra, vidro) quando o alvo é monstro.</summary>
         public void Impact(Vector3 pos, HitType type, CharacterClass? attacker, MonsterVoice? targetVoice, bool onMe, float delay)
         {
-            if (type == HitType.Miss) { Play("miss", pos, 0.45f, 1f, delay); return; }
-            if (type == HitType.Combo) { Play("hit_fire", pos, 0.9f, 1f, delay); return; }
+            if (type == HitType.Miss) { Play("miss", pos, 0.8f, 1f, delay); return; }
+            KezorAudio.NotifyCombat();
+            if (type == HitType.Combo) { Play("hit_fire", pos, 1f, 1f, delay); return; }
             bool magic = attacker is CharacterClass.Arcanist or CharacterClass.Invoker;
             string k = magic ? "hit_magic"
                 : attacker == CharacterClass.Ranger ? "hit_arrow"
                 : targetVoice is MonsterVoice.Stone ? "hit_stone"
                 : targetVoice is MonsterVoice.Crystal ? "hit_glass"
                 : "hit_flesh";
-            Play(k, pos, onMe ? 0.75f : 0.65f, 1f, delay);
-            if (type == HitType.Critical || type == HitType.Surge) Play("hit_crit", pos, 0.6f, type == HitType.Surge ? 1.12f : 1f, delay);
-            if (onMe) Play("hurt_me", pos, 0.6f, 1f, delay);
+            bool crit = type == HitType.Critical || type == HitType.Surge;
+            // crítico troca o impacto comum pelo pesado (com tilintar de lâmina), em vez de empilhar os dois
+            if (crit && k == "hit_flesh") Play("hit_crit", pos, 1f, type == HitType.Surge ? 0.92f : 1f, delay);
+            else { Play(k, pos, onMe ? 0.95f : 0.85f, 1f, delay); if (crit) Play("hit_crit", pos, 0.6f, 1f, delay); }
+            if (onMe) Play("hurt_me", pos, 0.75f, 1f, delay);
         }
 
         /// <summary>Barulho de monstro. Dor é limitada a um por monstro a cada 0,3 s; alerta, um a cada 6 s.</summary>
@@ -131,7 +155,7 @@ namespace Kezor.Client
             float size = def != null ? def.Scale : 1f;
             // bichos grandes soam mais graves; chefes, mais graves e mais altos
             float pitch = Mathf.Clamp(1.08f - (size - 1f) * 0.2f, 0.82f, 1.12f) * (boss ? 0.9f : 1f);
-            float vol = what switch { MonsterSfx.Aggro => 0.6f, MonsterSfx.Attack => 0.55f, MonsterSfx.Hurt => 0.4f, _ => 0.7f } * (boss ? 1.3f : 1f);
+            float vol = what switch { MonsterSfx.Aggro => 0.85f, MonsterSfx.Attack => 0.75f, MonsterSfx.Hurt => 0.6f, _ => 0.9f } * (boss ? 1.15f : 1f);
             string key = VoiceOf(defId).ToString().ToLowerInvariant() + "_" + what.ToString().ToLowerInvariant();
             Play(key, pos, vol, pitch, what == MonsterSfx.Hurt ? 0.07f : 0f);
             if (what == MonsterSfx.Death) _lastHurt.Remove(entityId);
@@ -150,6 +174,19 @@ namespace Kezor.Client
             _ => MonsterVoice.Beast,
         };
 
+        /// <summary>Voz do meu herói: gemido de dor (no máximo um a cada 0,9 s, e só em parte dos golpes) ou grito de queda.</summary>
+        public void HeroVoice(bool female, bool death, Vector3 pos, float delay = 0f)
+        {
+            float now = Time.time;
+            if (!death && (now - _lastHeroVoice < 0.9f || Random.value > 0.6f)) return;
+            _lastHeroVoice = now;
+            Play((death ? "death_" : "hurt_") + (female ? "female" : "male"), pos, death ? 0.95f : 0.8f, 1f, delay);
+            if (death) Play("death_me", pos, 0.9f, 1f, delay + 0.25f);
+        }
+
+        /// <summary>Voz feminina? (a Invocadora; as outras classes usam a voz masculina)</summary>
+        public static bool FemaleVoice(CharacterClass cls) => cls == CharacterClass.Invoker;
+
         // ---------------------------------------------------------------- interface e mundo
         /// <summary>Som de interface (clique, abrir e fechar janela): sem distância nem pan.</summary>
         public void Ui(string key, float vol = 0.5f)
@@ -159,9 +196,11 @@ namespace Kezor.Client
             _lastKey[key] = now;
             var clip = Get(key);
             if (clip == null) return;
-            var s = _pool[_next]; _next = (_next + 1) % Voices;
+            int vi = NextVoice();
+            var s = _pool[vi];
             s.Stop();
-            s.clip = clip; s.volume = Mathf.Clamp01(vol * Volume); s.pitch = 1f; s.panStereo = 0f;
+            s.clip = clip; s.volume = Mathf.Clamp01(vol * KezorAudio.Ui); s.pitch = Random.Range(0.97f, 1.03f); s.panStereo = 0f;
+            _lp[vi].cutoffFrequency = 22000f;
             s.Play();
         }
 

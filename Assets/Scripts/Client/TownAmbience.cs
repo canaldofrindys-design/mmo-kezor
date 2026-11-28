@@ -5,19 +5,23 @@ using UnityEngine;
 namespace Kezor.Client
 {
     /// <summary>
-    /// Som ambiente da Vila de Brasalume, com gravações reais (CC0) em Resources/Audio/Ambiente: água corrente na
-    /// Fonte de Brasas e no poço, martelo e fogo da forja, pássaros na praça do mercado, crepitar dos braseiros,
-    /// cigarras à noite e, de vez em quando, um corvo longe. As fontes são 3D: o som cresce ao chegar perto de cada
-    /// lugar da cidade. Fontes e licenças em docs/SONS_LICENCAS.md.
+    /// Som ambiente da Vila de Brasalume, com loops longos de estúdio (Oculus Audio Pack) em Resources/Audio/Ambiente:
+    /// um fundo de natureza que acompanha a luz do Vale (grilos e floresta à noite, vento e pássaros de dia), o córrego
+    /// da Fonte de Brasas, a água do poço, o martelo na bigorna da forja e o burburinho da praça do mercado. Os lugares
+    /// são fontes 3D com queda suave: o som cresce ao chegar perto. De dia, de vez em quando, um pássaro canta longe.
+    /// Tudo passa pelo canal de ambiente do <see cref="KezorAudio"/> e abaixa um pouco durante a luta.
+    /// Fontes e licenças em docs/SONS_LICENCAS.md.
     /// </summary>
     public sealed class TownAmbience : MonoBehaviour
     {
-        /// <summary>Volume geral do ambiente (0..1), separado dos efeitos de combate.</summary>
-        public static float Volume = 0.7f;
         private static readonly Dictionary<string, AudioClip?> Clips = new Dictionary<string, AudioClip?>();
-        private AudioSource? _crow;
-        private float _crowTimer = 18f;
+        private readonly List<(AudioSource src, float vol)> _spots = new List<(AudioSource, float)>();
+        private AudioSource? _bed, _bird;
+        private bool _bedIsDay;
+        private float _birdTimer = 12f;
+        private AudioClip?[] _birds = new AudioClip?[0];
         private readonly System.Random _rnd = new System.Random(7);
+        private const float BedVol = 0.9f;
 
         public static TownAmbience? Build(Transform parent, MapDefinition map)
         {
@@ -26,58 +30,88 @@ namespace Kezor.Client
             go.transform.SetParent(parent, false);
             var a = go.AddComponent<TownAmbience>();
             float cx = map.SafeX, cz = map.SafeZ;
-            a.Spot("Fonte", new Vector3(cx, 1.2f, cz), "fonte", 0.5f, 4f, 26f);
+            a.Spot("Fonte", new Vector3(cx, 1.2f, cz), "fonte", 0.9f, 3f, 24f);
             foreach (var p in map.Props)
-            {
-                var pos = new Vector3(p.X, 1.2f, p.Z);
-                switch (p.Kind)
-                {
-                    case "Braseiro4": a.Spot("Braseiro", pos, "brasa", 0.3f, 1.5f, 9f); break;
-                    case "Poco4": a.Spot("Poço", pos, "poco", 0.2f, 1.5f, 8f); break;
-                }
-            }
+                if (p.Kind == "Poco4") a.Spot("Poço", new Vector3(p.X, 1.2f, p.Z), "poco", 0.7f, 1.5f, 9f);
             foreach (var h in map.Houses)
                 if (h.Kind == "Ferraria4")
                 {   // a forja fica no telheiro lateral da ferraria
                     var (fx, fz) = MapDefinition.LocalToWorld(h.X, h.Z, h.Yaw, h.Scale, 6.8f, -0.9f);
-                    a.Spot("Forja", new Vector3(fx, 1.2f, fz), "forja", 0.45f, 3f, 30f);
+                    a.Spot("Forja", new Vector3(fx, 1.2f, fz), "forja", 0.75f, 3f, 26f);
                 }
             if (map.Squares.Count > 0)   // a primeira pracinha é o mercado
             {
                 var m = map.Squares[0];
-                a.Spot("Mercado", new Vector3(m.X, 1.5f, m.Z), "mercado", 0.35f, 5f, 28f);
+                a.Spot("Mercado", new Vector3(m.X, 1.5f, m.Z), "mercado", 1f, 5f, 26f);
             }
-            a.Spot("Noite", Vector3.zero, "noite", 0.22f, 1f, 1f, spatial: false);
-            a._crow = a.Spot("Corvo", Vector3.zero, "coruja", 0.2f, 1f, 1f, spatial: false, loop: false);
+            a._bed = a.Source("Fundo", Vector3.zero, null, false, true);
+            a.SetBed(KezorLook.Day);
+            a._bird = a.Source("Pássaro", Vector3.zero, null, false, false);
+            var birds = new List<AudioClip?>();
+            for (int i = 0; i < 8; i++) { var c = Resources.Load<AudioClip>("Audio/Sfx/passaro_" + i); if (c == null) break; birds.Add(c); }
+            a._birds = birds.ToArray();
             return a;
         }
 
-        private AudioSource? Spot(string name, Vector3 pos, string clipKey, float vol, float min, float max, bool spatial = true, bool loop = true)
+        private void Spot(string name, Vector3 pos, string clipKey, float vol, float min, float max)
         {
             var clip = Clip(clipKey);
-            if (clip == null) return null;
+            if (clip == null) return;
+            var s = Source(name, pos, clip, true, true);
+            s.minDistance = min; s.maxDistance = max;
+            s.time = (float)_rnd.NextDouble() * clip.length * 0.9f;   // cada lugar começa num ponto diferente do loop
+            s.Play();
+            _spots.Add((s, vol));
+        }
+
+        private AudioSource Source(string name, Vector3 pos, AudioClip? clip, bool spatial, bool loop)
+        {
             var go = new GameObject("Som: " + name);
             go.transform.SetParent(transform, false);
             go.transform.position = pos;
             var s = go.AddComponent<AudioSource>();
-            s.clip = clip; s.loop = loop; s.volume = vol * Volume; s.playOnAwake = false;
+            s.clip = clip; s.loop = loop; s.playOnAwake = false; s.dopplerLevel = 0f;
             s.spatialBlend = spatial ? 1f : 0f;
-            s.rolloffMode = AudioRolloffMode.Linear; s.minDistance = min; s.maxDistance = max;
-            s.dopplerLevel = 0f;
-            if (loop) { s.time = (float)_rnd.NextDouble() * clip.length * 0.9f; s.Play(); }
+            // queda suave e própria (a curva logarítmica do Unity some cedo demais com distâncias curtas como estas)
+            s.rolloffMode = AudioRolloffMode.Custom;
+            s.SetCustomCurve(AudioSourceCurveType.CustomRolloff, new AnimationCurve(
+                new Keyframe(0f, 1f), new Keyframe(0.25f, 0.7f), new Keyframe(0.6f, 0.25f), new Keyframe(1f, 0f)));
+            s.spread = spatial ? 60f : 0f;   // largura: a fonte não vira um ponto minúsculo
+            s.volume = 0f;
             return s;
+        }
+
+        /// <summary>Troca o fundo entre noite (padrão do Vale) e dia (comando /dia), com o loop começando num ponto ao acaso.</summary>
+        private void SetBed(bool day)
+        {
+            if (_bed == null) return;
+            _bedIsDay = day;
+            var clip = Clip(day ? "dia" : "noite");
+            if (clip == null) return;
+            _bed.clip = clip;
+            _bed.time = (float)_rnd.NextDouble() * clip.length * 0.9f;
+            _bed.Play();
         }
 
         private void Update()
         {
-            if (_crow == null) return;
-            _crowTimer -= Time.deltaTime;
-            if (_crowTimer <= 0f)
+            float bus = KezorAudio.Ambient * KezorAudio.AmbientDuck;
+            foreach (var (src, vol) in _spots) if (src != null) src.volume = vol * bus;
+            if (_bed != null)
             {
-                _crowTimer = 25f + (float)_rnd.NextDouble() * 35f;
-                _crow.pitch = 0.92f + (float)_rnd.NextDouble() * 0.16f;
-                _crow.panStereo = (float)_rnd.NextDouble() * 1.4f - 0.7f;
-                _crow.Play();
+                if (_bedIsDay != KezorLook.Day) SetBed(KezorLook.Day);
+                _bed.volume = BedVol * bus;
+            }
+            if (_bird == null || _birds.Length == 0 || !KezorLook.Day) return;
+            _birdTimer -= Time.deltaTime;
+            if (_birdTimer <= 0f)
+            {
+                _birdTimer = 14f + (float)_rnd.NextDouble() * 22f;
+                _bird.clip = _birds[_rnd.Next(_birds.Length)];
+                _bird.volume = 0.6f * bus;
+                _bird.pitch = 0.95f + (float)_rnd.NextDouble() * 0.1f;
+                _bird.panStereo = (float)_rnd.NextDouble() * 1.2f - 0.6f;
+                _bird.Play();
             }
         }
 

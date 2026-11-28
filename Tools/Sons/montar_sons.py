@@ -1,45 +1,55 @@
 #!/usr/bin/env python3
 """
-Monta os sons do Kezor a partir de gravações livres (CC0) de Kenney e OpenGameArt.
+Monta os sons do Kezor (versão 2, mixagem profissional).
 
-Cada efeito do jogo (golpe, impacto, magia, grito de monstro, passo, moeda, ambiente da vila) é um corte
-de uma gravação real, às vezes com duas camadas somadas e a altura ajustada. Nada aqui é sintetizado.
-As fontes e licenças estão em docs/SONS_LICENCAS.md.
+Cada som do jogo é desenhado em camadas a partir de gravações de estúdio livres (Oculus Audio Pack, CC BY 4.0,
+e pacotes CC0 de Kenney e OpenGameArt), e passa pela mesma cadeia de mixagem:
+
+    corte -> altura -> soma das camadas -> EQ (passa-altas, prateleira de graves, passa-baixas)
+          -> compressor -> reverb de sala curta (cola as camadas no mesmo espaço) -> limitador
+          -> loudness alvo da categoria
+
+O loudness alvo já deixa os sons equilibrados entre si (golpe < impacto, passo e clique bem baixos, ambiente
+discreto), então no jogo quase todo volume fica em 1. Fontes e licenças em docs/SONS_LICENCAS.md.
 
 Uso:
-    python montar_sons.py <pasta-das-fontes> <pasta-Assets/Resources/Audio>
+    python montar_sons.py <pasta-das-fontes> <pasta-Assets/Resources/Audio> [pasta-do-demo]
 
-A pasta das fontes tem as cópias CC0 do GitHub (veja docs/SONS_LICENCAS.md), com estes nomes:
+Pastas dentro da pasta das fontes:
+    oc     = github.com/facebookincubator/Meta-open-sound  (corpora/oculus-audio-pack/ogg)
     oga1   = github.com/zuujis-cc0/opengameart-sound-effect
-    oga5   = github.com/zuujis-cc0/opengameart-sound-effect-5
     oga8   = github.com/zuujis-cc0/opengameart-sound-effect-8
-    kenney = github.com/zuujis-cc0/opengameart-kenney-sound-effect
     kenney_impact = github.com/Boyquotes/kenney-impact-sounds-for-godot   (addons/kenney impact sounds)
     kenney_rpg    = github.com/Boyquotes/kenney-rpg-audio-for-godot       (addons/kenney rpg audio)
-Precisa de ffmpeg e numpy.
+    wyz    = github.com/wyzowl/sfx-kit (sounds)
+Precisa de ffmpeg, numpy e pedalboard (pip install numpy pedalboard).
 """
 import os
 import subprocess
 import sys
 
 import numpy as np
+from pedalboard import (Compressor, HighpassFilter, Limiter, LowpassFilter, LowShelfFilter, Pedalboard,
+                        PeakFilter, Reverb)
 
-SR = 44100
+SR = 48000
 SRC = ""
 
-# ------------------------------------------------------------------ atalhos das fontes
+# ------------------------------------------------------------------ fontes
+OC = "oc/"
 C150 = "oga1/150-combat-sound-effects/150gameeffectsounds/"
 MELEE, EXPL, MAGIC = C150 + "01_combat_melee/", C150 + "03_explosions_destruction/", C150 + "04_magic_spells/"
-TEX = "oga8/medieval-sound-effects-weapon-textures/"
-TEX1, TEX2 = TEX + "medieval_sfx_textures_1_of_2/", TEX + "medieval_sfx_textures_2_of_2/"
-CLASH = "oga8/medieval-sound-effects-weapon-impacts/medieval_sfx_weapon_on_weapon_1_of_2/"
-DEMON = "oga8/demon-voice/all_demon_lord_audio_files_0/DL "
-ORC = "oga8/orc-voice/all_orc_commander_audio_files_0/"
-KI = "kenney_impact/"
-KR = "kenney_rpg/"
-UI = "kenney/interface-sounds/kenney_interfaceSounds/Audio/"
+TEX1 = "oga8/medieval-sound-effects-weapon-textures/medieval_sfx_textures_1_of_2/"
+KI, KR = "kenney_impact/", "kenney_rpg/"
 BONE_D = "oga8/deep-bone-crackbreak-sfx/deep_breaks/Deep Break "
-BONE_W = "oga8/fleshy-bone-breaksnap-sfx/wet_breaks/Wet Break "
+
+
+def oc(name, n=1):
+    """Arquivo do Oculus Audio Pack pelo nome UCS (com ou sem o _OS / _LOOP do fim)."""
+    for cand in (f"{name}_{n:02d}.ogg", f"{name}_OS_{n:02d}.ogg"):
+        if os.path.exists(os.path.join(SRC, OC, cand)):
+            return OC + cand
+    raise FileNotFoundError(name)
 
 
 # ------------------------------------------------------------------ leitura e edição
@@ -47,33 +57,30 @@ _cache = {}
 
 
 def load(path, at=0.0, dur=None):
-    """Lê um trecho como mono float32 a 44,1 kHz."""
     key = (path, at, dur)
-    if key in _cache:
-        return _cache[key].copy()
-    full = os.path.join(SRC, path)
-    if not os.path.exists(full):
-        raise FileNotFoundError(full)
-    cmd = ["ffmpeg", "-v", "error"]
-    if at > 0:
-        cmd += ["-ss", f"{at:.4f}"]
-    if dur is not None:
-        cmd += ["-t", f"{dur:.4f}"]
-    cmd += ["-i", full, "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"]
-    x = np.frombuffer(subprocess.run(cmd, capture_output=True, check=True).stdout, np.float32).copy()
-    _cache[key] = x
-    return x.copy()
+    if key not in _cache:
+        full = os.path.join(SRC, path)
+        if not os.path.exists(full):
+            raise FileNotFoundError(full)
+        cmd = ["ffmpeg", "-v", "error"]
+        if at > 0:
+            cmd += ["-ss", f"{at:.4f}"]
+        if dur is not None:
+            cmd += ["-t", f"{dur:.4f}"]
+        cmd += ["-i", full, "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"]
+        _cache[key] = np.frombuffer(subprocess.run(cmd, capture_output=True, check=True).stdout, np.float32).copy()
+    return _cache[key].copy()
 
 
 def pitch(x, p):
-    """Muda a altura (e o tempo junto), como um disco mais rápido ou mais lento."""
+    """Altura por reamostragem (como fita mais rápida/lenta): o jeito clássico de engrossar ou afinar criaturas."""
     if abs(p - 1.0) < 1e-3:
         return x
     n = int(len(x) / p)
     return np.interp(np.arange(n) * p, np.arange(len(x)), x).astype(np.float32)
 
 
-def fade(x, fin=0.004, fout=0.05):
+def fade(x, fin=0.002, fout=0.05):
     x = x.copy()
     a, b = min(len(x), int(fin * SR)), min(len(x), int(fout * SR))
     if a > 0:
@@ -83,255 +90,355 @@ def fade(x, fin=0.004, fout=0.05):
     return x
 
 
-def lowpass(x, hz):
-    k = 1 - np.exp(-2 * np.pi * hz / SR)
-    y = np.empty_like(x)
-    acc = 0.0
-    for i, v in enumerate(x):
-        acc += (v - acc) * k
-        y[i] = acc
-    return y
-
-
-def trim(x, db=-45):
-    """Corta o silêncio do começo e do fim."""
+def trim(x, db=-50):
     if len(x) == 0:
         return x
     thr = np.abs(x).max() * 10 ** (db / 20)
     idx = np.where(np.abs(x) > thr)[0]
     if len(idx) == 0:
         return x
-    s, e = max(0, idx[0] - int(0.003 * SR)), min(len(x), idx[-1] + int(0.02 * SR))
-    return x[s:e]
+    return x[max(0, idx[0] - int(0.002 * SR)):min(len(x), idx[-1] + int(0.03 * SR))]
 
 
-def cut(path, at=0.0, dur=None, p=1.0, g=1.0, fout=0.06, lp=None):
-    x = load(path, at, dur)
-    if lp:
-        x = lowpass(x, lp)
-    return fade(trim(pitch(x, p)), 0.003, fout) * g
+def cut(path, at=0.0, dur=None, p=1.0, g=1.0, fout=0.06):
+    """Um trecho já aparado, na altura pedida e com ganho g (em escala linear)."""
+    return fade(trim(pitch(load(path, at, dur), p)), 0.002, fout) * g
 
 
-def hits(path, n, pre=0.08, length=0.45, skip=0, thr_db=-26):
-    """Os n golpes mais fortes de uma gravação com vários golpes seguidos (cada um começando um pouco antes)."""
+def db(v):
+    return 10 ** (v / 20)
+
+
+def hits(path, n, pre=0.03, length=0.5, thr_db=-26):
+    """Os n golpes mais fortes de uma gravação com vários seguidos."""
     x = load(path)
     hop = int(SR * 0.01)
     e = np.array([np.sqrt(np.mean(x[i * hop:(i + 1) * hop] ** 2) + 1e-12) for i in range(len(x) // hop)])
-    db = 20 * np.log10(e / e.max())
-    onsets, i = [], 0
-    while i < len(db):
-        if db[i] > thr_db:
+    d = 20 * np.log10(e / e.max())
+    on, i = [], 0
+    while i < len(d):
+        if d[i] > thr_db:
             j = i
-            while j < len(db) and db[j] > thr_db - 6:
+            while j < len(d) and d[j] > thr_db - 6:
                 j += 1
-            onsets.append((e[i:j].max(), i * 0.01))
+            on.append((e[i:j].max(), i * 0.01))
             i = j + 20
         else:
             i += 1
-    best = sorted(onsets, reverse=True)[skip:skip + n]
-    return sorted(t for _, t in best), (pre, length)
-
-
-def pieces(path, n, pre=0.08, length=0.45, skip=0, p=1.0, g=1.0, fout=0.12, thr_db=-26):
-    ts, _ = hits(path, n, pre, length, skip, thr_db)
-    return [fade(pitch(load(path, max(0.0, t - pre), length), p), 0.003, fout) * g for t in ts]
+    ts = sorted(t for _, t in sorted(on, reverse=True)[:n])
+    return [fade(load(path, max(0.0, t - pre), length), 0.002, 0.15) for t in ts]
 
 
 def mix(*parts):
-    """Soma camadas: (som, começo em segundos, ganho)."""
+    """Camadas: (som, começo em segundos, ganho em dB)."""
     end = max(int(at * SR) + len(s) for s, at, _ in parts)
     out = np.zeros(end, np.float32)
-    for s, at, gain in parts:
+    for s, at, gdb in parts:
         o = int(at * SR)
-        out[o:o + len(s)] += s * gain
+        out[o:o + len(s)] += s * db(gdb)
     return out
 
 
-def norm(x, peak_db=-1.0):
-    m = np.abs(x).max()
-    return x if m < 1e-9 else (x / m * 10 ** (peak_db / 20)).astype(np.float32)
+# ------------------------------------------------------------------ cadeia de mixagem
+def chain(x, hp=60, lp=None, low=None, presence=None, comp=(-20, 3.0), verb=0.0, room=0.22, tail=0.35):
+    """EQ -> compressor -> reverb de sala -> limitador. low/presence = (Hz, dB)."""
+    fx = [HighpassFilter(cutoff_frequency_hz=hp), HighpassFilter(cutoff_frequency_hz=hp)]   # 24 dB/oitava: grave limpo
+    if low:
+        fx.append(LowShelfFilter(cutoff_frequency_hz=low[0], gain_db=low[1], q=0.7))
+    if presence:
+        fx.append(PeakFilter(cutoff_frequency_hz=presence[0], gain_db=presence[1], q=1.0))
+    if lp:
+        fx.append(LowpassFilter(cutoff_frequency_hz=lp))
+    if comp:
+        fx.append(Compressor(threshold_db=comp[0], ratio=comp[1], attack_ms=3, release_ms=90))
+    if verb > 0:
+        x = np.concatenate([x, np.zeros(int(tail * SR), np.float32)])
+        fx.append(Reverb(room_size=room, damping=0.55, wet_level=verb, dry_level=1.0, width=0.0))
+    y = Pedalboard(fx)(x[None, :].astype(np.float32), SR)[0]
+    return y
 
 
-def loop(x, xfade=1.0):
-    """Fecha o loop: o fim entra no começo sem estalo."""
+def limit(x, ceiling=-1.0):
+    """Limitador transparente: segura os picos e deixa o teto em `ceiling` dBFS (o Limiter do JUCE sobe o ganho)."""
+    y = Pedalboard([Limiter(threshold_db=-4.0, release_ms=60)])(x[None, :].astype(np.float32), SR)[0]
+    pk = np.abs(y).max()
+    return (y * (db(ceiling) / pk)).astype(np.float32) if pk > 1e-9 else y
+
+
+def peak_rms(x, w=0.1):
+    w = int(w * SR)
+    if len(x) < w:
+        x = np.concatenate([x, np.zeros(w - len(x), np.float32)])
+    c = np.cumsum(np.concatenate([[0.0], x.astype(np.float64) ** 2]))
+    return np.sqrt((c[w:] - c[:-w]) / w).max()
+
+
+def loud(x, target):
+    """Leva o trecho mais forte (janela de 100 ms) a `target` dB RMS, sem passar de -1 dBFS de pico."""
+    for _ in range(3):   # o limitador come um pouco do RMS: ajusta de novo
+        x = x * (db(target) / max(peak_rms(x), 1e-9))
+        if np.abs(x).max() > db(-1.0):
+            x = limit(x)
+    return trim(x.astype(np.float32), -60)
+
+
+def loop(x, xfade=2.0):
     n = int(xfade * SR)
     head, body, tail = x[:n], x[n:-n], x[-n:]
     t = np.linspace(0, 1, n)
     return np.concatenate([body, tail * np.cos(t * np.pi / 2) + head * np.sin(t * np.pi / 2)]).astype(np.float32)
 
 
-def write(x, path, q=5):
+def write(x, path, q=6):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     pcm = np.clip(x, -1, 1).astype(np.float32).tobytes()
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-",
                     "-c:a", "libvorbis", "-q:a", str(q), path], input=pcm, check=True)
 
 
-# ------------------------------------------------------------------ receitas
+# ------------------------------------------------------------------ níveis por categoria (dB RMS, janela 100 ms)
+SWING, BOW, SPELL, IMPACT, CRIT, VOICE_BIG, VOICE, VOICE_SMALL = -17, -16, -15, -12, -11, -12, -13.5, -15
+HERO_VOX, LEVEL, BUFF, COIN, STEP, UI = -15, -13, -16, -19, -24, -21
+
+
 def sfx():
-    """Chave do jogo -> lista de variações (o jogo sorteia uma a cada toque)."""
+    """Chave do jogo -> [(som pronto)]. O jogo sorteia uma variação a cada toque."""
     R = {}
-    swing_axe = TEX2 + "Axe Swing.wav"
-    swing_dag = TEX2 + "Dagger Swing.wav"
-    swing_kat = TEX1 + "Katana Swing.wav"
-    swing_seax = TEX2 + "Seax Swing.wav"
-    clash = CLASH + "Dagger Norse Sword Blade on Blade.wav"
 
-    # ---- herói: o gesto
-    R["swing_heavy"] = pieces(swing_axe, 3, 0.18, 0.6, p=0.92)
-    R["swing_light"] = pieces(swing_dag, 3, 0.12, 0.42)
-    R["swing_light2"] = pieces(swing_kat, 3, 0.12, 0.42, p=1.08)
-    R["swing_spear"] = [cut(TEX2 + "Spear Swing.wav", 0.0, 0.7, fout=0.25), cut(TEX2 + "Spear Swing.wav", 2.15, 0.7, fout=0.25)] \
-        + pieces(swing_seax, 1, 0.15, 0.5)
-    R["bow"] = pieces(TEX1 + "English Longbow Shoot.wav", 3, 0.03, 0.55) + pieces(TEX1 + "Scythian Recurve Shoot.wav", 1, 0.03, 0.55)
-    R["punch"] = pieces(swing_seax, 3, 0.12, 0.38, skip=1, p=0.9)
-    R["spell_arcane"] = [cut(MAGIC + f"Wind Spell Impact {i}_s07.wav", 0, 1.3, fout=0.5) for i in (1, 2, 3)]
-    R["spell_fire"] = [cut(MAGIC + f"Fire Spell Impact {i}_s06.wav", 0, 1.5, fout=0.5) for i in (3, 4, 5)]
-    R["spell_summon"] = [cut(MAGIC + f"Earth Spell Impact {i}_s07.wav", 0, 1.6, fout=0.6) for i in (2, 4)] \
-        + [cut(MAGIC + "Plant Spell Impact 1_s07.wav", 0, 1.6, fout=0.6)]
+    def S(key, target, sounds, **ch):
+        R[key] = [loud(chain(s, **ch), target) for s in sounds]
 
-    # ---- impactos
-    slice_ = MELEE + "knife_slice_48kHz_16bit_0.51s_9438a1db_s03.wav"
-    R["hit_flesh"] = [mix((cut(MELEE + f), 0, 1.0), (cut(slice_, g=0.35), 0, 1.0)) for f in (
-        "impact_punch_medium_000_48kHz_16bit_0.36s_bd322da3_s02.wav",
-        "impact_punch_medium_002_48kHz_16bit_0.42s_212c5895_s02.wav",
-        "impact_punch_medium_004_48kHz_16bit_0.44s_0fa50bbe_s02.wav")] \
-        + [mix((cut(KI + "impact_punch_medium_001.ogg"), 0, 1.0), (cut(KR + "knife_slice_2.ogg", g=0.35), 0, 1.0))]
-    clang = pieces(clash, 3, 0.01, 0.5, fout=0.3)
-    R["hit_crit"] = [mix((cut(MELEE + f), 0, 1.0), (c, 0, 0.55)) for f, c in zip((
-        "impact_punch_heavy_000_48kHz_16bit_0.65s_8fb58ba7_s02.wav",
-        "impact_punch_heavy_002_48kHz_16bit_0.46s_565485a1_s02.wav",
-        "impact_punch_heavy_004_48kHz_16bit_0.54s_b437d453_s02.wav"), clang)]
-    R["hit_stone"] = [cut(KI + f"impact_mining_00{i}.ogg") for i in (0, 1, 3)]
-    R["hit_glass"] = [cut(KI + f"impact_glass_medium_00{i}.ogg") for i in (0, 1, 2)]
-    R["hit_magic"] = [cut(MAGIC + f"Ice Spell Impact {i}_s06.wav", 0, 0.9, fout=0.4) for i in (1, 2, 3)]
-    R["hit_arrow"] = [mix((cut(KI + f"impact_wood_light_00{i}.ogg"), 0, 0.8), (cut(KI + f"impact_soft_medium_00{i}.ogg"), 0, 1.0)) for i in (0, 1, 2)]
-    R["hit_fire"] = [mix((cut(MAGIC + f"Fire Spell Impact {i}_s06.wav", 0, 1.4, fout=0.5), 0, 1.0),
-                         (cut(EXPL + "explosion_crunch_000_48kHz_16bit_0.78s_e875be4e_s04.wav"), 0, 0.5)) for i in (1, 2)]
-    R["miss"] = pieces(swing_dag, 3, 0.1, 0.35, skip=3, p=1.12)
-    R["hurt_me"] = [mix((cut(KI + f"impact_punch_heavy_00{i}.ogg"), 0, 1.0), (cut(KI + f"impact_plate_light_00{i}.ogg"), 0.02, 0.35)) for i in (0, 1, 2)]
-    R["death_me"] = [mix((cut(KI + "impact_soft_heavy_000.ogg"), 0, 1.0), (cut(KI + "impact_plate_medium_001.ogg"), 0.14, 0.6),
-                         (cut(KI + "impact_metal_light_002.ogg"), 0.3, 0.35)),
-                     mix((cut(KI + "impact_soft_heavy_002.ogg"), 0, 1.0), (cut(KI + "impact_plate_medium_003.ogg"), 0.16, 0.6),
-                         (cut(KI + "impact_metal_light_000.ogg"), 0.34, 0.35))]
+    swoosh = lambda i, p, g=0.0: cut(oc("SWSH_Swoosh", i), p=p, g=db(g), fout=0.12)
+    whoosh_s = lambda i, p=1.0: cut(oc("WHSH_WhooshSmall", i), p=p, fout=0.06)
+    whoosh_m = lambda i, p=1.0: cut(oc("WHSH_WhooshMedium", i), p=p, fout=0.08)
+    punch = lambda kind, i, p=1.0: cut(oc("FGHTImpt_Punch" + kind, i), p=p, fout=0.12)
+    slice_ = cut(KR + "knife_slice.ogg", fout=0.05)
+    slice2 = cut(KR + "knife_slice_2.ogg", fout=0.05)
+
+    # ---- herói: o gesto (ar cortado pela arma; espada pesada mais grave e larga, lâminas rápidas mais agudas)
+    S("swing_heavy", SWING, [mix((swoosh(i, 0.88), 0, 0), (whoosh_m(j, 0.75), 0.04, -9)) for i, j in ((1, 1), (3, 3), (4, 1))],
+      hp=70, low=(180, 3), presence=(2500, 2))
+    S("swing_light", SWING, [swoosh(i, 1.18) for i in (2, 5, 6)], hp=220, presence=(4000, 2))
+    S("swing_light2", SWING, [swoosh(i, 1.35) for i in (1, 3, 4)], hp=300, presence=(5000, 2))
+    S("swing_spear", SWING, [mix((swoosh(i, 0.95), 0, 0), (whoosh_m(j, 0.8), 0.02, -6)) for i, j in ((4, 2), (6, 3), (2, 1))],
+      hp=120, presence=(3000, 2))
+    bows = hits(TEX1 + "English Longbow Shoot.wav", 3, 0.01, 0.55) + hits(TEX1 + "Scythian Recurve Shoot.wav", 2, 0.01, 0.55)
+    S("bow", BOW, [mix((trim(b), 0, 0), (whoosh_s(k % 3 + 1, 1.4), 0.03, -10)) for k, b in enumerate(bows)], hp=150, verb=0.06)
+    S("punch", SWING, [mix((whoosh_s(i, 0.95), 0, 0), (cut(oc("CLOTHMvmt_ClothingMovement", i), 0, 0.3, fout=0.1), 0, -12)) for i in (1, 2, 3)],
+      hp=120)
+    S("spell_arcane", SPELL, [cut(oc("MAGSpel_MagicSpell", 1), 0, 1.5, fout=0.5), cut(oc("MAGSpel_MagicSpell", 2), 0, 1.5, fout=0.5),
+                              mix((cut(oc("MAGSpel_MagicSpell", 1), 0, 1.5, p=1.12, fout=0.5), 0, 0), (cut(MAGIC + "Wind Spell Impact 1_s07.wav", 0, 1.2, fout=0.5), 0, -8))],
+      hp=150, verb=0.12, room=0.4)
+    S("spell_fire", SPELL, [cut(MAGIC + f"Fire Spell Impact {i}_s06.wav", 0, 1.4, fout=0.5) for i in (2, 3, 5)], hp=110, presence=(2500, 2), verb=0.08)
+    S("spell_summon", SPELL, [mix((cut(oc("MAGSpel_MagicSpell", 2), 0, 1.8, p=0.85, fout=0.6), 0, 0),
+                                  (cut(oc("CREAMnstr_CreatureCreepyReverb", k), 0, 1.6, p=1.2, fout=0.6), 0.1, -14)) for k in (1, 3)],
+      hp=100, verb=0.15, room=0.5)
+
+    # ---- impactos: corpo (soco grave) + material (corte, pedra, vidro...) na mesma sala
+    S("hit_flesh", IMPACT, [mix((punch("Regular", i), 0, 0), (s, 0, -9)) for i, s in ((1, slice_), (3, slice2), (5, slice_), (6, slice2))],
+      hp=55, low=(120, 3), presence=(3500, 2), verb=0.07)
+    clash = cut(oc("WEAPSwrd_SwordClash"), 0, 0.5, fout=0.25)
+    S("hit_crit", CRIT, [mix((punch("Harder", i), 0, 0), (clash, 0, -6), (s, 0, -8)) for i, s in ((1, slice_), (3, slice2), (4, slice_))],
+      hp=45, low=(110, 4), presence=(3000, 2), verb=0.1)
+    S("hit_stone", IMPACT, [mix((cut(KI + f"impact_mining_00{i}.ogg"), 0, 0), (punch("Regular", i + 1), 0, -8), (cut(EXPL + f"Break_0{b}_s01.wav"), 0, -7)) for i, b in ((0, 1), (1, 2), (3, 1))],
+      hp=70, verb=0.07)
+    S("hit_glass", IMPACT, [mix((cut(KI + f"impact_glass_medium_00{i}.ogg"), 0, 0), (punch("Regular", i + 2), 0, -10), (cut(EXPL + f"BreakGlass_0{i + 1}_s01.wav"), 0, -9)) for i in (0, 1, 2)],
+      hp=120, verb=0.09)
+    S("hit_magic", IMPACT, [mix((cut(MAGIC + f"Ice Spell Impact {i}_s06.wav", 0, 0.8, fout=0.35), 0, 0), (punch("Regular", i), 0, -10)) for i in (2, 3, 4)],
+      hp=100, verb=0.1)
+    S("hit_arrow", IMPACT, [mix((cut(KI + f"impact_wood_light_00{i}.ogg"), 0, 0), (punch("Regular", i + 4), 0, -6), (slice_ if i % 2 else slice2, 0, -11)) for i in (0, 1, 2)],
+      hp=90, verb=0.06)
+    S("hit_fire", IMPACT, [mix((cut(MAGIC + f"Fire Spell Impact {i}_s06.wav", 0, 1.2, fout=0.5), 0, 0), (punch("Harder", 2 + i), 0, -6)) for i in (1, 2)],
+      hp=80, presence=(2500, 2), verb=0.08)
+    S("miss", SWING - 4, [swoosh(i, 1.25) for i in (2, 4, 5)], hp=250)
+    S("hurt_me", IMPACT - 1, [mix((punch("Harder", i), 0, 0), (cut(oc("CLOTHMvmt_MovementWithGear", i), 0, 0.4, fout=0.15), 0.01, -10)) for i in (1, 2, 3)],
+      hp=50, low=(110, 3), verb=0.06)
+    S("death_me", IMPACT - 2, [mix((punch("Hardest", 1, 0.7), 0, 0), (cut(oc("CLOTHMvmt_MovementWithGear", i), 0, 0.8, fout=0.3), 0.08, -6)) for i in (2, 4)],
+      hp=40, low=(100, 3), verb=0.1)
+    # vozes do herói (dor e queda), por voz masculina ou feminina
+    S("hurt_male", HERO_VOX, [cut(oc(f"VOXMale_Male0{m}Hurt", i), fout=0.08) for m in (1, 2) for i in (1, 2, 3)], hp=120, verb=0.06)
+    S("hurt_female", HERO_VOX, [cut(oc(f"VOXFem_Female0{m}Hurt", i), fout=0.08) for m in (1, 2) for i in (1, 2, 3)], hp=150, verb=0.06)
+    S("death_male", HERO_VOX + 1, [cut(oc("VOXMale_Male01Death", i), fout=0.3) for i in (1, 2)] + [cut(oc("VOXMale_Male02Death", 1), fout=0.3)],
+      hp=110, verb=0.12)
+    S("death_female", HERO_VOX + 1, [cut(oc("VOXFem_Female01Death", i), fout=0.3) for i in (1, 2)] + [cut(oc("VOXFem_Female02Death", 1), fout=0.3)],
+      hp=140, verb=0.12)
 
     # ---- progresso e habilidades
-    R["levelup"] = [cut(MAGIC + "Healing Spell Impact 4_s08.wav", fout=0.6), cut(MAGIC + "Healing Spell Impact 10_s08.wav", fout=0.6)]
-    R["cast_buff"] = [cut(f"oga8/cure-magic/curemagic/Cure{i}.wav", fout=0.4) for i in (1, 3, 5)]
-    R["cast_banner"] = [mix((cut(KI + f"impact_bell_heavy_00{i}.ogg", fout=0.4), 0, 1.0), (cut(KR + f"cloth_{j}.ogg"), 0.05, 0.6)) for i, j in ((0, 1), (2, 3))]
-    R["area"] = [mix((cut(EXPL + f, fout=0.4), 0, 1.0), (cut(MAGIC + "Earth Spell Impact 3_s07.wav", 0, 1.0, fout=0.5), 0, 0.5)) for f in (
-        "explosion_crunch_001_48kHz_16bit_1.36s_5803a7f0_s04.wav",
-        "explosion_crunch_002_48kHz_16bit_1.26s_e0852ce0_s04.wav",
-        "explosion_crunch_003_48kHz_16bit_1.55s_4b973e9c_s04.wav")]
+    S("levelup", LEVEL, [mix((cut(oc("MUSCStngr_LevelUpOrchestral", i), fout=0.6), 0, 0), (cut(MAGIC + "Healing Spell Impact 4_s08.wav", fout=0.6), 0, -12)) for i in (1, 2)],
+      hp=60, comp=(-16, 2.0), verb=0.1, room=0.5)
+    S("cast_buff", BUFF, [cut(f"oga8/cure-magic/curemagic/Cure{i}.wav", fout=0.4) for i in (1, 3, 5)], hp=150, verb=0.15, room=0.45)
+    S("cast_banner", BUFF + 1, [mix((cut(oc("CLOTHFlp_FlagFlapping_LOOP"), a, 1.0, fout=0.4), 0, 0), (cut(oc("MUSCStngr_MarchingSnare"), 0, 1.3, fout=0.4), 0.05, -5)) for a in (2.0, 9.0)],
+      hp=90, verb=0.1)
+    boom = cut("wyz/booms-and-bass/boom-hit-medium.wav", fout=0.4)
+    S("area", IMPACT, [mix((cut(MAGIC + f"Earth Spell Impact {i}_s07.wav", 0, 1.4, fout=0.5), 0, 0), (punch("Hardest", 1, 0.8), 0, -5), (boom, 0, -10)) for i in (3, 4)],
+      hp=50, low=(90, 1.5), verb=0.12, room=0.4)
 
     # ---- mundo e interface
-    R["coin"] = [cut(KR + "handle_coins.ogg"), cut(KR + "handle_coins_2.ogg"), cut("oga8/gold-coin-6/coin.flac", fout=0.2)]
-    R["step"] = [cut(KI + f"footstep_grass_00{i}.ogg", fout=0.04) for i in range(5)]
-    UIS = "kenney/51-ui-sound-effects-buttons-switches-and-clicks/UI_SFX_Set/"
-    R["ui_click"] = [cut(UIS + "click1.wav", fout=0.02), cut(UIS + "click3.wav", fout=0.02), cut(KR + "metal_click.ogg", fout=0.03)]
-    R["ui_open"] = [cut(UI + "open_001.ogg", fout=0.03), cut(KR + "book_open.ogg", fout=0.05)]
-    R["ui_close"] = [cut(UI + "close_001.ogg", fout=0.03), cut(KR + "book_close.ogg", fout=0.05)]
+    S("coin", COIN, [cut(oc("OBJCoin_CoinDrop"), fout=0.2), cut(KR + "handle_coins.ogg", fout=0.1), cut(KR + "handle_coins_2.ogg", fout=0.1)], hp=300)
+    S("step", STEP, [cut(oc("FEETHmn_ShoeGrassWalk", i), fout=0.08) for i in range(1, 6)] + [cut(oc("FEETHmn_ShoeDirtWalk", i), fout=0.08) for i in range(1, 6)],
+      hp=90, comp=None)
+    S("ui_click", UI, [cut(oc("UIClick_WoodConfirm")), cut(oc("UIClick_WoodBack"))], hp=150, comp=None)
+    S("ui_open", UI, [cut(oc("UIClick_WoodOpen")), cut(oc("OBJBook_BookOpen"), 0, 0.6, fout=0.2)], hp=150, comp=None)
+    S("ui_close", UI, [cut(oc("UIClick_WoodClose")), cut(oc("OBJBook_BookClose"), fout=0.15)], hp=150, comp=None)
 
-    # ---- monstros: alerta, ataque, dor e morte por família de voz
-    growl = lambda n, p, **k: cut(DEMON + f"DEMON GROWL {n}.wav", p=p, fout=0.2, **k)
-    snarl = lambda n, p, **k: cut(DEMON + f"DEMON SNARL {n}.wav", p=p, fout=0.15, **k)
-    dies = DEMON + "DEMON DIES.wav"
+    # ---- monstros: vozes de criatura de estúdio, engrossadas ou afinadas por família, mais camadas de material
+    V = dict(hp=60, verb=0.1, room=0.3)
     # fera (lobo, lince, serpe)
-    R["beast_aggro"] = [growl(1, 1.22), growl(3, 1.3), cut("oga8/dog-growl/dog-growl.ogg", p=0.9, fout=0.15)]
-    R["beast_attack"] = [snarl(3, 1.3), cut(ORC + "ORC FIGHT 2.wav", p=1.35, fout=0.1), cut(ORC + "ORC FIGHT.wav", p=1.4, fout=0.1)]
-    R["beast_hurt"] = [cut("oga1/boar-0/boar_0.ogg", fout=0.1), cut(ORC + "ORC GRUNT 1.wav", p=1.4, fout=0.06), cut(ORC + "ORC GRUNT 2.wav", p=1.45, fout=0.06)]
-    R["beast_death"] = [cut(dies, 0.8, 0.75, p=1.2, fout=0.3), cut(ORC + "ORC DIES.wav", 0.05, 0.55, p=1.3, fout=0.25)]
+    S("beast_aggro", VOICE, [cut(oc("ANMLDog_DogBark", i), p=0.72, fout=0.15) for i in (1, 2)] + [cut(oc("CREAHmn_TrollEffort"), p=1.12, fout=0.15)], **V)
+    S("beast_attack", VOICE, [cut(oc("CREAHmn_TrollEffort"), p=1.2, fout=0.1), cut(oc("CREAHmn_TrollHurt", 2), p=1.15, fout=0.1),
+                              cut(oc("ANMLDog_DogBark", 1), p=0.8, fout=0.1)], **V)
+    S("beast_hurt", VOICE_SMALL, [cut(oc("ANMLFarm_PigSqueal", 1), 0, 0.35, p=0.82, fout=0.1), cut(oc("CREAHmn_TrollHurt", 1), p=1.2, fout=0.1),
+                                  cut(oc("CREAHmn_TrollHurt", 3), p=1.25, fout=0.1)], **V)
+    S("beast_death", VOICE, [cut(oc("CREAHmn_TrollDeath", i), p=1.1, fout=0.3) for i in (1, 2)], **V)
     # gosma
-    slime0 = MELEE + "slime_000_48kHz_16bit_0.5s_691d3d6e_s04.wav"
-    slime1 = MELEE + "slime_001_48kHz_16bit_4.71s_56e4987f_s04.wav"
-    R["slime_aggro"] = [cut(slime0, p=0.85), cut(slime1, 0, 0.9, fout=0.3)]
-    R["slime_attack"] = [mix((cut("oga8/slime-jump-effect/slime_jump.wav", p=0.8), 0, 1.0), (cut(slime0, p=1.2), 0.03, 0.8)), cut(slime1, 1.0, 0.6, fout=0.2)]
-    R["slime_hurt"] = [cut(slime0, p=1.3), cut(BONE_W + "9.wav", p=1.2, g=0.8)]
-    R["slime_death"] = [mix((cut(slime1, 2.0, 1.2, fout=0.4), 0, 1.0), (cut(BONE_W + "1.wav"), 0, 0.6))]
+    sq = lambda i, a, d, p=1.0: cut(oc("GORESqsh_BloodSquishSlimy", i), a, d, p=p, fout=0.15)
+    S("slime_aggro", VOICE_SMALL, [sq(1, 0, 0.8, 0.8), sq(3, 0, 0.8, 0.85)], hp=80, verb=0.08)
+    S("slime_attack", VOICE_SMALL, [mix((cut(MELEE + "slime_000_48kHz_16bit_0.5s_691d3d6e_s04.wav"), 0, 0), (sq(2, 0, 0.4), 0, -4)), sq(4, 0.5, 0.5, 1.1)], hp=80, verb=0.08)
+    S("slime_hurt", VOICE_SMALL, [sq(2, 1.0, 0.35, 1.2), sq(4, 2.0, 0.35, 1.2)], hp=100, verb=0.06)
+    S("slime_death", VOICE, [sq(3, 0, 1.6, 0.9), sq(1, 0.5, 1.6, 0.85)], hp=60, low=(140, 2), verb=0.1)
     # inseto (aranhas, rastejante)
     scr = "oga8/evil-screech-1/evil_screech_1.ogg"
-    cic = "oga1/cicada-sounds/082526-cicadasounds_0.ogg"
-    R["insect_aggro"] = [mix((cut(scr, 0.4, 0.6, p=1.6, fout=0.2), 0, 0.8), (cut(cic, 3.0, 0.7, fout=0.3), 0, 0.6)), cut(scr, 1.9, 0.7, p=1.7, fout=0.25)]
-    R["insect_attack"] = [mix((cut(scr, 3.85, 0.4, p=1.9, fout=0.15), 0, 0.8), (cut(slice_), 0, 0.6)), mix((cut(scr, 5.65, 0.4, p=2.0, fout=0.15), 0, 0.8), (cut(KR + "knife_slice.ogg"), 0, 0.6))]
-    R["insect_hurt"] = [cut(scr, 0.45, 0.2, p=2.1, fout=0.08), cut(scr, 1.95, 0.2, p=2.2, fout=0.08)]
-    R["insect_death"] = [mix((cut(BONE_W + "2.wav"), 0, 1.0), (cut(scr, 3.86, 0.7, p=1.5, fout=0.3), 0.05, 0.6)),
-                         mix((cut(BONE_W + "4.wav"), 0, 1.0), (cut(scr, 5.66, 0.7, p=1.45, fout=0.3), 0.05, 0.6))]
+    S("insect_aggro", VOICE, [mix((cut(scr, 0.4, 0.6, p=1.6, fout=0.2), 0, 0), (cut(oc("CREAMnstr_CreatureCreepy", 2), 0, 0.8, p=1.6, fout=0.3), 0, -6)),
+                              mix((cut(scr, 1.9, 0.7, p=1.7, fout=0.25), 0, 0), (cut(oc("CREAMnstr_CreatureCreepy", 3), 0, 0.8, p=1.7, fout=0.3), 0, -6))], hp=200, verb=0.08)
+    S("insect_attack", VOICE_SMALL, [mix((cut(scr, 3.85, 0.35, p=1.9, fout=0.12), 0, 0), (slice_, 0, -4)), mix((cut(scr, 5.65, 0.35, p=2.0, fout=0.12), 0, 0), (slice2, 0, -4))], hp=200, verb=0.06)
+    S("insect_hurt", VOICE_SMALL - 2, [cut(scr, 0.45, 0.2, p=2.1, fout=0.08), cut(scr, 1.95, 0.2, p=2.2, fout=0.08)], hp=300, verb=0.05)
+    S("insect_death", VOICE, [mix((cut(oc("GOREBone_BonesBreaking", i), 0, 0.7, p=1.35, fout=0.25), 0, 0), (cut(scr, t, 0.6, p=1.5, fout=0.3), 0.04, -6)) for i, t in ((1, 3.86), (3, 5.66))],
+      hp=120, verb=0.08)
     # morto-vivo (ossadas, carniçal)
-    R["undead_aggro"] = [mix((cut(ORC + "ORC GROWL.wav", p=0.78, fout=0.3), 0, 1.0), (cut("oga8/horror-breathing/horrorbreathing/horrorbreathing/horrorbreathing.wav", 0, 1.2, fout=0.4), 0, 0.5)),
-                         cut(ORC + "ORC GROWL 2.wav", p=0.8, fout=0.3)]
-    R["undead_attack"] = [mix((s, 0, 1.0), (cut(BONE_D + "5.wav", g=0.5), 0.05, 1.0)) for s in pieces(swing_axe, 2, 0.15, 0.5, skip=3)]
-    R["undead_hurt"] = [cut(BONE_D + f"{i}.wav") for i in (3, 6, 8)]
-    R["undead_death"] = [mix((cut(BONE_D + "1.wav"), 0, 1.0), (cut(BONE_D + "4.wav"), 0.18, 0.8), (cut(KI + "impact_wood_heavy_001.ogg"), 0.35, 0.6)),
-                         mix((cut(BONE_D + "7.wav"), 0, 1.0), (cut(BONE_D + "2.wav"), 0.2, 0.8), (cut(KI + "impact_wood_heavy_003.ogg"), 0.4, 0.6))]
+    S("undead_aggro", VOICE, [mix((cut(oc("VOXMale_GroanCreepy"), 0, 1.6, p=0.85, fout=0.5), 0, 0), (cut(oc("CHAINMvmt_ChainsCreepy", 2), 0, 1.2, fout=0.5), 0, -12)),
+                              mix((cut(oc("VOXMale_GroanCreepy"), 2.0, 1.6, p=0.8, fout=0.5), 0, 0), (cut(oc("CHAINMvmt_ChainsCreepy", 1), 0, 1.2, fout=0.5), 0, -12))], **V)
+    S("undead_attack", VOICE_SMALL, [mix((swoosh(i, 0.9), 0, 0), (cut(oc("GOREBone_BonesBreaking", 3), 0, 0.4, p=1.25, fout=0.15), 0.05, -8)) for i in (3, 5)], hp=90, verb=0.08)
+    S("undead_hurt", VOICE_SMALL, [cut(BONE_D + f"{i}.wav", fout=0.15) for i in (3, 6)] + [cut(oc("GOREBone_SkullCracking"), 0, 0.5, fout=0.15)], hp=90, verb=0.07)
+    S("undead_death", VOICE, [mix((cut(oc("GOREBone_BonesBreaking", 2), fout=0.3), 0, 0), (cut(oc("WOODImpt_LargeWoodDrop"), p=1.3, fout=0.3), 0.15, -7)),
+                              mix((cut(oc("GOREBone_BonesBreaking", 1), fout=0.3), 0, 0), (cut(oc("WOODImpt_LargeWoodDrop"), p=1.4, fout=0.3), 0.12, -7))], **V)
     # pedra (golem, colosso)
-    rumble = "oga5/rumbling-sound-effects/rumbling18.wav"
-    R["stone_aggro"] = [mix((cut(rumble, 10, 1.4, fout=0.5), 0, 1.0), (cut("oga8/stone-door/stone_door.ogg", fout=0.3), 0, 0.8))]
-    R["stone_attack"] = [mix((s, 0, 1.0), (cut(KI + "impact_mining_004.ogg", p=0.8), 0.18, 0.8)) for s in pieces(swing_axe, 2, 0.18, 0.6, p=0.65)]
-    R["stone_hurt"] = [cut(KI + f"impact_mining_00{i}.ogg", p=0.8) for i in (0, 2, 4)]
-    R["stone_death"] = [mix((cut(EXPL + "Break_01_s01.wav"), 0, 0.8), (cut(rumble, 30, 1.4, fout=0.6), 0, 1.0), (cut(KI + "impact_mining_002.ogg", p=0.7), 0.12, 0.9))]
+    S("stone_aggro", VOICE_BIG, [mix((cut(oc("CREAHmn_GiantEffort"), 0, 1.8, p=0.78, fout=0.5), 0, 0), (cut(KI + "impact_mining_002.ogg", p=0.7), 0.1, -9))], hp=65, presence=(1200, 3), verb=0.12)
+    S("stone_attack", VOICE, [mix((swoosh(i, 0.6), 0, 0), (punch("Hardest", 1, 0.6), 0.2, -3)) for i in (1, 4)], hp=60, presence=(1500, 2), verb=0.08)
+    S("stone_hurt", VOICE_SMALL, [mix((cut(KI + f"impact_mining_00{i}.ogg", p=0.8), 0, 0), (cut(oc("CREAHmn_GiantHurt", j), 0, 0.6, p=0.85, fout=0.2), 0, -7)) for i, j in ((0, 1), (4, 2))],
+      hp=70, presence=(1800, 3), verb=0.08)
+    S("stone_death", VOICE_BIG, [mix((cut(oc("CREAHmn_GiantDeath", 1), 0, 2.4, p=0.82, fout=0.6), 0, 0), (cut(EXPL + "Break_01_s01.wav"), 0.3, -4), (boom, 0.3, -6))],
+      hp=55, presence=(1500, 3), verb=0.12, room=0.4)
     # cristal (sentinela, vigia de gelo, soberano, estilhaço)
-    R["crystal_aggro"] = [mix((cut(MAGIC + "Ice Spell Impact 4_s06.wav", 0, 1.2, fout=0.5), 0, 1.0), (cut(KI + "impact_glass_light_001.ogg"), 0, 0.6))]
-    R["crystal_attack"] = [mix((s, 0, 1.0), (cut(KI + "impact_glass_light_003.ogg"), 0.12, 0.7)) for s in pieces(swing_dag, 2, 0.1, 0.4, p=1.25)]
-    R["crystal_hurt"] = [cut(KI + f"impact_glass_heavy_00{i}.ogg") for i in (0, 2)]
-    R["crystal_death"] = [mix((cut(EXPL + f"BreakGlass_0{i}_s01.wav"), 0, 1.0), (cut(MAGIC + "Ice Spell Impact 5_s06.wav", 0, 1.2, fout=0.5), 0, 0.6)) for i in (1, 3)]
+    S("crystal_aggro", VOICE, [mix((cut(oc("UIMisc_BelltreeUp"), 0, 1.6, fout=0.6), 0, 0), (cut(oc("CREAMnstr_CreatureCreepy", 3), 0, 1.2, p=1.4, fout=0.4), 0, -8))], hp=200, verb=0.15, room=0.45)
+    S("crystal_attack", VOICE_SMALL, [mix((swoosh(i, 1.4), 0, 0), (cut(KI + f"impact_glass_light_00{k}.ogg"), 0.1, -6)) for i, k in ((2, 1), (6, 3))], hp=250, verb=0.08)
+    S("crystal_hurt", VOICE_SMALL, [mix((cut(KI + f"impact_glass_light_00{i}.ogg"), 0, 0), (cut(EXPL + f"BreakGlass_0{i + 1}_s01.wav"), 0, -6)) for i in (0, 2)], hp=200, verb=0.1)
+    S("crystal_death", VOICE, [mix((cut(EXPL + f"BreakGlass_0{i}_s01.wav"), 0, 0), (cut(oc("UIMisc_BelltreeDown"), 0, 1.6, fout=0.6), 0.05, -6)) for i in (1, 3)], hp=150, verb=0.15, room=0.45)
     # espírito (bruxa, mariposa, espectro, ecos)
-    ghost = "oga8/ghostly-humming/ghostly_humming.ogg"
-    R["spirit_aggro"] = [cut(ghost, 0.6, 1.6, fout=0.6), cut(ghost, 19.7, 1.6, fout=0.6)]
-    R["spirit_attack"] = [cut(MAGIC + f"Wind Spell Impact {i}_s07.wav", 0, 0.7, fout=0.3) for i in (4, 5)]
-    R["spirit_hurt"] = [cut(ghost, 5.5, 0.35, p=1.25, fout=0.15), cut(ghost, 26.3, 0.35, p=1.25, fout=0.15)]
-    R["spirit_death"] = [mix((cut(MAGIC + "Wind Spell Impact 2_s07.wav", 0, 1.6, fout=0.6), 0, 0.9), (cut(ghost, 41.3, 1.6, p=1.3, fout=0.8), 0, 0.8))]
+    S("spirit_aggro", VOICE, [cut(oc("VOXWhsp_WhispersCreepyReverb"), 0, 1.8, fout=0.7), cut(oc("VOXFem_GroanCreepy"), 0, 1.6, fout=0.6)], hp=150, verb=0.15, room=0.6)
+    S("spirit_attack", VOICE_SMALL, [mix((whoosh_m(i, 0.9), 0, 0), (cut(oc("VOXWhsp_WhispersCreepy"), a, 0.5, fout=0.2), 0, -6)) for i, a in ((1, 0.5), (3, 2.0))], hp=150, verb=0.12, room=0.5)
+    S("spirit_hurt", VOICE_SMALL, [cut(oc("VOXFem_GroanCreepy"), a, 0.4, p=1.2, fout=0.15) for a in (0.3, 2.2)], hp=200, verb=0.1, room=0.5)
+    S("spirit_death", VOICE, [mix((cut(oc("VOXScrm_FemaleScream"), 0, 1.6, p=0.8, fout=0.7), 0, 0), (cut("wyz/reverse-whooshes/reverse-whoosh-medium-soft.wav"), 0, -10))],
+      hp=150, verb=0.2, room=0.7)
     # fogo (cria e arauto das cinzas)
-    fire = "oga5/some-sounds-0/all-in-one_0/fire seamless.wav"
-    R["fire_aggro"] = [mix((growl(4, 0.8), 0, 1.0), (cut(fire, 2, 1.6, fout=0.5), 0, 0.5)), mix((growl(2, 0.82), 0, 1.0), (cut(fire, 6, 1.2, fout=0.5), 0, 0.5))]
-    R["fire_attack"] = [mix((snarl(3, 0.85), 0, 0.9), (cut(MAGIC + "Fire Spell Impact 5_s06.wav", 0, 0.6, fout=0.3), 0, 0.6))]
-    R["fire_hurt"] = [cut(ORC + "ORC GRUNT 2.wav", p=0.8, fout=0.08), cut(ORC + "ORC GRUNT 1.wav", p=0.78, fout=0.08)]
-    R["fire_death"] = [mix((cut(dies, 0.8, 0.75, p=0.85, fout=0.3), 0, 1.0), (cut(EXPL + "explosion_crunch_004_48kHz_16bit_1.98s_b6838d5c_s04.wav", fout=0.6), 0.15, 0.7))]
+    fire = lambda i, d=0.6: cut(MAGIC + f"Fire Spell Impact {i}_s06.wav", 0, d, fout=0.3)
+    S("fire_aggro", VOICE_BIG, [mix((cut(oc("CREAHmn_OgreLaugh", i), 0, 1.6, p=0.85, fout=0.5), 0, 0), (fire(3, 1.2), 0, -8)) for i in (1, 3)], hp=50, low=(110, 2), verb=0.1)
+    S("fire_attack", VOICE, [mix((cut(oc("CREAHmn_OgreEffort"), p=0.9, fout=0.15), 0, 0), (fire(5), 0, -6))], hp=50, verb=0.08)
+    S("fire_hurt", VOICE_SMALL, [cut(oc("CREAHmn_OgreHurt", i), fout=0.12) for i in (1, 2, 3)], hp=60, verb=0.07)
+    S("fire_death", VOICE_BIG, [mix((cut(oc("CREAHmn_OgreDeathScream"), 0, 1.8, fout=0.6), 0, 0), (cut(EXPL + "explosion_crunch_004_48kHz_16bit_1.98s_b6838d5c_s04.wav", fout=0.6), 0.2, -6))],
+      hp=45, low=(100, 2), verb=0.1)
     return R
 
 
 def ambient():
-    """Loops da vila (tocados em 3D perto de cada lugar) e o pio da noite."""
+    """Loops longos de estúdio, tratados para ficar atrás do jogo (sem graves embolando, sem agudos chiando)."""
     A = {}
-    river = "oga8/park-ambiences/park_ambience_river.wav"
-    birds = "oga8/park-ambiences/park_ambience_birds.wav"
-    fire = "oga5/some-sounds-0/all-in-one_0/fire seamless.wav"
-    A["fonte"] = loop(load(river, 40, 13), 1.0)
-    A["poco"] = loop(lowpass(load(river, 120, 11), 1800), 1.0)
-    A["brasa"] = loop(load(fire, 0, 9), 1.0)
-    A["mercado"] = loop(load(birds, 60, 16), 1.5)       # praça de dia: pássaros (não há burburinho CC0 bom)
-    A["noite"] = loop(load("oga1/cicada-sounds/082526-cicadasounds2_0.ogg", 5, 13), 1.5)
-    A["coruja"] = fade(trim(load("oga1/crow/crow_0.ogg")), 0.003, 0.1)   # corvo distante
-    # forja: fogo baixo com marteladas no metal (três batidas e uma pausa)
-    bed = load(fire, 10, 9) * 0.45
-    parts = [(bed, 0, 1.0)]
-    t = 0.4
-    hammer = [cut(KI + f"impact_metal_heavy_00{i}.ogg") for i in range(5)]
-    k = 0
-    while t < 7.6:
-        for _ in range(3):
-            parts.append((hammer[k % 5], t, 0.9 if k % 3 else 1.0))
-            t += 0.62
-            k += 1
-        t += 1.3
-    A["forja"] = loop(mix(*parts)[:int(9 * SR)], 0.6)
-    return A
+
+    def bed(path, at, dur, target, hp=120, lp=9000, xf=2.5, notch=None):
+        x = load(path, at, dur)
+        eq = [PeakFilter(cutoff_frequency_hz=f, gain_db=g, q=4.0) for f, g in (notch or [])]
+        x = Pedalboard([HighpassFilter(cutoff_frequency_hz=hp), LowpassFilter(cutoff_frequency_hz=lp)] + eq + [
+                        Compressor(threshold_db=-28, ratio=2.0, attack_ms=30, release_ms=400)])(x[None, :], SR)[0]
+        x = loop(x, xf)
+        rms = np.sqrt(np.mean(x ** 2))
+        x = (x * db(target) / max(rms, 1e-9)).astype(np.float32)
+        return limit(x, -6.0) if np.abs(x).max() > db(-6.0) else x
+
+    A["noite"] = bed(oc("AMBForst_Night_LOOP"), 0, 45.0, -32, hp=150, lp=7000, notch=[(2860, -14), (2870, -6), (2000, -6)])   # grilos sem apito constante
+    A["dia"] = bed(oc("WINDVege_LightWindTreesBirds_LOOP"), 0, 62.0, -30, hp=150, lp=9000)
+    A["fonte"] = bed(oc("WATRFlow_CreekInWoods_LOOP"), 0, 44.5, -24, hp=200, lp=9000)
+    A["poco"] = bed(oc("WATRLap_WaterLapping_LOOP"), 0, 44.5, -26, hp=200, lp=7000)
+    A["forja"] = bed(oc("METLImpt_HammerAnvilAmbient"), 0, 15.1, -24, hp=120, lp=11000, xf=1.0)
+    A["mercado"] = bed(oc("CRWDConv_Restaurant_LOOP"), 0, 47.5, -30, hp=180, lp=1600)   # burburinho de gente, sem palavras
+    birds = [loud(chain(cut(oc("AMBForst_ForestBirds", i), fout=0.6), hp=400, comp=None), -28) for i in (1, 2, 3)]
+    return A, {"passaro": birds}
 
 
 def main():
     global SRC
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(1)
     SRC, out = sys.argv[1], sys.argv[2]
+    demo_dir = sys.argv[3] if len(sys.argv) > 3 else None
+    R = sfx()
+    A, extra = ambient()
+    R.update(extra)
     total = 0
-    for key, variants in sfx().items():
+    for key, variants in R.items():
         for i, v in enumerate(variants):
-            write(norm(v), os.path.join(out, "Sfx", f"{key}_{i}.ogg"))
+            write(v, os.path.join(out, "Sfx", f"{key}_{i}.ogg"))
             total += 1
-    for key, v in ambient().items():
-        write(norm(v, -3.0), os.path.join(out, "Ambiente", f"{key}.ogg"), q=4)
+    for key, v in A.items():
+        write(v, os.path.join(out, "Ambiente", f"{key}.ogg"), q=4)
         total += 1
     print(f"{total} arquivos em {out}")
+    if demo_dir:
+        demo(R, A, demo_dir)
+
+
+# ------------------------------------------------------------------ demo: uma luta curta como soa no jogo
+def demo(R, A, out_dir):
+    """Renderiza uma cena de ~40 s com os volumes do jogo, para ouvir sem abrir o Unity."""
+    rng = np.random.default_rng(3)
+    T = 36.0
+    track = np.zeros(int(T * SR), np.float32)
+
+    def put(key, t, vol=1.0, i=None):
+        v = R[key]
+        s = v[i if i is not None else rng.integers(len(v))]
+        o = int(t * SR)
+        n = min(len(s), len(track) - o)
+        track[o:o + n] += s[:n] * vol
+
+    noite = np.tile(A["noite"], 2)[:len(track)] * 0.55
+    fonte = np.tile(A["fonte"], 2)[:len(track)]
+    forja = np.tile(A["forja"], 4)[:len(track)]
+    env = np.clip(1 - np.arange(len(track)) / (12 * SR), 0, 1)      # a vila some quando o herói sai dela
+    track += noite + (fonte * 0.45 + forja * 0.3) * env
+    t = 0.5
+    for _ in range(14):                                            # andando para fora da vila
+        put("step", t, 0.75); t += 0.42
+    put("ui_open", 1.5, 0.8); put("ui_click", 2.6, 0.8); put("ui_close", 3.4, 0.8)
+    t = 7.0
+    put("beast_aggro", t, 0.8); t += 1.0
+    for k in range(4):                                             # Guardião contra lobo
+        put("swing_heavy", t, 0.8); put("hit_crit" if k == 2 else "hit_flesh", t + 0.07, 0.9); put("beast_hurt", t + 0.14, 0.6)
+        put("beast_attack", t + 0.55, 0.7); put("hit_flesh", t + 0.67, 0.75); put("hurt_me", t + 0.67, 0.6)
+        if k == 1:
+            put("hurt_male", t + 0.7, 0.7)
+        t += 1.05
+    put("beast_death", t, 0.85); put("coin", t + 0.6, 0.8); t += 1.6
+    put("levelup", t, 0.75); t += 2.6
+    put("undead_aggro", t, 0.8); t += 1.2                          # arqueiro contra esqueleto
+    for k in range(3):
+        put("bow", t, 0.85); put("hit_arrow", t + 0.18, 0.85); put("undead_hurt", t + 0.24, 0.6); t += 0.8
+    put("undead_death", t, 0.85); t += 1.6
+    put("stone_aggro", t, 0.85); t += 1.4                          # arcanista contra golem
+    for k in range(2):
+        put("spell_arcane", t, 0.7); put("hit_magic", t + 0.28, 0.85); put("stone_hurt", t + 0.35, 0.6); t += 1.2
+    put("spell_fire", t, 0.7); put("hit_fire", t + 0.28, 0.9); put("area", t + 0.3, 0.6); put("stone_death", t + 0.4, 0.9); t += 2.6
+    put("spirit_aggro", t, 0.75); t += 1.0                          # lâmina contra espectro
+    for k in range(3):
+        put("swing_light", t, 0.8); put("swing_light2", t + 0.08, 0.6); put("hit_flesh", t + 0.1, 0.8); put("spirit_hurt", t + 0.16, 0.6); t += 0.7
+    put("miss", t, 0.6); t += 0.6
+    put("spirit_death", t, 0.85); put("coin", t + 0.8, 0.8)
+    track = Pedalboard([Limiter(threshold_db=-1.0)])(track[None, :], SR)[0]
+    os.makedirs(out_dir, exist_ok=True)
+    pcm = np.clip(track, -1, 1).astype(np.float32).tobytes()
+    path = os.path.join(out_dir, "demo_combate_kezor.mp3")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-", "-c:a", "libmp3lame", "-q:a", "2", path],
+                   input=pcm, check=True)
+    print("demo:", path)
 
 
 if __name__ == "__main__":
