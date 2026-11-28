@@ -69,6 +69,15 @@ SETS = [
     ('C', 4, 'BlackBannerPlate', 'Estandarte', 'Placas do Estandarte Negro',
      ['Elmo do Estandarte Negro', 'Peitoral do Estandarte Negro', 'Grevas do Estandarte Negro', 'Manoplas do Estandarte Negro', 'Botas do Estandarte Negro'],
      'Defense = 40, ReductionPercent = 9, DefenseRatePercent = 10, DamagePercent = 7', '#d9a648', 'Strength'),
+    ('I', 1, 'MysticGarb', 'Mistica', 'Trajes da Mística',
+     ['Capuz da Mística', 'Capa da Mística', 'Saia da Mística', 'Luvas da Mística', 'Botas da Mística'],
+     'Defense = 4, MagicPercent = 8', '#5f8dff', 'Energy'),
+    ('I', 3, 'ProphetessRobe', 'Profetisa', 'Vestes da Profetisa',
+     ['Capuz da Profetisa', 'Vestes da Profetisa', 'Calças da Profetisa', 'Braçadeiras da Profetisa', 'Botas da Profetisa'],
+     'Defense = 12, MagicPercent = 18, ReductionPercent = 3', '#ff6a6a', 'Energy'),
+    ('I', 4, 'QueenGown', 'Rainha', 'Trajes da Rainha dos Ecos',
+     ['Tiara da Rainha dos Ecos', 'Peitoral da Rainha dos Ecos', 'Saia da Rainha dos Ecos', 'Mangas da Rainha dos Ecos', 'Sapatos da Rainha dos Ecos'],
+     'Defense = 18, MagicPercent = 26, ReductionPercent = 5, DamagePercent = 4', '#ffcf6a', 'Energy'),
 ]
 
 BASE_ENUM = ['None', 'Leather', 'Scale', 'Veil', 'RunePlate', 'ArcaneWeave', 'Bastion', 'EchoVeil', 'EmberHide']

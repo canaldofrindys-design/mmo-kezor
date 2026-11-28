@@ -34,6 +34,10 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Cruzado (Comandante, tier 1): placas completas com elmo | Medieval Knight - rigged for UE4/5 | Andywoodhead | CC BY 4.0 | https://sketchfab.com/3d-models/1c7a83c0832a4ab28d9f1a46d282fcf9 |
 | Set Marechal (Comandante, tier 3): placas com tabardo, elmo, manoplas e botas | Cavalry Armor Set | ulviaktas | CC BY 4.0 | https://sketchfab.com/3d-models/7621117443cc4c21ab90528fc399a944 |
 | Set Estandarte Negro (Comandante, tier 4): placas escuras completas com elmo | Modular Medieval Armor | jhonjpanesso | CC BY 4.0 | https://sketchfab.com/3d-models/f4156f249ea34c19afb57519f6b032af |
+| Set Mística (Invocadora, tier 1): capuz, capa, saia, luvas e botas | Celestial Mage – Fantasy Female Character | Guugoo3D | CC BY 4.0 | https://sketchfab.com/3d-models/ac57e97b1bcd44b38df887a28efd310f |
+| Set Profetisa (Invocadora, tier 3): capuz, vestes, calças, braçadeiras e botas (sem as armas) | Pirate Assassin Outfit | Blue-Spirit | CC BY 4.0 | https://sketchfab.com/3d-models/2e7117c0daf14b058b2dabcd92eceead |
+| Set Rainha dos Ecos (Invocadora, tier 4): vestido com peitoral, mangas e saia | Female Noble Knight Armor | mert16art | CC BY 4.0 | https://sketchfab.com/3d-models/5b40c2e4b40d48378d595268d2db69bb |
+| Set Rainha dos Ecos (Invocadora, tier 4): tiara | Game-Ready Crown Pack (Low Poly) | visthetique | CC BY 4.0 | https://sketchfab.com/3d-models/b659f3aebd6e4ad6861d2706be128096 |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças

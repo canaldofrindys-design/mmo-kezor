@@ -41,6 +41,9 @@ namespace Kezor.Core.Items
             ArmorSet.CrusaderPlate => "Placas do Cruzado",
             ArmorSet.MarshalPlate => "Placas do Marechal",
             ArmorSet.BlackBannerPlate => "Placas do Estandarte Negro",
+            ArmorSet.MysticGarb => "Trajes da Mística",
+            ArmorSet.ProphetessRobe => "Vestes da Profetisa",
+            ArmorSet.QueenGown => "Trajes da Rainha dos Ecos",
             // </kz-class-sets name>
             _ => "",
         };
@@ -71,6 +74,9 @@ namespace Kezor.Core.Items
             ArmorSet.CrusaderPlate => new SetBonus { Defense = 10, ReductionPercent = 3, DefenseRatePercent = 3 },
             ArmorSet.MarshalPlate => new SetBonus { Defense = 28, ReductionPercent = 7, DefenseRatePercent = 8, DamagePercent = 4 },
             ArmorSet.BlackBannerPlate => new SetBonus { Defense = 40, ReductionPercent = 9, DefenseRatePercent = 10, DamagePercent = 7 },
+            ArmorSet.MysticGarb => new SetBonus { Defense = 4, MagicPercent = 8 },
+            ArmorSet.ProphetessRobe => new SetBonus { Defense = 12, MagicPercent = 18, ReductionPercent = 3 },
+            ArmorSet.QueenGown => new SetBonus { Defense = 18, MagicPercent = 26, ReductionPercent = 5, DamagePercent = 4 },
             // </kz-class-sets bonus>
             _ => default,
         };

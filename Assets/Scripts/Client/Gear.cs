@@ -78,6 +78,7 @@ namespace Kezor.Client
             { "Arqueiro", KezorLook.Hex("#7fae5a") }, { "Batedor", KezorLook.Hex("#4fcf8a") }, { "Sentinela", KezorLook.Hex("#ff4a4a") },
             { "Esgrimista", KezorLook.Hex("#9aa7b8") }, { "Duelista", KezorLook.Hex("#7fb8ff") }, { "Astral", KezorLook.Hex("#e6f2ff") },
             { "Cruzado", KezorLook.Hex("#ffd34a") }, { "Marechal", KezorLook.Hex("#ff5a5a") }, { "Estandarte", KezorLook.Hex("#d9a648") },
+            { "Mistica", KezorLook.Hex("#5f8dff") }, { "Profetisa", KezorLook.Hex("#ff6a6a") }, { "Rainha", KezorLook.Hex("#ffcf6a") },
             // </kz-class-sets colors>
         };
 
@@ -121,6 +122,9 @@ namespace Kezor.Client
             if (d.Id >= 820 && d.Id <= 824) return "Cruzado";
             if (d.Id >= 830 && d.Id <= 834) return "Marechal";
             if (d.Id >= 840 && d.Id <= 844) return "Estandarte";
+            if (d.Id >= 850 && d.Id <= 854) return "Mistica";
+            if (d.Id >= 860 && d.Id <= 864) return "Profetisa";
+            if (d.Id >= 870 && d.Id <= 874) return "Rainha";
             // </kz-class-sets setof>
             return null;
         }
