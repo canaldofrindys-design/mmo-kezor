@@ -38,6 +38,10 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Profetisa (Invocadora, tier 3): capuz, vestes, calças, braçadeiras e botas (sem as armas) | Pirate Assassin Outfit | Blue-Spirit | CC BY 4.0 | https://sketchfab.com/3d-models/2e7117c0daf14b058b2dabcd92eceead |
 | Set Rainha dos Ecos (Invocadora, tier 4): vestido com peitoral, mangas e saia | Female Noble Knight Armor | mert16art | CC BY 4.0 | https://sketchfab.com/3d-models/5b40c2e4b40d48378d595268d2db69bb |
 | Set Rainha dos Ecos (Invocadora, tier 4): tiara | Game-Ready Crown Pack (Low Poly) | visthetique | CC BY 4.0 | https://sketchfab.com/3d-models/b659f3aebd6e4ad6861d2706be128096 |
+| Set Discípulo (Punho de Brasa, tier 1): túnica, calças, ataduras e sandálias | kung fu fighter low poly | Phuong Yen (kienvtcacademy2004) | CC BY 4.0 | https://sketchfab.com/3d-models/bf0edde5b5d44a149fd2febf7801308a |
+| Set Discípulo (Punho de Brasa, tier 1): faixa da cabeça | Barbarian Headband | shimtimultimedia | CC BY 4.0 | https://sketchfab.com/3d-models/0f55359e8c6744eb9f62f0a0383dd69b |
+| Set Brigantina Imperial (Punho de Brasa, tier 3): elmo, brigantina, grevas, manoplas e botas | Imperial Coronation Armor Free | Red_Ilya | CC BY 4.0 | https://sketchfab.com/3d-models/cb4a804badcf4182bb247bda366f4648 |
+| Set Samurai Rubro (Punho de Brasa, tier 4): kabuto, couraça, coxotes, braçais e grevas | Samurai Armor | Hurricane (pavelsmith15) | CC BY 4.0 | https://sketchfab.com/3d-models/7466f23c306a4b65920bfe8164e0e7c5 |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças

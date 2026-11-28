@@ -44,6 +44,9 @@ namespace Kezor.Core.Items
             ArmorSet.MysticGarb => "Trajes da Mística",
             ArmorSet.ProphetessRobe => "Vestes da Profetisa",
             ArmorSet.QueenGown => "Trajes da Rainha dos Ecos",
+            ArmorSet.DiscipleGarb => "Trajes do Discípulo",
+            ArmorSet.ImperialBrigandine => "Brigantina Imperial",
+            ArmorSet.CrimsonSamurai => "Armadura do Samurai Rubro",
             // </kz-class-sets name>
             _ => "",
         };
@@ -77,6 +80,9 @@ namespace Kezor.Core.Items
             ArmorSet.MysticGarb => new SetBonus { Defense = 4, MagicPercent = 8 },
             ArmorSet.ProphetessRobe => new SetBonus { Defense = 12, MagicPercent = 18, ReductionPercent = 3 },
             ArmorSet.QueenGown => new SetBonus { Defense = 18, MagicPercent = 26, ReductionPercent = 5, DamagePercent = 4 },
+            ArmorSet.DiscipleGarb => new SetBonus { Defense = 6, DamagePercent = 6 },
+            ArmorSet.ImperialBrigandine => new SetBonus { Defense = 20, DamagePercent = 12, DefenseRatePercent = 6 },
+            ArmorSet.CrimsonSamurai => new SetBonus { Defense = 28, DamagePercent = 16, DefenseRatePercent = 8, ReductionPercent = 4 },
             // </kz-class-sets bonus>
             _ => default,
         };

@@ -78,6 +78,15 @@ SETS = [
     ('I', 4, 'QueenGown', 'Rainha', 'Trajes da Rainha dos Ecos',
      ['Tiara da Rainha dos Ecos', 'Peitoral da Rainha dos Ecos', 'Saia da Rainha dos Ecos', 'Mangas da Rainha dos Ecos', 'Sapatos da Rainha dos Ecos'],
      'Defense = 18, MagicPercent = 26, ReductionPercent = 5, DamagePercent = 4', '#ffcf6a', 'Energy'),
+    ('P', 1, 'DiscipleGarb', 'Discipulo', 'Trajes do Discípulo',
+     ['Faixa do Discípulo', 'Túnica do Discípulo', 'Calças do Discípulo', 'Ataduras do Discípulo', 'Sandálias do Discípulo'],
+     'Defense = 6, DamagePercent = 6', '#d9c7a0', 'Strength'),
+    ('P', 3, 'ImperialBrigandine', 'Brigantina', 'Brigantina Imperial',
+     ['Elmo Imperial', 'Brigantina Imperial', 'Grevas Imperiais', 'Manoplas Imperiais', 'Botas Imperiais'],
+     'Defense = 20, DamagePercent = 12, DefenseRatePercent = 6', '#ffb04a', 'Strength'),
+    ('P', 4, 'CrimsonSamurai', 'Samurai', 'Armadura do Samurai Rubro',
+     ['Kabuto do Samurai Rubro', 'Couraça do Samurai Rubro', 'Coxotes do Samurai Rubro', 'Braçais do Samurai Rubro', 'Grevas do Samurai Rubro'],
+     'Defense = 28, DamagePercent = 16, DefenseRatePercent = 8, ReductionPercent = 4', '#ff3a2a', 'Strength'),
 ]
 
 BASE_ENUM = ['None', 'Leather', 'Scale', 'Veil', 'RunePlate', 'ArcaneWeave', 'Bastion', 'EchoVeil', 'EmberHide']
