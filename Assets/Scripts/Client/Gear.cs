@@ -269,6 +269,13 @@ namespace Kezor.Client
             }
         }
 
+        /// <summary>Liga as texturas assadas de uma peça instanciada fora do personagem (ícone, item girando no inventário).</summary>
+        public static void ApplyItemMaps(GameObject go, string path)
+        {
+            var rs = new List<Renderer>(go.GetComponentsInChildren<Renderer>(true));
+            ApplyMaps(rs, path.Substring(path.LastIndexOf('/') + 1));
+        }
+
         private static IEnumerable<string> MapNames(string name)
         {
             yield return name;

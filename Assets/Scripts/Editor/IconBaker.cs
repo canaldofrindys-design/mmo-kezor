@@ -116,7 +116,11 @@ namespace Kezor.EditorTools
             try
             {
                 bool pair = d.Kind == ItemKind.Gauntlet || d.Slot == EquipSlot.Pants || d.Slot == EquipSlot.Gloves || d.Slot == EquipSlot.Boots;
-                foreach (var p in pair ? paths.Skip(paths.Count - 1) : paths) ModelLibrary.Instantiate(p, p, root.transform);
+                foreach (var p in pair ? paths.Skip(paths.Count - 1) : paths)
+                {
+                    var go = ModelLibrary.Instantiate(p, p, root.transform);
+                    if (go != null) Gear.ApplyItemMaps(go, p);      // texturas assadas das peças de conjunto
+                }
                 var rs = root.GetComponentsInChildren<Renderer>();
                 if (rs.Length == 0) return Fit2D(Item2D(d), w, h);
                 if (d.IsWeapon || d.Kind == ItemKind.Shield) Orient(root, rs, d.Kind == ItemKind.Shield);

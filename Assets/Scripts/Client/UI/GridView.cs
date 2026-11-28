@@ -176,9 +176,9 @@ namespace Kezor.Client.UI
             int a = anchor;
             gi.Root.userData = new DropTag(Zone, a) { Grid = this };
             gi.Root.RegisterCallback<ClickEvent>(e => { var it = _data()[a]; if (it != null) OnClick?.Invoke(a, it, e.clickCount); });
-            gi.Root.RegisterCallback<PointerEnterEvent>(e => { var it = _data()[a]; if (it != null && !_ui.Drag.Dragging) _ui.ShowItemTip(it, e.position, Compare); });
+            gi.Root.RegisterCallback<PointerEnterEvent>(e => { var it = _data()[a]; if (it != null && !_ui.Drag.Dragging) { _ui.ShowItemTip(it, e.position, Compare); ItemSpin.Show(gi.Icon, it.Def); } });
             gi.Root.RegisterCallback<PointerMoveEvent>(e => { var it = _data()[a]; if (it != null && !_ui.Drag.Dragging) _ui.ShowItemTip(it, e.position, Compare); });
-            gi.Root.RegisterCallback<PointerLeaveEvent>(_ => _ui.HideItemTip());
+            gi.Root.RegisterCallback<PointerLeaveEvent>(_ => { _ui.HideItemTip(); ItemSpin.Hide(gi.Icon); });
             _ui.Drag.BindGrid(gi.Root, this, a, () => _data()[a]);
             return gi;
         }

@@ -48,9 +48,9 @@ namespace Kezor.Client.UI
         protected KzSlot ItemSlot(VisualElement parent, Func<Item?> item, bool compare, string extra = "")
         {
             var s = parent.Put(new KzSlot(extra));
-            s.RegisterCallback<PointerEnterEvent>(e => { var it = item(); if (it != null && !Ui.Drag.Dragging) Ui.ShowItemTip(it, e.position, compare); });
+            s.RegisterCallback<PointerEnterEvent>(e => { var it = item(); if (it != null && !Ui.Drag.Dragging) { Ui.ShowItemTip(it, e.position, compare); ItemSpin.Show(s.IconEl, it.Def); } });
             s.RegisterCallback<PointerMoveEvent>(e => { var it = item(); if (it != null && !Ui.Drag.Dragging) Ui.ShowItemTip(it, e.position, compare); });
-            s.RegisterCallback<PointerLeaveEvent>(_ => Ui.HideItemTip());
+            s.RegisterCallback<PointerLeaveEvent>(_ => { Ui.HideItemTip(); ItemSpin.Hide(s.IconEl); });
             return s;
         }
     }

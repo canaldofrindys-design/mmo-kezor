@@ -191,6 +191,7 @@ namespace Kezor.Client.UI
             _ghostIcon = Kz.El("kz-grid__icon", _ghost);
             _ghostText = Kz.Text("", "kz-slot__label", _ghost);
             _ghost.Show(false);
+            ItemSpin.Hide(_ghostIcon);
             ui.Root.RegisterCallback<PointerDownEvent>(OnDownWhileHolding, TrickleDown.TrickleDown);
         }
 
@@ -234,6 +235,7 @@ namespace Kezor.Client.UI
             _ghostIcon.style.backgroundImage = sp != null ? new StyleBackground(sp) : new StyleBackground(StyleKeyword.None);
             _ghostText.Set(sp == null ? KezorGame.Short(it) : "");
             _ghost.Show(true);
+            ItemSpin.Show(_ghostIcon, it.Def, px);      // o item pego continua girando preso ao cursor
             _ghost.BringToFront();
             _ui.HideItemTip();
             Follow(MousePanel());
@@ -245,6 +247,7 @@ namespace Kezor.Client.UI
             _originEl?.RemoveFromClassList("kz-held-origin");
             _from = null; _item = null; _originEl = null; _busy = false;
             _ghost.Show(false);
+            ItemSpin.Hide(_ghostIcon);
             _hoverGrid?.HidePreview(); _hoverGrid = null;
         }
 
