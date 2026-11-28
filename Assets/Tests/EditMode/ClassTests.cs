@@ -46,12 +46,15 @@ namespace Kezor.Tests
                 Assert.AreEqual(6, skills.Count, cls.ToString());
                 Assert.AreEqual(6, skills.Select(s => s.Name).Distinct().Count());
                 Assert.IsTrue(skills.Any(s => s.ReqLevel == 1 && s.NeedsTarget), $"{cls}: precisa de skill de dano no nível 1");
-                // armas próprias, 1 épica e um conjunto de 5 peças só da classe
+                // armas próprias, 1 épica e 4 conjuntos de 5 peças só da classe (tiers 1 a 4)
                 var mask = ClassDefinition.MaskOf(cls);
                 Assert.GreaterOrEqual(ItemDatabase.All.Count(d => d.IsWeapon && d.AllowedClasses == mask), 4, cls.ToString());
                 Assert.IsTrue(ItemDatabase.All.Any(d => d.Epic && d.AllowedClasses == mask), cls.ToString());
                 var set = ItemDatabase.All.Where(d => d.Set != ArmorSet.None && d.AllowedClasses == mask).ToList();
-                Assert.AreEqual(5, set.Count, cls.ToString());
+                Assert.AreEqual(20, set.Count, cls.ToString());
+                Assert.AreEqual(4, set.Select(d => d.Set).Distinct().Count(), cls.ToString());
+                foreach (var g in set.GroupBy(d => d.Set))
+                    Assert.AreEqual(5, g.Select(d => d.Slot).Distinct().Count(), $"{cls} {g.Key}");
             }
             Assert.IsTrue(ClassDefinition.TryParse("pun", out var p) && p == CharacterClass.EmberFist);
         }
