@@ -35,6 +35,7 @@ def setup(pre, model, set_name):
     G['BARE_HANDS'] = False
     G['ARM_EXCLUDE'] = ()
     G['HAT_Z'] = None
+    G['NO_HELM_SPLIT'] = False
 
 
 def kind_of(o):
@@ -239,7 +240,7 @@ def split_parts(objs, head_z=None, sleeve_to='Luva', boot_z=None, shin_to='Bota'
             c = co[vs].mean(0)
             side = 'R' if neg or (b == 0 and c[0] < 0) else 'L'
             if b == 0:
-                k = 'Elmo' if c[2] > hz and abs(c[0]) < 0.16 else 'Armadura'
+                k = 'Elmo' if c[2] > hz and abs(c[0]) < 0.16 and not globals().get('NO_HELM_SPLIT') else 'Armadura'
             elif b == 1:
                 k = 'Armadura' if c[2] > TJ['S' + side][2] - 0.06 else sleeve_to + side if sleeve_to != 'Armadura' else 'Armadura'
             elif b in (2, 3):
@@ -666,8 +667,9 @@ def fit_auto(K, objs, rot_z=0.0, height=None, debug=False, extras=None, split=No
         split.setdefault('shin_to', 'Calca')
     parts = split_parts(work, **split)
     if 'Elmo' in extras:
-        for o in parts['Elmo']:
+        for o in parts['Elmo']:                         # o que a roupa tinha acima do pescoço (gola alta) fica no peitoral
             o.name = 'TA_x_' + o.name
+            parts['Armadura'].append(o)
         parts['Elmo'] = fit_hat(extras['Elmo'])
     if 'Bota' in extras:
         for side in 'LR':

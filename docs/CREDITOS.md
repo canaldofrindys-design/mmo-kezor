@@ -24,6 +24,10 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Sábio (Arcanista, tier 3): botas | medieval leather boots | starry2007 | CC BY 4.0 | https://sketchfab.com/3d-models/779167c08dba4e929b7b41df95945c04 |
 | Set Arquimago (Arcanista, tier 4): vestes com manto, calças, braçadeiras e botas | Mage Set | 4xy | CC BY 4.0 | https://sketchfab.com/3d-models/4166dea53b104a87925169c68a512423 |
 | Set Arquimago (Arcanista, tier 4): elmo | Red Mage Helmet Flow Ver2 | chambersu1996 | CC BY 4.0 | https://sketchfab.com/3d-models/8d77e78fadc446959e96fc1fa2cfa191 |
+| Set Arqueiro (Patrulheiro, tier 1): gibão, calças, luvas, botas e capuz | Archer's clothes | aptyphawk22 | CC BY 4.0 | https://sketchfab.com/3d-models/cda91b3146514f1c8794d435acad1f90 |
+| Set Batedor (Patrulheiro, tier 3): couraça, calças, luvas e botas | Elven Ranger | div.andromeda | CC BY 4.0 | https://sketchfab.com/3d-models/daed59994fd340bc8f7e1d9bb30d6cdf |
+| Set Batedor (Patrulheiro, tier 3): elmo | Helmet - Archery | Multipainkiller_Studio | CC BY 4.0 | https://sketchfab.com/3d-models/5b082c77519345b2a37d3beaff65418a |
+| Set Sentinela Rubra (Patrulheiro, tier 4): armadura completa com elmo | Elsworn Leather Armor | SethBlaine | CC BY 4.0 | https://sketchfab.com/3d-models/5affa0d955554002b8cd44bc7aca352d |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças

@@ -32,6 +32,9 @@ namespace Kezor.Core.Items
             ArmorSet.ApprenticeRobe => "Túnica do Aprendiz",
             ArmorSet.SageRobe => "Vestes do Sábio",
             ArmorSet.ArchmageRobe => "Vestes do Arquimago",
+            ArmorSet.ArcherGarb => "Trajes do Arqueiro",
+            ArmorSet.ScoutLeather => "Couraça do Batedor",
+            ArmorSet.SentinelLeather => "Couraça da Sentinela Rubra",
             // </kz-class-sets name>
             _ => "",
         };
@@ -53,6 +56,9 @@ namespace Kezor.Core.Items
             ArmorSet.ApprenticeRobe => new SetBonus { Defense = 4, MagicPercent = 8 },
             ArmorSet.SageRobe => new SetBonus { Defense = 12, MagicPercent = 20, ReductionPercent = 3 },
             ArmorSet.ArchmageRobe => new SetBonus { Defense = 18, MagicPercent = 28, ReductionPercent = 5, DamagePercent = 4 },
+            ArmorSet.ArcherGarb => new SetBonus { Defense = 6, DefenseRatePercent = 6 },
+            ArmorSet.ScoutLeather => new SetBonus { Defense = 20, DefenseRatePercent = 14, DamagePercent = 5 },
+            ArmorSet.SentinelLeather => new SetBonus { Defense = 28, DefenseRatePercent = 18, DamagePercent = 8, ReductionPercent = 4 },
             // </kz-class-sets bonus>
             _ => default,
         };

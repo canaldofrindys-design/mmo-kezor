@@ -42,6 +42,15 @@ SETS = [
     ('A', 4, 'ArchmageRobe', 'Arquimago', 'Vestes do Arquimago',
      ['Elmo do Arquimago', 'Vestes do Arquimago', 'Calças do Arquimago', 'Braçadeiras do Arquimago', 'Botas do Arquimago'],
      'Defense = 18, MagicPercent = 28, ReductionPercent = 5, DamagePercent = 4', '#c58bff', 'Energy'),
+    ('R', 1, 'ArcherGarb', 'Arqueiro', 'Trajes do Arqueiro',
+     ['Capuz do Arqueiro', 'Gibão do Arqueiro', 'Calças do Arqueiro', 'Luvas do Arqueiro', 'Botas do Arqueiro'],
+     'Defense = 6, DefenseRatePercent = 6', '#7fae5a', 'Agility'),
+    ('R', 3, 'ScoutLeather', 'Batedor', 'Couraça do Batedor',
+     ['Elmo do Batedor', 'Couraça do Batedor', 'Calças do Batedor', 'Luvas do Batedor', 'Botas do Batedor'],
+     'Defense = 20, DefenseRatePercent = 14, DamagePercent = 5', '#4fcf8a', 'Agility'),
+    ('R', 4, 'SentinelLeather', 'Sentinela', 'Couraça da Sentinela Rubra',
+     ['Elmo da Sentinela', 'Couraça da Sentinela', 'Grevas da Sentinela', 'Luvas da Sentinela', 'Botas da Sentinela'],
+     'Defense = 28, DefenseRatePercent = 18, DamagePercent = 8, ReductionPercent = 4', '#ff4a4a', 'Agility'),
 ]
 
 BASE_ENUM = ['None', 'Leather', 'Scale', 'Veil', 'RunePlate', 'ArcaneWeave', 'Bastion', 'EchoVeil', 'EmberHide']
