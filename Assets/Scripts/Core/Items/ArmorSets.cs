@@ -29,6 +29,9 @@ namespace Kezor.Core.Items
             ArmorSet.KnightPlate => "Placas do Cavaleiro",
             ArmorSet.TemplarPlate => "Placas do Templário",
             ArmorSet.SovereignPlate => "Placas do Soberano",
+            ArmorSet.ApprenticeRobe => "Túnica do Aprendiz",
+            ArmorSet.SageRobe => "Vestes do Sábio",
+            ArmorSet.ArchmageRobe => "Vestes do Arquimago",
             // </kz-class-sets name>
             _ => "",
         };
@@ -47,6 +50,9 @@ namespace Kezor.Core.Items
             ArmorSet.KnightPlate => new SetBonus { Defense = 12, ReductionPercent = 3 },
             ArmorSet.TemplarPlate => new SetBonus { Defense = 30, ReductionPercent = 7, DamagePercent = 6 },
             ArmorSet.SovereignPlate => new SetBonus { Defense = 42, ReductionPercent = 10, DamagePercent = 8, DefenseRatePercent = 5 },
+            ArmorSet.ApprenticeRobe => new SetBonus { Defense = 4, MagicPercent = 8 },
+            ArmorSet.SageRobe => new SetBonus { Defense = 12, MagicPercent = 20, ReductionPercent = 3 },
+            ArmorSet.ArchmageRobe => new SetBonus { Defense = 18, MagicPercent = 28, ReductionPercent = 5, DamagePercent = 4 },
             // </kz-class-sets bonus>
             _ => default,
         };

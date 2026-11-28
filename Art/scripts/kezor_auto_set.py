@@ -18,6 +18,7 @@ PRE, MODEL, SET = 'GR_', 'GuardiaoRunicoBase', 'Novo'
 BODY, HEAD, WB = PRE + 'Body', PRE + 'Head', 'KZB_PesosAuto'
 SJ, TJ, BONES, TWIST = {}, {}, {}, {}
 SPINE_R = 0.16
+CLAMP_SLEEVES = 0.0          # >0: raio máximo da manga em volta do braço (túnicas de manga larga)
 SPINE = {'sx': 1.0, 'sy': 1.0}
 SJ_FIX = {}
 DECIMATE = {'Elmo': 1.0, 'Armadura': 1.0, 'Luva': 1.0, 'Calca': 1.0, 'Bota': 1.0}
@@ -29,6 +30,11 @@ def setup(pre, model, set_name):
     G['PRE'], G['MODEL'], G['SET'] = pre, model, set_name
     G['BODY'], G['HEAD'] = pre + 'Body', pre + 'Head'
     G['SJ_FIX'] = {}
+    G['CLAMP_SLEEVES'] = 0.0
+    G['OPEN_FACE'] = None
+    G['BARE_HANDS'] = False
+    G['ARM_EXCLUDE'] = ()
+    G['HAT_Z'] = None
 
 
 def kind_of(o):
@@ -43,7 +49,7 @@ def spine_map(p):
 
 
 # ---------------------------------------------------------------- 1) cópias
-def prep(objs, rot_z=0.0, height=None, keep=None):
+def prep(objs, rot_z=0.0, height=None, keep=None, z0=0.0):
     col = bpy.data.collections.get('TR_work') or bpy.data.collections.new('TR_work')
     if col.name not in bpy.context.scene.collection.children:
         bpy.context.scene.collection.children.link(col)
@@ -68,7 +74,7 @@ def prep(objs, rot_z=0.0, height=None, keep=None):
     body = np.array([tuple(p) for p in body_pts((BODY, HEAD))])
     h = height or (body[:, 2].max() - body[:, 2].min() + 0.04)
     s = h / (zmax - zmin)
-    M = Matrix.Scale(s, 4) @ Matrix.Translation((-cx, 0, -zmin))
+    M = Matrix.Translation((0, 0, z0)) @ Matrix.Scale(s, 4) @ Matrix.Translation((-cx, 0, -zmin))
     for c in out:
         c.data.transform(M)
     # alinha o tronco em y com o do corpo
@@ -126,7 +132,8 @@ def body_joints(K):
 
 def auto_joints(objs):
     """Juntas da roupa estimadas da malha (pose A/T simétrica, frente -Y)."""
-    p = np.vstack([_np(o) for o in objs])
+    ex = globals().get('ARM_EXCLUDE') or ()
+    p = np.vstack([_np(o) for o in objs if o.get('src') not in ex])
     body = np.array([tuple(q) for q in body_pts((BODY,))])
     J = {}
     zsh = TJ['SL'][2]
@@ -142,11 +149,10 @@ def auto_joints(objs):
         tip = c + d * t.max()
         sh = np.array([sg * (abs(TJ['S' + s][0])), TJ['S' + s][1], zsh])
         # ombro na reta do braço, na largura do ombro do corpo
-        if abs(d[2]) < 0.6:                                  # pose T/A aberta: ombro na reta do braço
-            k = (sh[0] - c[0]) / d[0] if abs(d[0]) > 1e-3 else 0
-            sh = c + d * k
-        else:                                                # braços caídos: ombro do corpo
-            sh = np.array(TJ['S' + s]) + np.array([sg * 0.005, 0, 0.01])
+        sh = np.array(TJ['S' + s]) + np.array([sg * 0.005, 0, 0.01])  # ombro do corpo (a roupa já foi posta na altura dele)
+        if abs(d[2]) < 0.6:                                  # pose T/A aberta: ponta = o que vai mais longe em x
+            far = arm[abs(arm[:, 0]) > abs(arm[:, 0]).max() - 0.04]
+            tip = far.mean(0)
         L = np.linalg.norm(tip - sh)
         u = (tip - sh) / L
         J['S' + s] = tuple(sh)
@@ -186,21 +192,29 @@ def repose_auto(objs, sharp=2.0):
     XF = {b: bone_xf(b) for b in BONES}
     for o in objs:
         p = _np(o)
-        names, outs, ws = [], [], []
+        names, outs, ws, dn = [], [], [], []
         for b in BONES:
             a0, d0, L0, a1, Rm, st = XF[b]
             rel = p - a0
             t = rel @ d0
             perp = rel - t[:, None] * d0
             outs.append(a1 + (t[:, None] * d0 * st + perp * BONES[b][3]) @ Rm.T)
-            ws.append(np.exp(-sharp * (seg_dist(p, a0, d0, L0) / BONES[b][2]) ** 2))
+            dn.append(seg_dist(p, a0, d0, L0) / BONES[b][2])
+            ws.append(np.exp(-sharp * dn[-1] ** 2))
             names.append(b)
         outs.append(spine_map(p))
         zc = np.clip(p[:, 2], 0.95, 1.5)
         d = np.sqrt(p[:, 0] ** 2 + (p[:, 1] + 0.025) ** 2 + (p[:, 2] - zc) ** 2)
-        ws.append(np.exp(-sharp * (d / SPINE_R) ** 2) + 1e-6)
+        dn.append(d / SPINE_R)
+        ws.append(np.exp(-sharp * dn[-1] ** 2))
         names.append('Spine')
-        W = np.array(ws); W /= W.sum(0) + 1e-12
+        W = np.array(ws)
+        far = W.max(0) < 1e-3                     # longe de tudo (pano pendurado): segue o osso mais perto
+        if far.any():
+            near = np.array(dn).argmin(0)
+            W[:, far] = 0.0
+            W[near[far], np.where(far)[0]] = 1.0
+        W /= W.sum(0) + 1e-12
         _set(o, sum(W[i][:, None] * outs[i] for i in range(len(outs))))
         dom = W.argmax(0)
         lab = np.array([LABEL[names[i].rstrip('LR')] * (1 if names[i].endswith('L') or names[i] == 'Spine' else -1) for i in dom],
@@ -210,7 +224,7 @@ def repose_auto(objs, sharp=2.0):
 
 
 # ---------------------------------------------------------------- 4) peças por osso dominante
-def split_parts(objs, head_z=None, sleeve_to='Luva', boot_z=None):
+def split_parts(objs, head_z=None, sleeve_to='Luva', boot_z=None, shin_to='Bota'):
     """Elmo: acima do pescoço; Luva: braço (manga junto, ombreira fica na armadura); Calça: coxa; Bota: canela/pé."""
     hz = head_z or (bpy.data.objects[HEAD].matrix_world.translation.z + 0.0)
     out = {k: [] for k in ('Elmo', 'Armadura', 'LuvaL', 'LuvaR', 'CalcaL', 'CalcaR', 'BotaL', 'BotaR')}
@@ -233,7 +247,7 @@ def split_parts(objs, head_z=None, sleeve_to='Luva', boot_z=None):
             elif b == 4:
                 k = 'Calca' + side
             else:
-                k = 'Bota' + side
+                k = shin_to + side if shin_to != 'Armadura' else 'Armadura'
             if boot_z is not None and k.startswith('Calca') and c[2] < boot_z:
                 k = 'Bota' + side
             part.setdefault(k, []).append(f.index)
@@ -279,8 +293,267 @@ def fit_helm_auto(parts, margin=0.015, depth_margin=0.02):
     return k
 
 
+# ---------------------------------------------------------------- 4b) peças avulsas (chapéu, botas, luvas de outro modelo)
+def _copies(objs, rot_z, tag):
+    col = bpy.data.collections['TR_work']
+    dg = bpy.context.evaluated_depsgraph_get()
+    out = []
+    for i, o in enumerate(objs):
+        me = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+        me.transform(o.matrix_world)
+        me.transform(Matrix.Rotation(math.radians(rot_z), 4, 'Z'))
+        c = bpy.data.objects.new('TX_%s%02d' % (tag, i), me); col.objects.link(c)
+        o.hide_set(True)
+        out.append(c)
+    return out
+
+
+def _xf(objs, M):
+    for o in objs:
+        o.data.transform(M)
+
+
+def fit_hat(src, margin=0.012, sink=0.12):
+    """Chapéu: a boca (anel de baixo) abraça a cabeça e desce até a testa.
+    Capuz (src com 3º item 'hood'): a parte de cima envolve a cabeça com folga, topo acima do cabelo."""
+    objs, rz = src[0], src[1]
+    hs = _copies(objs, rz, 'hat')
+    p = np.vstack([_np(o) for o in hs])
+    head = head_pts(); top = head[:, 2].max()
+    hd = head[head[:, 2] > top - 0.2]
+    if len(src) > 2 and src[2] == 'helm':                 # elmo fechado: miolo (sem chifres) cobre a cabeça com folga
+        lo, hi = np.percentile(p, 4, axis=0), np.percentile(p, 96, axis=0)
+        k = max((np.ptp(hd[:, 0]) + 2 * 0.02) / (hi[0] - lo[0]), (np.ptp(hd[:, 1]) + 2 * 0.02) / (hi[1] - lo[1]))
+        hc = Vector(((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2]))
+        tc = Vector(((hd[:, 0].min() + hd[:, 0].max()) / 2, (hd[:, 1].min() + hd[:, 1].max()) / 2, top + 0.025))
+        _xf(hs, Matrix.Translation(tc) @ Matrix.Scale(k, 4) @ Matrix.Translation(-hc))
+        return hs
+    if len(src) > 2 and src[2] == 'hood':
+        up = p[p[:, 2] > p[:, 2].max() - 0.45 * np.ptp(p[:, 2])]
+        k = (np.ptp(hd[:, 0]) + 2 * 0.035) / np.ptp(up[:, 0])
+        hc = Vector(((up[:, 0].min() + up[:, 0].max()) / 2, up[:, 1].max(), p[:, 2].max()))
+        tc = Vector(((hd[:, 0].min() + hd[:, 0].max()) / 2, hd[:, 1].max() + 0.035, top + 0.03))
+        _xf(hs, Matrix.Translation(tc) @ Matrix.Scale(k, 4) @ Matrix.Translation(-hc))
+        globals()['OPEN_FACE'] = (top, (hd[:, 1].min() + hd[:, 1].max()) / 2)
+        return hs
+    zb = p[:, 2].min(); ring = p[p[:, 2] < zb + 0.12 * np.ptp(p[:, 2])]
+    # largura da boca: mediana das distâncias ao centro no anel de baixo (aba larga não manda)
+    c = np.array([(p[:, 0].min() + p[:, 0].max()) / 2, (p[:, 1].min() + p[:, 1].max()) / 2])
+    r_ring = np.percentile(np.hypot(ring[:, 0] - c[0], ring[:, 1] - c[1]), 30)
+    r_head = (np.ptp(hd[:, 0]) + np.ptp(hd[:, 1])) / 4 + margin
+    k = r_head / max(r_ring, 1e-4)
+    globals()['OPEN_FACE'] = (top, (hd[:, 1].min() + hd[:, 1].max()) / 2)
+    globals()['HAT_Z'] = top - sink                       # abaixo da boca do chapéu a cabeça fica à mostra
+    hc = Vector((c[0], c[1], zb))
+    tc = Vector(((hd[:, 0].min() + hd[:, 0].max()) / 2, (hd[:, 1].min() + hd[:, 1].max()) / 2, top - sink))
+    _xf(hs, Matrix.Translation(tc) @ Matrix.Scale(k, 4) @ Matrix.Translation(-hc))
+    return hs
+
+
+def _split_pair(objs):
+    """Par de botas/luvas: separa por lado (x). Uma peça só vira par espelhado."""
+    p = np.vstack([_np(o) for o in objs])
+    cx = (p[:, 0].min() + p[:, 0].max()) / 2
+    left, right = [], []
+    for o in objs:
+        q = _np(o)
+        if (q[:, 0] > cx + 0.01).all():
+            left.append(o)
+        elif (q[:, 0] < cx - 0.01).all():
+            right.append(o)
+        else:                                           # uma malha com as duas: corta no meio
+            for side, keep in (('L', lambda f: f > cx), ('R', lambda f: f <= cx)):
+                c = o.copy(); c.data = o.data.copy(); bpy.data.collections['TR_work'].objects.link(c)
+                c.name = o.name + side
+                bm = bmesh.new(); bm.from_mesh(c.data)
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if not keep(f.calc_center_median().x)], context='FACES')
+                bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+                bm.to_mesh(c.data); bm.free()
+                (left if side == 'L' else right).append(c)
+            bpy.data.objects.remove(o, do_unlink=True)
+    if not left or not right:
+        one = left or right
+        mir = []
+        for o in one:
+            c = o.copy(); c.data = o.data.copy(); bpy.data.collections['TR_work'].objects.link(c)
+            c.data.transform(Matrix.Translation((2 * cx, 0, 0)) @ Matrix.Scale(-1, 4, (1, 0, 0)))
+            c.data.flip_normals(); mir.append(c)
+        left, right = (one, mir) if left else (mir, one)
+    return left, right
+
+
+def fit_boots(src, top_z=None):
+    """Botas: sola no chão, cano até top_z (padrão: meio da canela), centradas no pé do corpo, bico para -Y."""
+    objs, rz = src[0], src[1]
+    bs = _copies(objs, rz, 'boot')
+    left, right = _split_pair(bs)
+    body = np.array([tuple(q) for q in body_pts((BODY,))])
+    out = []
+    for side, grp, sg in (('L', left, 1), ('R', right, -1)):
+        p = np.vstack([_np(o) for o in grp])
+        foot = body[(body[:, 2] < 0.12) & (body[:, 0] * sg > 0.02)]
+        # escala pelo comprimento do pé (mantém a proporção da bota); top_z força a altura do cano
+        k = top_z / np.ptp(p[:, 2]) if top_z else (np.ptp(foot[:, 1]) + 0.035) / np.ptp(p[:, 1])
+        # largura do pé do corpo + folga manda se o cano ficar estreito
+        kx = max(k, (np.ptp(foot[:, 0]) + 0.03) / np.ptp(p[:, 0]))
+        c = Vector(((p[:, 0].min() + p[:, 0].max()) / 2, (p[:, 1].min() + p[:, 1].max()) / 2, p[:, 2].min()))
+        t = Vector(((foot[:, 0].min() + foot[:, 0].max()) / 2, (foot[:, 1].min() + foot[:, 1].max()) / 2 - 0.005, 0.0))
+        S = Matrix.Diagonal((kx, max(k, (np.ptp(foot[:, 1]) + 0.03) / np.ptp(p[:, 1])), k, 1.0))
+        _xf(grp, Matrix.Translation(t) @ S @ Matrix.Translation(-c))
+        out.append(grp)
+    return out[0], out[1]
+
+
+def fit_gloves(src, sleeveL, sleeveR):
+    """Luvas avulsas: cobrem a mão do corpo (punho até a ponta dos dedos) e somam com a manga da roupa."""
+    objs, rz = src[0], src[1]
+    gs = _copies(objs, rz, 'glove')
+    left, right = _split_pair(gs)
+    out = []
+    for side, grp, sl in (('L', left, sleeveL), ('R', right, sleeveR)):
+        p = np.vstack([_np(o) for o in grp])
+        W, T = np.array(TJ['W' + side]), np.array(TJ['T' + side])
+        L = np.linalg.norm(T - W) + 0.10
+        k = L / np.ptp(p[:, 2])
+        c = Vector(((p[:, 0].min() + p[:, 0].max()) / 2, (p[:, 1].min() + p[:, 1].max()) / 2, p[:, 2].max()))
+        t = Vector(tuple(W + np.array([0, 0, 0.06])))
+        _xf(grp, Matrix.Translation(t) @ Matrix.Scale(k, 4) @ Matrix.Translation(-c))
+        out.append(list(sl) + grp)
+    return out[0], out[1]
+
+
+def recenter_sleeves(parts, nbins=12, blend=0.15):
+    """Centra o tubo da manga no braço do corpo (fatias ao longo do braço; o centro de cada fatia vai para o eixo)."""
+    for side in 'LR':
+        objs = parts['Luva' + side]
+        if not objs:
+            continue
+        S, W = np.array(TJ['S' + side]), np.array(TJ['W' + side])
+        d = W - S; L = np.linalg.norm(d); u = d / L
+        allp = np.vstack([_np(o) for o in objs])
+        t = np.clip((allp - S) @ u / L, 0, 1)
+        off = np.zeros((nbins, 3)); cnt = np.zeros(nbins)
+        b = np.minimum((t * nbins).astype(int), nbins - 1)
+        for i in range(nbins):
+            q = allp[b == i]
+            if len(q) < 10:
+                continue
+            c = (q.min(0) + q.max(0)) / 2
+            ax = S + u * (((c - S) @ u))
+            off[i] = (c - ax); cnt[i] = 1
+        if not cnt.any():
+            continue
+        # preenche fatias vazias e suaviza
+        idx = np.where(cnt > 0)[0]
+        for k in range(3):
+            off[:, k] = np.interp(np.arange(nbins), idx, off[idx, k])
+        off = np.array([off[max(0, i - 1):i + 2].mean(0) for i in range(nbins)])
+        tb = (np.arange(nbins) + 0.5) / nbins
+        for o in objs:
+            p = _np(o)
+            tt = np.clip((p - S) @ u / L, 0, 1)
+            sh = np.stack([np.interp(tt, tb, off[:, k]) for k in range(3)], 1)
+            w = np.clip(tt / blend, 0, 1)[:, None]            # perto do ombro mexe menos (emenda com a armadura)
+            _set(o, p - sh * w)
+
+
+def clamp_sleeves(parts, rmax=0.085, keep=0.25):
+    """Manga larga que pendia do braço em T vira asa quando o braço desce: puxa para perto do braço."""
+    for side in 'LR':
+        S, E_, W = (np.array(TJ[j + side]) for j in 'SEW')
+        segs = [(S, E_), (E_, W)]
+        for o in parts['Luva' + side] + parts['Armadura']:
+            p = _np(o)
+            best = np.full(len(p), 9.0); foot = np.zeros_like(p)
+            for a, b in segs:
+                d = b - a; L = np.linalg.norm(d); u = d / L
+                t = np.clip((p - a) @ u, 0, L)
+                q = a + t[:, None] * u
+                dist = np.linalg.norm(p - q, axis=1)
+                m = dist < best; best[m] = dist[m]; foot[m] = q[m]
+            sel = (best > rmax) & (p[:, 2] < S[2] - 0.05) & (p[:, 0] * (1 if side == 'L' else -1) > abs(S[0]) - 0.02)
+            if o in parts['Armadura']:
+                sel &= best < 0.25
+            if not sel.any():
+                continue
+            v = p[sel] - foot[sel]
+            r = np.linalg.norm(v, axis=1)
+            p[sel] = foot[sel] + v / r[:, None] * (rmax + (r - rmax) * keep)[:, None]
+            _set(o, p)
+
+
+def _wb_groups(names, th=0.5):
+    wb = bpy.data.objects[WB]; mw = wb.matrix_world
+    gi = {wb.vertex_groups[n].index for n in names if n in wb.vertex_groups}
+    return np.array([tuple(mw @ v.co) for v in wb.data.vertices
+                     if sum(g.weight for g in v.groups if g.group in gi) > th])
+
+
+def inflate(objs, a, b, body, gap, nt=28, na=28, tmin=-0.05, tmax=1.05):
+    """Pano por dentro do corpo (fundo demais para o push_out): sai em volta do eixo a→b até o raio do corpo + folga."""
+    if not objs or not len(body):
+        return 0
+    a, b = np.array(a, float), np.array(b, float)
+    d = b - a; L = np.linalg.norm(d); u = d / L
+    ref = np.array([0, -1.0, 0]) if abs(u[1]) < 0.9 else np.array([1.0, 0, 0])
+    e1 = ref - u * (ref @ u); e1 /= np.linalg.norm(e1); e2 = np.cross(u, e1)
+
+    def cyl(p):
+        rel = p - a; t = rel @ u / L
+        x, y = rel @ e1, rel @ e2
+        return t, np.hypot(x, y), np.arctan2(y, x)
+    bt, br, ba = cyl(body)
+    m = (bt > tmin) & (bt < tmax)
+    R = np.zeros((nt, na))
+    ti = np.clip(((bt[m] - tmin) / (tmax - tmin) * nt).astype(int), 0, nt - 1)
+    ai = ((ba[m] + np.pi) / (2 * np.pi) * na).astype(int) % na
+    np.maximum.at(R, (ti, ai), br[m])
+    R = np.maximum.reduce([R, np.roll(R, 1, 1), np.roll(R, -1, 1)])          # vizinhos no ângulo
+    R = np.maximum.reduce([R, np.vstack([R[:1], R[:-1]]), np.vstack([R[1:], R[-1:]])])
+    # 1) quanto cada célula (fatia × ângulo) precisa sair: o pano mais de dentro chega ao corpo + folga
+    data = []
+    Dl = np.zeros((nt, na))
+    for o in objs:
+        p = _np(o)
+        t, r, ang = cyl(p)
+        ok = (t > tmin) & (t < tmax) & (r > 1e-5)
+        ti = np.clip(((t - tmin) / (tmax - tmin) * nt).astype(int), 0, nt - 1)
+        ai = ((ang + np.pi) / (2 * np.pi) * na).astype(int) % na
+        need = np.where(R[ti, ai] > 0, R[ti, ai] + gap - r, 0.0)
+        np.maximum.at(Dl, (ti[ok], ai[ok]), np.maximum(need[ok], 0))
+        data.append((o, p, t, r, ti, ai, ok))
+    # 2) suaviza para não rasgar e empurra todas as camadas juntas (a de fora não é furada pela de dentro)
+    Dl = np.maximum.reduce([Dl, np.roll(Dl, 1, 1), np.roll(Dl, -1, 1)])
+    Dl = (Dl + np.roll(Dl, 1, 1) + np.roll(Dl, -1, 1) + np.vstack([Dl[:1], Dl[:-1]]) + np.vstack([Dl[1:], Dl[-1:]])) / 5
+    n = 0
+    for o, p, t, r, ti, ai, ok in data:
+        dl = np.where(ok, Dl[ti, ai], 0.0)
+        sel = dl > 1e-4
+        if not sel.any():
+            continue
+        rel = p[sel] - a; tt = rel @ u
+        perp = rel - tt[:, None] * u
+        p[sel] = a + tt[:, None] * u + perp / r[sel][:, None] * (r[sel] + dl[sel])[:, None]
+        _set(o, p); n += int(sel.sum())
+    return n
+
+
+def inflate_all(parts, gap=0.012):
+    tors = _wb_groups(('Body', 'Chest'))
+    out = {}
+    out['torso'] = inflate(parts['Armadura'], (0, -0.025, 0.85), (0, -0.025, 1.52), tors, gap)
+    for s in 'LR':
+        arm = _wb_groups(('Arm' + s, 'ForeArm' + s))
+        out['arm' + s] = inflate(parts['Luva' + s], TJ['S' + s], TJ['W' + s], arm, gap * 0.8, tmin=0.08)
+        leg = _wb_groups(('Leg' + s, 'Shin' + s))
+        out['leg' + s] = inflate(parts['Calca' + s] + parts['Armadura'], TJ['H' + s], TJ['A' + s], leg, gap, tmin=0.0, tmax=1.0)
+    return out
+
+
 def settle_auto(parts):
     G = globals()
+    if G.get('INFLATE', True):
+        G['INFLATED'] = inflate_all(parts)
     G['BVH'] = body_tree((BODY,), no_arms=True)
     for k in ('Armadura', 'CalcaL', 'CalcaR'):
         for o in parts[k]:
@@ -380,28 +653,46 @@ def pivots_auto():
             'CalcaL': g('LegL'), 'CalcaR': g('LegR'), 'BotaL': g('LegL'), 'BotaR': g('LegR')}
 
 
-def fit_auto(K, objs, rot_z=0.0, height=None, debug=False):
+def fit_auto(K, objs, rot_z=0.0, height=None, debug=False, extras=None, split=None, z0=0.0):
     G = globals()
     G['TJ'] = body_joints(K)
-    work, s = prep(objs, rot_z, height)
+    work, s = prep(objs, rot_z, height, z0=z0)
     G['SJ'] = auto_joints(work)
     G['BONES'] = make_bones()
     repose_auto(work)
-    parts = split_parts(work)
+    split = dict(split or {}); split.pop('clamp', None)
+    extras = extras or {}
+    if 'Bota' in extras:
+        split.setdefault('shin_to', 'Calca')
+    parts = split_parts(work, **split)
+    if 'Elmo' in extras:
+        for o in parts['Elmo']:
+            o.name = 'TA_x_' + o.name
+        parts['Elmo'] = fit_hat(extras['Elmo'])
+    if 'Bota' in extras:
+        for side in 'LR':
+            parts['Calca' + side] += parts['Bota' + side]
+        parts['BotaL'], parts['BotaR'] = fit_boots(extras['Bota'])
+    if 'Luva' in extras:
+        parts['LuvaL'], parts['LuvaR'] = fit_gloves(extras['Luva'], parts['LuvaL'], parts['LuvaR'])
+    if G.get('CLAMP_SLEEVES'):
+        recenter_sleeves(parts)
+        clamp_sleeves(parts, G['CLAMP_SLEEVES'])
     G['HELM_K'] = fit_helm_auto(parts)
     settle_auto(parts)
     G['PARTS'] = parts
     return parts, s
 
 
-def run_auto(K, objs, rot_z=0.0, height=None, export=True, closed_helm=False):
-    parts, s = fit_auto(K, objs, rot_z, height)
+def run_auto(K, objs, rot_z=0.0, height=None, export=True, closed_helm=False, extras=None, split=None, z0=0.0):
+    parts, s = fit_auto(K, objs, rot_z, height, extras=extras, split=split, z0=z0)
     K['ALLOWED'].update({'Armadura': ('Body', 'Chest', 'LegL', 'LegR'),
                          'CalcaL': ('LegL', 'ShinL', 'FootL', 'Body'), 'CalcaR': ('LegR', 'ShinR', 'FootR', 'Body')})
     K['WEIGHT_MIX'].update({'Armadura': skirt_mix, 'CalcaL': pants_mix('L'), 'CalcaR': pants_mix('R')})
     K['HIDE_ZMIN'].update({'Armadura': 0.5})
     ensure_maps({m for objs_ in parts.values() for o in objs_ for m in o.data.materials if m})
     built = build_parts_auto(K, parts)
+    settle_auto({k: (built[k][0] if k in built else []) for k in ('Elmo', 'Armadura', 'LuvaL', 'LuvaR', 'CalcaL', 'CalcaR', 'BotaL', 'BotaR')})
     if not export:
         return built
     ex = K['export_parts'](SET, built, bpy.data.objects[WB], pivots_auto(), textures=True)
@@ -459,8 +750,17 @@ def clean_hide(set_name, model, wb_name=None):
                  if f.startswith(set_name + '_') and f.endswith('_%s.txt' % model)]:
         piece = os.path.basename(path)[len(set_name) + 1:-len(model) - 5].rstrip('LR')
         bad = FORBID.get(piece, ())
+        if piece == 'Luva' and globals().get('BARE_HANDS'):
+            bad = bad + ('Hand',)
         pts = [tuple(int(x) for x in l.split()) for l in open(path, encoding='utf-8').read().split('\n') if l.strip()]
         keep = [p for p in pts if dom[kd.find(Vector(p) / 1000.0)[1]] not in bad]
+        of = globals().get('OPEN_FACE')
+        hz = globals().get('HAT_Z')
+        if piece == 'Elmo' and hz:
+            keep = [p for p in keep if p[2] / 1000 > hz - 0.01]
+        if piece == 'Elmo' and of:                      # capuz aberto: o rosto fica à mostra
+            top, yc = of
+            keep = [p for p in keep if not (top - 0.25 < p[2] / 1000 < top - 0.05 and abs(p[0]) < 80 and p[1] / 1000 < yc - 0.02)]
         with open(path, 'w', encoding='utf-8') as f:
             f.write('\n'.join('%d %d %d' % p for p in keep))
         out[os.path.basename(path)] = (len(pts), len(keep))
@@ -529,7 +829,7 @@ def hide_preview(set_name=None):
     return out
 
 
-def rerun(K, set_name, src_names, rot_z=0.0, **kw):
+def rerun(K, set_name, src_names, rot_z=0.0, extras=None, **kw):
     for o in list(bpy.data.objects):
         if o.name.startswith(('KZS_', 'TA_', 'TR_', 'PV_')):
             bpy.data.objects.remove(o, do_unlink=True)
@@ -539,7 +839,11 @@ def rerun(K, set_name, src_names, rot_z=0.0, **kw):
     srcs = [bpy.data.objects[n] for n in src_names]
     for o in srcs:
         o.hide_set(False)
-    r = run_auto(K, srcs, rot_z, **kw)
+    ex = {k: ([bpy.data.objects[n] for n in v[0]],) + tuple(v[1:]) for k, v in (extras or {}).items()}
+    for v in ex.values():
+        for o in v[0]:
+            o.hide_set(False)
+    r = run_auto(K, srcs, rot_z, extras=ex, **kw)
     for o in bpy.data.objects:
         if o.name.startswith(('TA_', 'TR_')):
             o.hide_set(True)

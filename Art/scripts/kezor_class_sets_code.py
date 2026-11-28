@@ -18,6 +18,8 @@ TIERS = {1: (15, 0.68, 55, 36), 3: (45, 1.38, 120, 50), 4: (65, 1.85, 160, 58)}
 BASE_DEF = {'Helm': 16, 'Armor': 26, 'Pants': 22, 'Gloves': 11, 'Boots': 13}       # Placas Rúnicas (tier 2)
 REQ_ADD = {'Helm': 5, 'Armor': 15, 'Pants': 10, 'Gloves': 0, 'Boots': 0}
 DUR_ADD = {'Helm': 2, 'Armor': 8, 'Pants': 6, 'Gloves': 0, 'Boots': 2}
+# defesa relativa por classe (o Véu do Arcanista tem ~metade da defesa das Placas Rúnicas)
+CLASS_DEF = {'W': 1.0, 'A': 0.5, 'I': 0.5, 'R': 0.7, 'L': 0.8, 'C': 0.95, 'P': 0.7}
 SLOT = {'Helm': 'Helm', 'Armor': 'Armor', 'Pants': 'Pants', 'Gloves': 'Gloves', 'Boots': 'Boots'}
 
 # (classe, tier, enum, prefixo do modelo, nome do set, nomes das 5 peças, bônus, cor, atributo do requisito)
@@ -31,6 +33,15 @@ SETS = [
     ('W', 4, 'SovereignPlate', 'Soberano', 'Placas do Soberano',
      ['Elmo do Soberano', 'Peitoral do Soberano', 'Grevas do Soberano', 'Manoplas do Soberano', 'Botas do Soberano'],
      'Defense = 42, ReductionPercent = 10, DamagePercent = 8, DefenseRatePercent = 5', '#ffcf4a', 'Strength'),
+    ('A', 1, 'ApprenticeRobe', 'Aprendiz', 'Túnica do Aprendiz',
+     ['Capuz do Aprendiz', 'Túnica do Aprendiz', 'Calças do Aprendiz', 'Mangas do Aprendiz', 'Botas do Aprendiz'],
+     'Defense = 4, MagicPercent = 8', '#8a7bd1', 'Energy'),
+    ('A', 3, 'SageRobe', 'Sabio', 'Vestes do Sábio',
+     ['Chapéu do Sábio', 'Vestes do Sábio', 'Saia do Sábio', 'Mangas do Sábio', 'Botas do Sábio'],
+     'Defense = 12, MagicPercent = 20, ReductionPercent = 3', '#5fa8ff', 'Energy'),
+    ('A', 4, 'ArchmageRobe', 'Arquimago', 'Vestes do Arquimago',
+     ['Elmo do Arquimago', 'Vestes do Arquimago', 'Calças do Arquimago', 'Braçadeiras do Arquimago', 'Botas do Arquimago'],
+     'Defense = 18, MagicPercent = 28, ReductionPercent = 5, DamagePercent = 4', '#c58bff', 'Energy'),
 ]
 
 BASE_ENUM = ['None', 'Leather', 'Scale', 'Veil', 'RunePlate', 'ArcaneWeave', 'Bastion', 'EchoVeil', 'EmberHide']
@@ -94,11 +105,16 @@ def patch(root):
     for cls, tier, enum, pre, sname, names, _, _, attr in SETS:
         drop, k, req, dur = TIERS[tier]
         lines.append('// %s — tier %d (%s)' % (sname, tier, cls))
+        dk = CLASS_DEF.get(cls, 1.0)
         for i, kind in enumerate(KINDS):
+            if attr == 'Strength':
+                reqs = 'ReqStrength = %d' % (req + REQ_ADD[kind])
+            else:                                     # classes de magia/agilidade: pouca força e o atributo principal
+                reqs = 'ReqStrength = %d, Req%s = %d' % (round((req + REQ_ADD[kind]) * 0.3), attr, round((req + REQ_ADD[kind]) * 0.75))
             lines.append('public static readonly ItemDefinition %s%s = Add(new ItemDefinition { Id = %d, Set = ArmorSet.%s, Name = "%s", '
-                         'Kind = ItemKind.%s, Slot = EquipSlot.%s, Defense = %d, Req%s = %d, BaseDurability = %d, AllowedClasses = %s, DropLevel = %d });'
-                         % (enum, kind, base_id(cls, tier) + i, enum, names[i], kind, SLOT[kind], round(BASE_DEF[kind] * k), attr,
-                            req + REQ_ADD[kind], dur + DUR_ADD[kind], cls, drop))
+                         'Kind = ItemKind.%s, Slot = EquipSlot.%s, Defense = %d, %s, BaseDurability = %d, AllowedClasses = %s, DropLevel = %d });'
+                         % (enum, kind, base_id(cls, tier) + i, enum, names[i], kind, SLOT[kind], max(1, round(BASE_DEF[kind] * k * dk)), reqs,
+                            dur + DUR_ADD[kind] - (6 if dk < 0.8 else 0), cls, drop))
     anchor = [l for l in t.split('\n') if 'RunePlateBoots = Add(' in l][0] + '\n'
     t = put_block(t, lines, '        ', anchor_after=anchor)
     write(p, t, nl, bom)

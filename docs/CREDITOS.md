@@ -16,6 +16,14 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Cavaleiro (Guardião Rúnico, tier 1): elmo, peitoral com saia de malha, ombreiras, braçais e manoplas, coxotes e grevas | Knight armor | slagperch3d | CC BY 4.0 | https://sketchfab.com/3d-models/2353f53f8bd04a9ab7b036a007daf7fc |
 | Set Templário (Guardião Rúnico, tier 3): elmo fechado, peitoral e tabardo de escamas, ombreiras, braçais, grevas e sapatos de placa | Medieval Knight Armour | GraphVFX | CC BY 4.0 | https://sketchfab.com/3d-models/5d076bc757674b94b55735791b35a995 |
 | Set Soberano (Guardião Rúnico, tier 4): armadura negra e dourada com elmo de viseira, peitoral de lamelas, braçais, coxotes e botas | Old king armor | Pebegou | CC BY 4.0 | https://sketchfab.com/3d-models/f5a4479d211e49d49937b55fd9478e85 |
+| Set Aprendiz (Arcanista, tier 1): túnica com cinto e mangas | Robe (Free) | wolfgar74 | CC BY 4.0 | https://sketchfab.com/3d-models/fcc16fda59e84ee29ea7e920d556d166 |
+| Set Aprendiz (Arcanista, tier 1): capuz | Accessory_Hood Cowl 001 | collinsweeney | CC BY 4.0 | https://sketchfab.com/3d-models/9a6d8f8c1113444fb8504d758d032b38 |
+| Set Aprendiz (Arcanista, tier 1): botas | Medieval Boots | Peakz | CC BY 4.0 | https://sketchfab.com/3d-models/ddfa994dac18462598bddd8c28c75ef3 |
+| Set Sábio (Arcanista, tier 3): vestes bordadas, saia e mangas | Skywind tribunal temple robe | Lanetary | CC BY 4.0 | https://sketchfab.com/3d-models/b05d3842a5564da59b337781f39573cb |
+| Set Sábio (Arcanista, tier 3): chapéu | Wizard's hat | Byakko | CC BY 4.0 | https://sketchfab.com/3d-models/68a9fb2dbd8442a5bacf9c0141320308 |
+| Set Sábio (Arcanista, tier 3): botas | medieval leather boots | starry2007 | CC BY 4.0 | https://sketchfab.com/3d-models/779167c08dba4e929b7b41df95945c04 |
+| Set Arquimago (Arcanista, tier 4): vestes com manto, calças, braçadeiras e botas | Mage Set | 4xy | CC BY 4.0 | https://sketchfab.com/3d-models/4166dea53b104a87925169c68a512423 |
+| Set Arquimago (Arcanista, tier 4): elmo | Red Mage Helmet Flow Ver2 | chambersu1996 | CC BY 4.0 | https://sketchfab.com/3d-models/8d77e78fadc446959e96fc1fa2cfa191 |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças
