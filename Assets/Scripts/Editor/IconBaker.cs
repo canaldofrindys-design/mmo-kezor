@@ -37,7 +37,7 @@ namespace Kezor.EditorTools
             foreach (var d in ItemDatabase.All.OrderBy(d => d.Id))
             {
                 var (w, h) = ItemSize.Of(d);
-                var px = RenderItem(d, w * Px, h * Px);
+                var px = BlenderIcon(d, w * Px, h * Px) ?? RenderItem(d, w * Px, h * Px);
                 items.Add(new Icon { Name = "item_" + d.Id, Pix = px, W = w * Px, H = h * Px });
             }
             WriteAtlas("items", items);
@@ -105,6 +105,36 @@ namespace Kezor.EditorTools
                     px[(y + oy) * w + x + ox] = tex.GetPixelBilinear((x + 0.5f) / side, (y + 0.5f) / side);
             UnityEngine.Object.DestroyImmediate(tex);
             return px;
+        }
+
+        // ------------------------------------------------------------------ ícones renderizados no Blender
+        private const string BlenderDir = "Art/icons/items";
+
+        /// <summary>
+        /// Ícone feito no Blender (Art/ui/blender/icons.py, mesmos FBX do jogo, render Cycles com a luz da interface):
+        /// Art/icons/items/item_&lt;id&gt;.png. Se não existir, o ícone é renderizado aqui no Unity como antes.
+        /// </summary>
+        private static Color[]? BlenderIcon(ItemDefinition d, int w, int h)
+        {
+            var path = Path.Combine(BlenderDir, "item_" + d.Id + ".png");
+            if (!File.Exists(path)) return null;
+            var src = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            try
+            {
+                if (!src.LoadImage(File.ReadAllBytes(path))) return null;
+                if (src.width == w && src.height == h) return src.GetPixels();
+                var px = new Color[w * h];                                 // tamanho diferente: encaixa sem distorcer
+                float k = Mathf.Min(w / (float)src.width, h / (float)src.height);
+                float ox = (w - src.width * k) / 2f, oy = (h - src.height * k) / 2f;
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                    {
+                        float u = (x + 0.5f - ox) / (src.width * k), v = (y + 0.5f - oy) / (src.height * k);
+                        px[y * w + x] = u < 0 || v < 0 || u > 1 || v > 1 ? Color.clear : src.GetPixelBilinear(u, v);
+                    }
+                return px;
+            }
+            finally { UnityEngine.Object.DestroyImmediate(src); }
         }
 
         // ------------------------------------------------------------------ itens 3D

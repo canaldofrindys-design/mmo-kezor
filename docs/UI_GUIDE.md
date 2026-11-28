@@ -85,6 +85,11 @@ referência de 1600×900.
 ## Arte
 Toda a arte da interface é desenhada em código (`UiArtBaker`, menu **Kezor ▸ Gerar arte da UI**) e gravada em
 `Assets/Resources/UI/Art`. Os ícones de itens e skills vêm de `Kezor ▸ Gerar ícones` (atlas em `Resources/UI/Icons`).
+Desde a v7 os ícones dos itens com modelo (armas, escudos, peças dos sets, asas, montarias e mascotes) são renderizados
+no Blender a partir dos mesmos FBX do jogo, com a luz do kit da interface: `python Art/ui/blender/icons.py` grava
+`Art/icons/items/item_<id>.png` no tamanho exato da grade (96 px por casa), e o `Gerar ícones` usa esses PNGs quando
+existem. Peças com texturas assadas (sets de classe, `Resources/Textures/Equip`) só saem do Blender se as texturas
+estiverem no repositório; sem elas, o Unity continua renderizando o ícone como antes.
 O tema fica em `Assets/Resources/UI/Kezor.uss`; as cores acima existem como variáveis USS.
 
 ## Arquitetura
