@@ -13,6 +13,9 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Trama (Lâmina Arcana): elmo, peitoral com gola de pele, saia, braçadeiras e manoplas, coxotes e botas | Mithril Armor set | 12oyraj | CC BY 4.0 | https://sketchfab.com/3d-models/3ae9057e840e4da0bf05269865c29c91 |
 | Set Ígneo (Punho de Brasa): elmo, colete, saiote e faixa, faixas de pulso, calções e sandálias | Ancient indian warrior | RustyGREINDER | CC BY 4.0 | https://sketchfab.com/3d-models/dba79e75dd7e4c32aa9867bd231f7914 |
 | Set Couro (todas as classes): gibão, cintos, mangas e luvas, calça e botas; faixa de testa feita com o cinto. As botas do Ecos usam essas botas recoloridas | Witcher Outfit | Blue-Spirit | CC BY 4.0 | https://sketchfab.com/3d-models/ae3d4a2e195b446d879637737ed89f5f |
+| Set Cavaleiro (Guardião Rúnico, tier 1): elmo, peitoral com saia de malha, ombreiras, braçais e manoplas, coxotes e grevas | Knight armor | slagperch3d | CC BY 4.0 | https://sketchfab.com/3d-models/2353f53f8bd04a9ab7b036a007daf7fc |
+| Set Templário (Guardião Rúnico, tier 3): elmo fechado, peitoral e tabardo de escamas, ombreiras, braçais, grevas e sapatos de placa | Medieval Knight Armour | GraphVFX | CC BY 4.0 | https://sketchfab.com/3d-models/5d076bc757674b94b55735791b35a995 |
+| Set Soberano (Guardião Rúnico, tier 4): armadura negra e dourada com elmo de viseira, peitoral de lamelas, braçais, coxotes e botas | Old king armor | Pebegou | CC BY 4.0 | https://sketchfab.com/3d-models/f5a4479d211e49d49937b55fd9478e85 |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças

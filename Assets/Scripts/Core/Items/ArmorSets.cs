@@ -25,6 +25,11 @@ namespace Kezor.Core.Items
             ArmorSet.Bastion => "Bastião",
             ArmorSet.EchoVeil => "Véu dos Ecos",
             ArmorSet.EmberHide => "Couro Ígneo",
+            // <kz-class-sets name>
+            ArmorSet.KnightPlate => "Placas do Cavaleiro",
+            ArmorSet.TemplarPlate => "Placas do Templário",
+            ArmorSet.SovereignPlate => "Placas do Soberano",
+            // </kz-class-sets name>
             _ => "",
         };
 
@@ -38,6 +43,11 @@ namespace Kezor.Core.Items
             ArmorSet.Bastion => new SetBonus { Defense = 18, ReductionPercent = 4, DefenseRatePercent = 5 },
             ArmorSet.EchoVeil => new SetBonus { Defense = 8, MagicPercent = 12, ReductionPercent = 2 },
             ArmorSet.EmberHide => new SetBonus { Defense = 8, DamagePercent = 10 },
+            // <kz-class-sets bonus>
+            ArmorSet.KnightPlate => new SetBonus { Defense = 12, ReductionPercent = 3 },
+            ArmorSet.TemplarPlate => new SetBonus { Defense = 30, ReductionPercent = 7, DamagePercent = 6 },
+            ArmorSet.SovereignPlate => new SetBonus { Defense = 42, ReductionPercent = 10, DamagePercent = 8, DefenseRatePercent = 5 },
+            // </kz-class-sets bonus>
             _ => default,
         };
 

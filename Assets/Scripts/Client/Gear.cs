@@ -72,6 +72,9 @@ namespace Kezor.Client
             { "Couro", KezorLook.Hex("#d9a066") }, { "Escamas", KezorLook.Hex("#7fd18b") }, { "Veu", KezorLook.Hex("#9fb8ff") },
             { "Runica", KezorLook.Hex("#7af0ff") }, { "Trama", KezorLook.Hex("#c9b8ff") }, { "Bastiao", KezorLook.Hex("#ffd36a") },
             { "Ecos", KezorLook.Hex("#b6ffd9") }, { "Igneo", KezorLook.Hex("#ff7a2a") },
+            // <kz-class-sets colors>
+            { "Cavaleiro", KezorLook.Hex("#c9d2dc") }, { "Templario", KezorLook.Hex("#9fd4ff") }, { "Soberano", KezorLook.Hex("#ffcf4a") },
+            // </kz-class-sets colors>
         };
 
         /// <summary>Nome do set quando elmo, armadura, calças, luvas e botas são todos do mesmo conjunto.</summary>
@@ -98,6 +101,11 @@ namespace Kezor.Client
             if (d.Id >= 160 && d.Id <= 164) return "Bastiao";
             if (d.Id >= 170 && d.Id <= 174) return "Ecos";
             if (d.Id >= 180 && d.Id <= 184) return "Igneo";
+            // <kz-class-sets setof>
+            if (d.Id >= 700 && d.Id <= 704) return "Cavaleiro";
+            if (d.Id >= 710 && d.Id <= 714) return "Templario";
+            if (d.Id >= 720 && d.Id <= 724) return "Soberano";
+            // </kz-class-sets setof>
             return null;
         }
 
