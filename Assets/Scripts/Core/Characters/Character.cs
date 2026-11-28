@@ -55,20 +55,43 @@ namespace Kezor.Core.Characters
         // ----- Vigor e Escudo (HUD v4) -----
         /// <summary>Custo de Vigor de cada skill (o ataque básico não gasta).</summary>
         public const int SkillVigorCost = 6;
-        /// <summary>Vigor recuperado por segundo em combate e fora dele.</summary>
-        public const float VigorRegenCombat = 8f, VigorRegenRest = 25f;
+        /// <summary>Intervalo de recuperação de mana e AG (MU: a cada tique de 3 s).</summary>
+        public const float RecoveryInterval = 3f;
+        /// <summary>Mana recuperada por tique: 3,7% do máximo (MU).</summary>
+        public const float ManaRecovery = 0.037f;
+        /// <summary>AG recuperado por tique além da fração da classe: 2, e +3 na zona segura (MU).</summary>
+        public const int AgRecoveryAbsolute = 2, AgRecoverySafeZone = 3;
         /// <summary>Segundos sem atacar nem apanhar para sair de combate.</summary>
         public const float CombatSeconds = 5f;
-        /// <summary>Escudo: 20% da vida máxima; volta 10% por segundo depois de 6 s sem levar dano.</summary>
-        public const int ShieldPercentOfHp = 20;
+        /// <summary>Escudo (SD, MU): só segura golpes de jogadores; 90% do golpe vai no escudo e 10% na vida.
+        /// Recarrega só na zona segura, depois de 6 s sem apanhar.</summary>
+        public const int ShieldRatioPercent = 90;
         public const float ShieldDelaySeconds = 6f, ShieldRegenPerSecond = 0.10f;
 
-        /// <summary>Vigor: fôlego para skills. Sem vigor suficiente a skill não sai (só o ataque básico).</summary>
+        /// <summary>Vigor (AG do MU): fôlego para skills. Sem vigor suficiente a skill não sai (só o ataque básico).</summary>
         public float Vigor { get; set; }
-        public int MaxVigor => 100 + Math.Min(100, Stats.Agility / 10) + Ascension.Total(AscEffect.Vigor);
-        /// <summary>Escudo de brasa: absorve dano antes da vida. Começa vazio e enche fora de perigo.</summary>
+        public int MaxVigor
+        {
+            get
+            {
+                var d = Def;
+                return Math.Max(1, (int)(d.AgEne * Stats.Energy + d.AgVit * Stats.Vitality + d.AgAgi * Stats.Agility + d.AgStr * Stats.Strength))
+                       + Ascension.Total(AscEffect.Vigor);
+            }
+        }
+        /// <summary>Escudo (SD): só absorve golpes de jogadores (PvP). Começa vazio e enche na zona segura.</summary>
         public float Shield { get; set; }
-        public int MaxShield => MaxHp * (ShieldPercentOfHp + Ascension.Total(AscEffect.ShieldPct)) / 100;
+        /// <summary>SD máximo (MU): 1,2·(FOR+AGI+VIT+ENE) + defesa + Nv²/30.</summary>
+        public int MaxShield
+        {
+            get
+            {
+                int sd = (int)(1.2f * (Stats.Strength + Stats.Agility + Stats.Vitality + Stats.Energy)) + GetCombatStats().Defense + Level * Level / 30;
+                return sd + sd * Ascension.Total(AscEffect.ShieldPct) / 100;
+            }
+        }
+        /// <summary>Na zona segura (o servidor atualiza a cada tique): o SD só recarrega aqui e o AG volta mais rápido.</summary>
+        public bool InSafeZone { get; set; }
         /// <summary>Tempo restante em combate (atacou ou apanhou há pouco).</summary>
         public float CombatTimer { get; set; }
         /// <summary>Tempo até o Escudo voltar a carregar.</summary>
@@ -79,14 +102,16 @@ namespace Kezor.Core.Characters
         public readonly int[] QuickSlots = { 2000, 2002, 2001, 0 };
         public const int QuickSlotCount = 4;
 
-        public int AbsorbShield(int damage)
+        public int AbsorbShield(int damage, bool fromPlayer)
         {
             CombatTimer = CombatSeconds;
             ShieldDelay = ShieldDelaySeconds;
-            if (Shield <= 0f || damage <= 0) return damage;
-            float take = Math.Min(Shield, damage);
-            Shield -= take;
-            return damage - (int)take;
+            if (!fromPlayer || Shield <= 0f || damage <= 0) return damage;
+            int toShield = damage * ShieldRatioPercent / 100;
+            int toHp = damage - toShield;
+            if (toShield > Shield) { toHp += toShield - (int)Shield; toShield = (int)Shield; }
+            Shield -= toShield;
+            return toHp;
         }
 
         /// <summary>Marca combate (quando o herói ataca).</summary>
@@ -100,15 +125,61 @@ namespace Kezor.Core.Characters
             return true;
         }
 
-        /// <summary>Passa o tempo: vigor volta (mais rápido fora de combate) e o escudo recarrega depois do atraso.</summary>
+        private float _recoveryAcc;
+
+        /// <summary>
+        /// Passa o tempo. Como no MU: a vida não volta sozinha; mana volta 3,7% do máximo e o AG a fração da classe + 2 (+3 na
+        /// zona segura) a cada 3 s; o escudo só recarrega na zona segura, depois de 6 s sem apanhar.
+        /// </summary>
         public void TickVitals(float dt)
         {
             if (dt <= 0f) return;
             if (CombatTimer > 0f) CombatTimer = Math.Max(0f, CombatTimer - dt);
-            Vigor = Math.Min(MaxVigor, Vigor + (InCombat ? VigorRegenCombat : VigorRegenRest) * dt);
             if (IsDead) { Shield = 0f; return; }
+            _recoveryAcc += dt;
+            while (_recoveryAcc >= RecoveryInterval)
+            {
+                _recoveryAcc -= RecoveryInterval;
+                int maxMp = MaxMp, maxAg = MaxVigor;
+                Mp = Math.Min(maxMp, Mp + Math.Max(1, (int)(maxMp * ManaRecovery)));
+                Vigor = Math.Min(maxAg, Vigor + maxAg * Def.AgRecovery + AgRecoveryAbsolute + (InSafeZone ? AgRecoverySafeZone : 0));
+            }
             if (ShieldDelay > 0f) { ShieldDelay = Math.Max(0f, ShieldDelay - dt); return; }
-            Shield = Math.Min(MaxShield, Shield + MaxShield * ShieldRegenPerSecond * dt);
+            if (!InSafeZone) return;
+            int maxSd = MaxShield;
+            Shield = Math.Min(maxSd, Shield + maxSd * ShieldRegenPerSecond * dt);
+        }
+
+        // ----- PK (estados do MU) -----
+        /// <summary>Cada grau de PK dura 3 h de jogo; depois cai um grau.</summary>
+        public const int PkStageSeconds = 3 * 3600;
+        /// <summary>Grau de PK: 0 normal, 1 aviso (laranja), 2 assassino 1º grau, 3 assassino 2º grau (vermelho).</summary>
+        public int PkLevel => Math.Min(Infamy, 3);
+        /// <summary>Assassino (2+ mortes): matá-lo não dá PK.</summary>
+        public bool IsMurderer => Infamy >= 2;
+        /// <summary>Segundos que faltam para cair um grau de PK.</summary>
+        public int PkSeconds { get; set; }
+        private float _pkAcc;
+
+        /// <summary>Registra a morte de um jogador inocente: sobe um grau (até o 3º) e o tempo recomeça; no 3º grau o tempo soma.</summary>
+        public void AddPlayerKill()
+        {
+            if (Infamy < 3) { Infamy++; PkSeconds = Math.Max(PkSeconds, PkStageSeconds); }
+            else PkSeconds += PkStageSeconds;
+        }
+
+        /// <summary>Conta o tempo do PK (só com o herói online) e baixa um grau quando acaba.</summary>
+        public void TickPk(float dt)
+        {
+            if (Infamy <= 0) { PkSeconds = 0; _pkAcc = 0; return; }
+            _pkAcc += dt;
+            int whole = (int)_pkAcc;
+            if (whole <= 0) return;
+            _pkAcc -= whole;
+            PkSeconds -= whole;
+            if (PkSeconds > 0) return;
+            Infamy = Math.Max(0, Math.Min(Infamy, 3) - 1);
+            PkSeconds = Infamy > 0 ? PkStageSeconds + PkSeconds : 0;
         }
 
         /// <summary>Restaura o progresso salvo (persistência).</summary>
@@ -125,7 +196,7 @@ namespace Kezor.Core.Characters
         {
             get
             {
-                int hp = (int)(Def.BaseHp + Def.HpPerLevel * (Level - 1) + Def.HpPerVitality * (Stats.Vitality - Def.BaseStats.Vitality));
+                int hp = (int)(Def.HpConst + Def.HpPerLevel * Level + Def.HpPerVitality * Stats.Vitality);
                 foreach (var it in Equipment.Values)
                     if (it.Durability > 0 && (it.Ascended & AscendedOption.MaxHpPlus) != 0) hp += hp * 4 / 100;
                 hp += hp * Ascension.Total(AscEffect.HpPct) / 100;
@@ -137,7 +208,9 @@ namespace Kezor.Core.Characters
         {
             get
             {
-                int mp = (int)(Def.BaseMp + Def.MpPerLevel * (Level - 1) + Def.MpPerEnergy * (Stats.Energy - Def.BaseStats.Energy));
+                int mp = (int)(Def.MpConst + Def.MpPerLevel * Level + Def.MpPerEnergy * (Stats.Energy - Def.MpEnergyOffset));
+                foreach (var it in Equipment.Values)
+                    if (it.Durability > 0 && (it.Ascended & AscendedOption.MaxMpPlus) != 0) mp += mp * 4 / 100;
                 mp += mp * Ascension.Total(AscEffect.MpPct) / 100;
                 foreach (var it in Equipment.Values) if (it.Def.IsJewel) mp += it.Def.JewelMp;
                 return mp;
@@ -190,8 +263,19 @@ namespace Kezor.Core.Characters
 
         public void Dismount() => Mounted = false;
 
-        /// <summary>Curva de experiência: cresce ~cúbica.</summary>
-        public static long ExpToNext(int level) => (long)level * level * (level + 10) * 5 + 100;
+        /// <summary>Experiência total para chegar ao nível (tabela do MU): 10·(N+8)·(N−1)², e do 256 em diante
+        /// soma 1000·(N−247)·(N−256)².</summary>
+        public static long TotalExpForLevel(int level)
+        {
+            if (level <= 1) return 0;
+            long n = level - 1;
+            long exp = 10L * (level + 8) * n * n;
+            if (level > 256) { long m = level - 256; exp += 1000L * (level - 247) * m * m; }
+            return exp;
+        }
+
+        /// <summary>Experiência que falta do nível atual para o próximo (o personagem guarda a experiência dentro do nível).</summary>
+        public static long ExpToNext(int level) => TotalExpForLevel(level + 1) - TotalExpForLevel(level);
 
         /// <summary>Concede experiência e retorna quantos níveis foram ganhos.</summary>
         public int GainExperience(long amount)
@@ -290,13 +374,17 @@ namespace Kezor.Core.Characters
         public CombatStats GetCombatStats()
         {
             var d = Def;
+            int str = d.StrAgiCombined ? Stats.Strength + Stats.Agility : Stats.Strength;
             var s = new CombatStats
             {
-                MinDamage = Stats.Strength / d.StrDivMin,
-                MaxDamage = Stats.Strength / d.StrDivMax,
+                MinDamage = str / d.StrDivMin,
+                MaxDamage = str / d.StrDivMax,
                 Defense = Stats.Agility / d.AgiDivDefense,
-                AttackRate = Level * 5 + Stats.Agility * 3 / 2 + Stats.Strength / 4,
-                DefenseRate = Stats.Agility / 3,
+                AttackRate = (int)(d.ArPerLevel * Level + d.ArPerAgi * Stats.Agility) + Stats.Strength / d.ArStrDiv,
+                DefenseRate = Stats.Agility / d.AgiDivDefenseRate,
+                AttackSpeed = Stats.Agility / (d.CastsMagic ? d.MagicSpeedDiv : d.AttackSpeedDiv),
+                SkillMultiplier = d.SkillMultiplier + d.SkillMultiplierPerEnergy * Stats.Energy,
+                IsPlayer = true,
                 Level = Level
             };
             if (d.AgiDamageDivMin > 0)
@@ -304,12 +392,23 @@ namespace Kezor.Core.Characters
                 s.MinDamage += Stats.Agility / d.AgiDamageDivMin;
                 s.MaxDamage += Stats.Agility / d.AgiDamageDivMax;
             }
+            if (d.EnePhysDivMin > 0)
+            {
+                s.MinDamage += Stats.Energy / d.EnePhysDivMin;
+                s.MaxDamage += Stats.Energy / d.EnePhysDivMax;
+            }
+            if (d.VitPhysDivMin > 0)
+            {
+                s.MinDamage += Stats.Vitality / d.VitPhysDivMin;
+                s.MaxDamage += Stats.Vitality / d.VitPhysDivMax;
+            }
             if (d.EneDivMin > 0)
             {
                 s.MinMagic = Stats.Energy / d.EneDivMin;
                 s.MaxMagic = Stats.Energy / d.EneDivMax;
             }
-            int magicPct = 0;
+            int magicPct = 0, dmgPct = 0;
+            bool defRateExc = false;
             foreach (var kv in Equipment)
             {
                 var it = kv.Value;
@@ -318,11 +417,17 @@ namespace Kezor.Core.Characters
                 s.Defense += it.Defense;
                 magicPct += it.MagicPowerPercent;
                 if (it.Luck) s.CriticalChancePercent += 5;
-                if ((it.Ascended & AscendedOption.SurgeChance) != 0) s.SurgeChancePercent += 10;
-                if ((it.Ascended & AscendedOption.DamagePerLevel) != 0) { s.MinDamage += Level / 20; s.MaxDamage += Level / 20; }
-                if ((it.Ascended & AscendedOption.DefenseRate) != 0) s.DefenseRate += s.DefenseRate / 10;
-                if ((it.Ascended & AscendedOption.DamageReduction) != 0) s.DamageReductionPercent += 4;
-                if ((it.Ascended & AscendedOption.LifeOnKill) != 0) s.LifeOnKill += 1;
+                var ex = it.Ascended;
+                if ((ex & AscendedOption.SurgeChance) != 0) s.SurgeChancePercent += 10;
+                if ((ex & AscendedOption.DamagePerLevel) != 0) { s.MinDamage += Level / 20; s.MaxDamage += Level / 20; if (s.MaxMagic > 0) { s.MinMagic += Level / 20; s.MaxMagic += Level / 20; } }
+                if ((ex & AscendedOption.DamagePercent) != 0) dmgPct += 2;
+                if ((ex & AscendedOption.AttackSpeed) != 0) s.AttackSpeed += 7;
+                if ((ex & AscendedOption.DefenseRate) != 0) defRateExc = true;
+                if ((ex & AscendedOption.DamageReduction) != 0) s.DamageReductionPercent += 4;
+                if ((ex & AscendedOption.Reflect) != 0) s.ReflectPercent += 5;
+                if ((ex & AscendedOption.LifeOnKill) != 0) s.LifeOnKill += 1;
+                if ((ex & AscendedOption.ManaOnKill) != 0) s.ManaOnKill += 1;
+                if ((ex & AscendedOption.ZenBonus) != 0) s.ZenBonusPercent += 40;
                 if (it.Def.IsWings) { s.DamageBonusPercent += it.WingDamage; s.DamageReductionPercent += it.WingAbsorb; }
                 if (it.Def.Pet == PetType.Guardian) { s.Defense += Item.GuardianPetDefense; s.DamageReductionPercent += Item.GuardianPetReduction; }
                 if (it.Def.IsJewel) { s.DamageReductionPercent += it.Def.JewelResistPercent; s.DamageBonusPercent += it.Def.JewelDamagePercent; }
@@ -359,9 +464,25 @@ namespace Kezor.Core.Characters
                 s.MinMagic += s.MinMagic * magicPct / 100;
                 s.MaxMagic += s.MaxMagic * magicPct / 100;
             }
+            if (dmgPct > 0)
+            {   // opção excelente "dano +2%" (sobre o dano base)
+                s.MinDamage += s.MinDamage * dmgPct / 100; s.MaxDamage += s.MaxDamage * dmgPct / 100;
+                s.MinMagic += s.MinMagic * dmgPct / 100; s.MaxMagic += s.MaxMagic * dmgPct / 100;
+            }
+            if (defRateExc) s.DefenseRate += s.DefenseRate / 10;
+            // MU: a defesa final é metade da soma (AGI + itens + bônus)
+            s.DefenseBase = s.Defense;
+            s.Defense /= 2;
             if (s.MaxDamage < s.MinDamage) s.MaxDamage = s.MinDamage;
             return s;
         }
+
+        /// <summary>Velocidade de ataque (MU): AGI/divisor da classe + opção excelente (+7).</summary>
+        public int AttackSpeed => GetCombatStats().AttackSpeed;
+
+        /// <summary>Intervalo mínimo entre golpes (s), pela velocidade de ataque: 0,8 × 50/(50+velocidade), no mínimo 0,2 s.</summary>
+        public float AttackCooldown => AttackIntervalFor(AttackSpeed);
+        public static float AttackIntervalFor(int speed) => Math.Max(0.2f, 0.8f * 50f / (50f + Math.Max(0, speed)));
 
         /// <summary>Desgaste ao atacar/ser atingido.</summary>
         public void WearEquipment(bool attacking, IRandom rng)

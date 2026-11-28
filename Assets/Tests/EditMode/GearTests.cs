@@ -187,7 +187,8 @@ namespace Kezor.Tests
             var baseDef = c.GetCombatStats();
             Equip(c, ItemDatabase.GuardianWisp);
             var g = c.GetCombatStats();
-            Assert.AreEqual(baseDef.Defense + Item.GuardianPetDefense, g.Defense);
+            Assert.AreEqual(baseDef.DefenseBase + Item.GuardianPetDefense, g.DefenseBase);
+            Assert.AreEqual(g.DefenseBase / 2, g.Defense, "defesa final do MU: metade");
             Assert.AreEqual(baseDef.DamageReductionPercent + Item.GuardianPetReduction, g.DamageReductionPercent);
             Assert.IsTrue(c.Unequip(EquipSlot.Pet, out _));
 

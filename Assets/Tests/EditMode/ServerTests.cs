@@ -199,7 +199,8 @@ namespace Kezor.Tests
             Assert.AreEqual(qty + 5, c.Inventory.Get(slot)!.Quantity);
             c.Hp = 1;
             StringAssert.StartsWith("OK", gs.Handle(1, $"USE {slot}"));
-            Assert.AreEqual(1 + ItemDatabase.HealthPotion.PotionAmount, c.Hp);
+            // MU: poção pequena = 10% da vida máxima + (100 − nível)
+            Assert.AreEqual(1 + c.MaxHp * 10 / 100 + (100 - c.Level), c.Hp);
         }
 
         [Test]

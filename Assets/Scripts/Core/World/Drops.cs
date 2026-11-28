@@ -22,7 +22,27 @@ namespace Kezor.Core.World
         public const int ItemChancePerMil = 120;
         public const int RuneChancePerMil = 25;
         public const int PotionChancePerMil = 90;
-        public const int AscendedChancePerMil = 10;
+        /// <summary>Item excelente (Ascendente): 0,1% dos itens que caem (MU), chefe 20%.</summary>
+        public const int AscendedChancePerMil = 1;
+        /// <summary>Chance de o item excelente vir com uma 2ª opção.</summary>
+        public const int SecondExcellentPercent = 20;
+        /// <summary>Ouro (zen) cai em metade das mortes: experiência ganha + 7 (MU).</summary>
+        public const int ZenChancePercent = 50, ZenBase = 7;
+
+        /// <summary>Sorteia 1 opção excelente (às vezes 2) entre as 6 da arma ou as 6 da armadura.</summary>
+        public static AscendedOption RollExcellent(ItemDefinition def, IRandom rng)
+        {
+            var pool = def.IsWeapon ? Item.WeaponExcellent : Item.ArmorExcellent;
+            var first = pool[rng.Next(0, pool.Length)];
+            var opts = first;
+            if (rng.Roll(SecondExcellentPercent))
+            {
+                var second = pool[rng.Next(0, pool.Length)];
+                if (second == first) second = pool[(Array.IndexOf(pool, first) + 1) % pool.Length];
+                opts |= second;
+            }
+            return opts;
+        }
         public const int FeatherChancePerMil = 40;
         public const int FeatherMinLevel = 14;
         public const int JewelChancePerMil = 12;
@@ -58,12 +78,7 @@ namespace Kezor.Core.World
                         Skill = def.IsWeapon && rng.Roll(30)
                     };
                     if (rng.Roll(25)) it.AdditionalOption = rng.Next(1, 3);
-                    if (rng.RollPerMil(m.Boss ? 200 : AscendedChancePerMil))
-                    {
-                        it.Ascended = def.IsWeapon
-                            ? (rng.Roll(50) ? AscendedOption.SurgeChance : (rng.Roll(50) ? AscendedOption.DamagePerLevel : AscendedOption.LifeOnKill))
-                            : (rng.Roll(34) ? AscendedOption.DefenseRate : (rng.Roll(50) ? AscendedOption.DamageReduction : AscendedOption.MaxHpPlus));
-                    }
+                    if (rng.RollPerMil(m.Boss ? 200 : AscendedChancePerMil)) it.Ascended = RollExcellent(def, rng);
                     drops.Add(it);
                 }
             }

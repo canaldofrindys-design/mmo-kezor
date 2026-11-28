@@ -188,7 +188,7 @@ namespace Kezor.Client.UI
             var m = S.Me;
             var def = ClassDefinition.Get(m.Class);
             _head.Set(m.Name);
-            _sub.Set($"{def.DisplayName}  ·  Nível {m.Level}  ·  Renascimentos {m.Rebirths}" + (m.Infamy > 0 ? $"  ·  <color=#ff6a5a>Infâmia {m.Infamy}</color>" : ""));
+            _sub.Set($"{def.DisplayName}  ·  Nível {m.Level}  ·  Renascimentos {m.Rebirths}" + (m.Infamy >= 2 ? $"  ·  <color=#ff6a5a>Assassino {m.Infamy - 1}º grau</color>" : m.Infamy == 1 ? "  ·  <color=#ff9a3c>Aviso de PK</color>" : ""));
             _free.Set(m.FreePoints > 0 ? $"Pontos livres: <color=#ffb347><b>{m.FreePoints}</b></color>" : "Pontos livres: <color=#7d7366>0</color>");
             _stat["STR"].Set(m.Str.ToString()); _stat["AGI"].Set(m.Agi.ToString()); _stat["VIT"].Set(m.Vit.ToString()); _stat["ENE"].Set(m.Ene.ToString());
             foreach (var b in _plus) b.SetEnabled(m.FreePoints > 0);

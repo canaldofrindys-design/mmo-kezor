@@ -12,7 +12,15 @@ namespace Kezor.Core.Server
         public readonly List<int> Members = new List<int>();
         public bool IsFull => Members.Count >= MaxMembers;
 
-        /// <summary>Bônus total de experiência por tamanho do grupo: +15% por membro extra no alcance.</summary>
-        public static float ExpBonus(int membersInRange) => 1f + 0.15f * (membersInRange - 1);
+        /// <summary>
+        /// Experiência total do grupo em % da experiência de um monstro (MU clássico): grupo comum de 2/3/4/5 = 160/180/200/220%;
+        /// grupo com 3+ classes todas diferentes = 230/270/300%. O total é dividido entre os membros pelo nível.
+        /// </summary>
+        public static int ExpPercent(int membersInRange, bool allDifferentClasses)
+        {
+            if (membersInRange <= 1) return 100;
+            if (allDifferentClasses && membersInRange >= 3) return membersInRange switch { 3 => 230, 4 => 270, _ => 300 };
+            return membersInRange switch { 2 => 160, 3 => 180, 4 => 200, _ => 220 };
+        }
     }
 }

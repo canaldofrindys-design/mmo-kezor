@@ -8,7 +8,7 @@ using Kezor.Core.Server;
 using Kezor.Server.Data;
 
 // Servidor dedicado de Kezor sem Unity (mesmo Core). Feito para ficar ligado 24h num VPS (Linux ou Windows).
-// Uso: Kezor.Server [porta] [--data <pasta>] [--db <banco>] [--gm-account <conta>] [--gm] [--name <nome>] [--channel <n>] [--max <jogadores>]
+// Uso: Kezor.Server [porta] [--data <pasta>] [--db <banco>] [--gm-account <conta>] [--gm] [--name <nome>] [--channel <n>] [--max <jogadores>] [--exp <taxa>]
 //   --data        pasta do servidor. Padrão: ./data
 //   --db          banco de dados: sqlite:<arquivo> (padrão: <data>/kezor.db), mysql:<conexão> (ex.: mysql:Server=localhost;Database=kezor;User ID=kezor;Password=...)
 //                 ou json (arquivos .json na pasta data, como o servidor do PC). Na primeira vez num banco vazio, os saves
@@ -39,8 +39,10 @@ string data = Arg("--data", Env("KEZOR_DATA", Path.Combine(AppContext.BaseDirect
 string name = Arg("--name", Env("KEZOR_NAME", "Kezor"));
 int channel = int.TryParse(Arg("--channel", "1"), out var ch) ? ch : 1;
 int max = int.TryParse(Arg("--max", "500"), out var mx) ? mx : 500;
+// taxa de experiência (MU oficial = 1x): --exp 10 ou KEZOR_EXP=10
+float expRate = float.TryParse(Arg("--exp", Env("KEZOR_EXP", "1")), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var er) && er > 0 ? er : 1f;
 
-var options = new ServerOptions { AllowGm = gm, RequireAccounts = true, ServerName = name, Channel = channel, MaxPlayers = max, Log = Log };
+var options = new ServerOptions { AllowGm = gm, RequireAccounts = true, ServerName = name, Channel = channel, MaxPlayers = max, Log = Log, ExperienceRate = expRate };
 for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "--gm-account") options.GmAccounts.Add(args[i + 1]);
 foreach (var a in Env("KEZOR_GM_ACCOUNTS", "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) options.GmAccounts.Add(a);
 

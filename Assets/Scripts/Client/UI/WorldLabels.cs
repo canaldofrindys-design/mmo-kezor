@@ -90,7 +90,7 @@ namespace Kezor.Client.UI
                     {
                         bool mine = kv.Key == S.MyId;
                         bool party = me.PartyId != 0 && e.PartyId == me.PartyId;
-                        nameColor = mine ? KezorLook.Hex("#f2e6c8") : party ? KezorLook.Hex("#8fe08f") : e.Infamy > 0 ? KezorLook.Hex("#ff5a5a") : KezorLook.Hex("#9fc6ff");
+                        nameColor = mine ? KezorLook.Hex("#f2e6c8") : party ? KezorLook.Hex("#8fe08f") : e.Infamy >= 2 ? KezorLook.Hex("#ff5a5a") : e.Infamy == 1 ? KezorLook.Hex("#ff9a3c") : KezorLook.Hex("#9fc6ff");   // PK: aviso laranja, assassino vermelho
                         name = $"{e.Name}  <size=10><color=#b9ad97>Nv {e.Level}</color></size>";
                         if (e.Guild != "") sub = $"<color={(e.Guild == G.WarEnemyGuild ? "#ff6a5a" : "#8fd0ff")}>‹{e.Guild}›</color>";
                         shop = e.Shop;

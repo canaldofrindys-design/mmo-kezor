@@ -96,7 +96,7 @@ namespace Kezor.Client.UI
             if (it.Def.IsMount) stats.Add($"Velocidade montado <b>+{it.Def.MountSpeedPercent}%</b>  (tecla X)");
             if (it.Def.Pet == PetType.Collector) stats.Add("Recolhe seus itens num raio de 6 m e dá +10% de ouro");
             if (it.Def.Pet == PetType.Guardian) stats.Add($"Defesa +{Item.GuardianPetDefense} e -{Item.GuardianPetReduction}% de dano recebido");
-            if (it.Def.IsPotion) stats.Add($"Recupera <b>{it.Def.PotionAmount}</b> de {(it.Def.Potion == PotionType.Health ? "vida" : "mana")}");
+            if (it.Def.IsPotion) stats.Add($"Recupera <b>{it.Def.PotionDescription}</b>");
             if (it.Def.IsRune) stats.Add(RuneService.Describe(it.Def.Rune));
             if (it.Def.JewelHp > 0) stats.Add($"Vida  <b>+{it.Def.JewelHp}</b>");
             if (it.Def.JewelMp > 0) stats.Add($"Mana  <b>+{it.Def.JewelMp}</b>");

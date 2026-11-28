@@ -52,16 +52,20 @@ namespace Kezor.Core.Server
             return sb.ToString();
         }
 
+        /// <summary>Intervalo entre poções (MU: 0,5 s).</summary>
+        public const double PotionCooldown = 0.5;
+
         private string Use(Session s, Character c, string[] p)
         {
             int slot = Int(p, 1);
             var it = c.Inventory.Get(slot);
             if (it == null) return "ERR slot vazio";
             if (!it.Def.IsPotion) return "ERR item não é consumível";
-            if (_time - s.LastPotionTime < 0.4) return "ERR aguarde";
+            if (_time - s.LastPotionTime < PotionCooldown) return "ERR aguarde";
             s.LastPotionTime = _time;
-            if (it.Def.Potion == PotionType.Health) c.Hp = Math.Min(c.MaxHp, c.Hp + it.Def.PotionAmount);
-            else c.Mp = Math.Min(c.MaxMp, c.Mp + it.Def.PotionAmount);
+            // MU: a poção recupera % do máximo + um bônus que diminui com o nível
+            if (it.Def.Potion == PotionType.Health) { int max = c.MaxHp; c.Hp = Math.Min(max, c.Hp + it.Def.PotionRecover(max, c.Level)); }
+            else { int max = c.MaxMp; c.Mp = Math.Min(max, c.Mp + it.Def.PotionRecover(max, c.Level)); }
             c.Inventory.ConsumeOne(slot);
             return "OK";
         }

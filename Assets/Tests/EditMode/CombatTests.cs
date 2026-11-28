@@ -12,9 +12,11 @@ namespace Kezor.Tests
         [Test]
         public void HitChanceClamped()
         {
-            Assert.AreEqual(95, CombatResolver.HitChancePercent(1000, 1));
-            Assert.AreEqual(5, CombatResolver.HitChancePercent(1, 1000));
-            Assert.AreEqual(50, CombatResolver.HitChancePercent(10, 10));
+            // MU: 1 − TD/TA quando a taxa de ataque é maior; senão 3%
+            Assert.AreEqual(999, CombatResolver.HitChancePerMil(1000, 1));
+            Assert.AreEqual(750, CombatResolver.HitChancePerMil(400, 100));
+            Assert.AreEqual(30, CombatResolver.HitChancePerMil(1, 1000));
+            Assert.AreEqual(30, CombatResolver.HitChancePerMil(10, 10), "taxas iguais: 3%");
         }
 
         [Test]
@@ -32,7 +34,7 @@ namespace Kezor.Tests
         {
             var w = new Character(1, "a", CharacterClass.Warden);
             var m = new Monster(1, MonsterCatalog.MossSlime, 0, 0);
-            var r = CombatResolver.Resolve(w, m, SkillCatalog.BasicAttack, new FixedRandom(99));
+            var r = CombatResolver.Resolve(w, m, SkillCatalog.BasicAttack, new FixedRandom(999));
             Assert.AreEqual(HitType.Miss, r.Type);
             Assert.AreEqual(m.MaxHp, m.Hp);
         }

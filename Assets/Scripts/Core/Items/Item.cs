@@ -15,17 +15,23 @@ namespace Kezor.Core.Items
     public enum PotionType { None, Health, Mana }
     public enum ItemRarity { Normal, Ascended }
 
-    /// <summary>Opções especiais de itens Ascendentes.</summary>
+    /// <summary>Opções especiais de itens Ascendentes (as 6 + 6 opções excelentes do MU).</summary>
     [Flags]
     public enum AscendedOption
     {
         None = 0,
-        SurgeChance = 1,       // armas: +10% de chance de Golpe Ascendente (dano máx +20%)
+        SurgeChance = 1,       // armas: +10% de chance de Golpe Ascendente (dano máx × 1,2)
         DamagePerLevel = 2,    // armas: +dano = nível/20
-        LifeOnKill = 4,        // armas: recupera HP ao matar
+        LifeOnKill = 4,        // armas: recupera vida/8 ao matar
         DefenseRate = 8,       // armaduras: +10% taxa de defesa
         DamageReduction = 16,  // armaduras: -4% dano recebido
-        MaxHpPlus = 32         // armaduras: +4% HP máximo
+        MaxHpPlus = 32,        // armaduras: +4% HP máximo
+        DamagePercent = 64,    // armas: +2% de dano
+        AttackSpeed = 128,     // armas: +7 de velocidade de ataque
+        ManaOnKill = 256,      // armas: recupera mana/8 ao matar
+        MaxMpPlus = 512,       // armaduras: +4% mana máxima
+        Reflect = 1024,        // armaduras: reflete 5% do dano recebido
+        ZenBonus = 2048        // armaduras: +40% de ouro dos monstros
     }
 
     public sealed class ItemDefinition
@@ -37,6 +43,13 @@ namespace Kezor.Core.Items
         public RuneType Rune;
         public PotionType Potion;
         public int PotionAmount;
+        /// <summary>Tamanho da poção no MU (1 pequena, 2 média, 3 grande): recupera 10%·tamanho do máximo + (tamanho+1)·50 − nível.</summary>
+        public int PotionTier;
+        /// <summary>Quanto a poção recupera para um herói com este máximo e nível (regra do MU; sem tamanho = valor fixo).</summary>
+        public int PotionRecover(int maximum, int level) => PotionTier <= 0 ? PotionAmount
+            : maximum * PotionTier * 10 / 100 + Math.Max(0, (PotionTier + 1) * 50 - level);
+        public string PotionDescription => PotionTier <= 0 ? $"{PotionAmount} de {(Potion == PotionType.Health ? "vida" : "mana")}"
+            : $"{PotionTier * 10}% da {(Potion == PotionType.Health ? "vida" : "mana")} máxima + {(PotionTier + 1) * 50} − nível";
         public int MinDamage, MaxDamage, Defense, MagicPowerPercent;
         public int ReqStrength, ReqAgility, ReqEnergy, ReqLevel;
         public int BaseDurability;
@@ -129,6 +142,10 @@ namespace Kezor.Core.Items
         public int RequiredAgility => Def.ReqAgility == 0 ? 0 : Def.ReqAgility + Def.ReqAgility * Level * 3 / 100;
 
         public const int GuardianPetDefense = 15, GuardianPetReduction = 5;
+        /// <summary>Opções excelentes possíveis para armas e para armaduras (sorteio do drop).</summary>
+        public static readonly AscendedOption[] WeaponExcellent = { AscendedOption.SurgeChance, AscendedOption.DamagePerLevel, AscendedOption.DamagePercent, AscendedOption.AttackSpeed, AscendedOption.LifeOnKill, AscendedOption.ManaOnKill };
+        public static readonly AscendedOption[] ArmorExcellent = { AscendedOption.MaxHpPlus, AscendedOption.MaxMpPlus, AscendedOption.DamageReduction, AscendedOption.Reflect, AscendedOption.DefenseRate, AscendedOption.ZenBonus };
+
         /// <summary>Asas: bônus de dano e absorção com o nível de runa.</summary>
         public int WingDamage => Def.IsWings ? Def.WingDamagePercent + Level : 0;
         public int WingAbsorb => Def.IsWings ? Def.WingAbsorbPercent + Level / 2 : 0;
@@ -160,7 +177,7 @@ namespace Kezor.Core.Items
             if (Luck) sb.Append("\nSorte: +5% crítico, +25% sucesso com Runa do Eclipse");
             foreach (AscendedOption o in Enum.GetValues(typeof(AscendedOption)))
                 if (o != AscendedOption.None && (Ascended & o) != 0) sb.Append("\n* ").Append(AscendedText(o));
-            if (Def.IsPotion) sb.Append($"\nRecupera {Def.PotionAmount} de {(Def.Potion == PotionType.Health ? "HP" : "MP")}");
+            if (Def.IsPotion) sb.Append($"\nRecupera {Def.PotionDescription}");
             if (Def.IsRune) sb.Append("\n").Append(RuneService.Describe(Def.Rune));
             if (Def.IsWings) sb.Append($"\nDano +{WingDamage}%  ·  Absorve {WingAbsorb}%");
             if (Def.IsMount) sb.Append($"\nVelocidade montado: +{Def.MountSpeedPercent}% (tecla X)");
@@ -179,6 +196,12 @@ namespace Kezor.Core.Items
             AscendedOption.DefenseRate => "+10% taxa de defesa",
             AscendedOption.DamageReduction => "-4% dano recebido",
             AscendedOption.MaxHpPlus => "+4% HP máximo",
+            AscendedOption.DamagePercent => "Dano +2%",
+            AscendedOption.AttackSpeed => "Velocidade de ataque +7",
+            AscendedOption.ManaOnKill => "Recupera mana ao abater",
+            AscendedOption.MaxMpPlus => "+4% mana máxima",
+            AscendedOption.Reflect => "Reflete 5% do dano",
+            AscendedOption.ZenBonus => "+40% de ouro dos monstros",
             _ => o.ToString()
         };
 
