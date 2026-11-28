@@ -26,3 +26,9 @@ do jogo e texturas juntadas em atlas.
 
 "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217."
 Alterações feitas: um ciclo de cada tomada, transferido para o esqueleto de 15 ossos do herói (Art/scripts/kezor_mocap.py).
+
+## Sons
+
+Todos os efeitos sonoros e o ambiente da vila vêm de gravações livres CC0 (domínio público, sem exigência de
+crédito) de Kenney e OpenGameArt. A lista completa, com autor, link e onde cada som é usado, está em
+[SONS_LICENCAS.md](SONS_LICENCAS.md). Nenhum arquivo de áudio de outro jogo é usado.

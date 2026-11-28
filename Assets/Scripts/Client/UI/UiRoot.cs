@@ -81,6 +81,8 @@ namespace Kezor.Client.UI
             Labels = new WorldLabels(this);
             Drag = new DragDrop(this);
             Root.RegisterCallback<PointerDownEvent>(e => { if (e.target is VisualElement ve && ve != Root) LastUiPointerFrame = Time.frameCount; }, TrickleDown.TrickleDown);
+            // clique de botão (todas as telas e janelas)
+            Root.RegisterCallback<ClickEvent>(e => { if (e.target is VisualElement ve && (ve is Button || ve.GetFirstAncestorOfType<Button>() != null)) CombatAudio.Ensure().Ui("ui_click", 0.45f); }, TrickleDown.TrickleDown);
             Root.RegisterCallback<PointerUpEvent>(e => { if (e.target is VisualElement ve && ve != Root) LastUiPointerFrame = Time.frameCount; }, TrickleDown.TrickleDown);          // antes da HUD: os atalhos Q W E R recebem itens arrastados
             Hud = new HudView(this);
             Prompts = new PromptsView(this);

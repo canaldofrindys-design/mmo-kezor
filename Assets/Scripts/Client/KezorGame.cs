@@ -270,6 +270,7 @@ namespace Kezor.Client
             {
                 ProcessEvents();
                 SyncViews();
+                Footsteps();
                 HandleInput();
             }
             else
@@ -388,6 +389,33 @@ namespace Kezor.Client
         };
 
         private EntityView? View(int id) => _views.TryGetValue(id, out var v) ? v : null;
+
+        // ---------------------------------------------------------------- passos
+        private readonly Dictionary<int, (Vector3 last, float dist)> _steps = new Dictionary<int, (Vector3, float)>();
+        private const float StepStride = 1.15f;   // metros entre um passo e outro
+
+        /// <summary>Um passo a cada ~1 m andado por herói visível (o meu um pouco mais alto que o dos outros).</summary>
+        private void Footsteps()
+        {
+            foreach (var v in _views.Values)
+            {
+                if (v == null || v.Kind != EntityKind.Player) continue;
+                var p = v.transform.position;
+                if (!_steps.TryGetValue(v.Id, out var st)) { _steps[v.Id] = (p, 0f); continue; }
+                var d = p - st.last; d.y = 0;
+                float m = d.magnitude;
+                if (m > 4f) { _steps[v.Id] = (p, 0f); continue; }       // teleporte ou troca de mapa
+                st.dist += m; st.last = p;
+                if (st.dist >= StepStride) { st.dist -= StepStride; _sfx.Step(p, v.Id == State.MyId ? 0.32f : 0.2f); }
+                _steps[v.Id] = st;
+            }
+            if (_steps.Count > _views.Count + 16)
+            {
+                var gone = new List<int>();
+                foreach (var id in _steps.Keys) if (!_views.ContainsKey(id)) gone.Add(id);
+                foreach (var id in gone) _steps.Remove(id);
+            }
+        }
         private Vector3 TopOf(EntityView v) => v.transform.position + Vector3.up * v.Height;
 
         private void ProcessEvents()
@@ -496,7 +524,7 @@ namespace Kezor.Client
                             break;
                         }
                         case "EXP": { var v = View(State.MyId); if (v != null) _fx.Text(TopOf(v), $"+{ev.F[0]} exp", new Color(0.95f, 0.9f, 0.5f), 0.9f); break; }
-                        case "GOLD": { var v = View(State.MyId); if (v != null) _fx.Text(TopOf(v) + Vector3.up * 0.3f, $"+{ev.F[0]} ouro", new Color(1f, 0.8f, 0.2f), 0.9f); break; }
+                        case "GOLD": { var v = View(State.MyId); if (v != null) { _fx.Text(TopOf(v) + Vector3.up * 0.3f, $"+{ev.F[0]} ouro", new Color(1f, 0.8f, 0.2f), 0.9f); _sfx.Play("coin", v.transform.position, 0.55f); } break; }
                     }
                 }
                 catch (Exception e) { Debug.LogWarning("[Kezor] evento inválido " + ev.Type + ": " + e.Message); }
