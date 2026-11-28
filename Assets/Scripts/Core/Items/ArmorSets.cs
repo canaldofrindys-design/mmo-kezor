@@ -35,6 +35,9 @@ namespace Kezor.Core.Items
             ArmorSet.ArcherGarb => "Trajes do Arqueiro",
             ArmorSet.ScoutLeather => "Couraça do Batedor",
             ArmorSet.SentinelLeather => "Couraça da Sentinela Rubra",
+            ArmorSet.FencerGarb => "Couraça do Esgrimista",
+            ArmorSet.DuelistPlate => "Placas do Duelista",
+            ArmorSet.SilverStagPlate => "Placas do Cervo de Prata",
             // </kz-class-sets name>
             _ => "",
         };
@@ -59,6 +62,9 @@ namespace Kezor.Core.Items
             ArmorSet.ArcherGarb => new SetBonus { Defense = 6, DefenseRatePercent = 6 },
             ArmorSet.ScoutLeather => new SetBonus { Defense = 20, DefenseRatePercent = 14, DamagePercent = 5 },
             ArmorSet.SentinelLeather => new SetBonus { Defense = 28, DefenseRatePercent = 18, DamagePercent = 8, ReductionPercent = 4 },
+            ArmorSet.FencerGarb => new SetBonus { Defense = 6, DamagePercent = 4, MagicPercent = 4 },
+            ArmorSet.DuelistPlate => new SetBonus { Defense = 22, DamagePercent = 10, MagicPercent = 12 },
+            ArmorSet.SilverStagPlate => new SetBonus { Defense = 32, DamagePercent = 14, MagicPercent = 16, ReductionPercent = 4 },
             // </kz-class-sets bonus>
             _ => default,
         };

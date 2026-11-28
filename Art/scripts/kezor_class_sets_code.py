@@ -51,6 +51,15 @@ SETS = [
     ('R', 4, 'SentinelLeather', 'Sentinela', 'Couraça da Sentinela Rubra',
      ['Elmo da Sentinela', 'Couraça da Sentinela', 'Grevas da Sentinela', 'Luvas da Sentinela', 'Botas da Sentinela'],
      'Defense = 28, DefenseRatePercent = 18, DamagePercent = 8, ReductionPercent = 4', '#ff4a4a', 'Agility'),
+    ('L', 1, 'FencerGarb', 'Esgrimista', 'Couraça do Esgrimista',
+     ['Elmo do Esgrimista', 'Couraça do Esgrimista', 'Calças do Esgrimista', 'Luvas do Esgrimista', 'Botas do Esgrimista'],
+     'Defense = 6, DamagePercent = 4, MagicPercent = 4', '#9aa7b8', 'Strength'),
+    ('L', 3, 'DuelistPlate', 'Duelista', 'Placas do Duelista',
+     ['Elmo do Duelista', 'Placas do Duelista', 'Grevas do Duelista', 'Braçadeiras do Duelista', 'Botas do Duelista'],
+     'Defense = 22, DamagePercent = 10, MagicPercent = 12', '#7fb8ff', 'Strength'),
+    ('L', 4, 'SilverStagPlate', 'Astral', 'Placas do Cervo de Prata',
+     ['Elmo do Cervo de Prata', 'Placas do Cervo de Prata', 'Grevas do Cervo de Prata', 'Manoplas do Cervo de Prata', 'Botas do Cervo de Prata'],
+     'Defense = 32, DamagePercent = 14, MagicPercent = 16, ReductionPercent = 4', '#e6f2ff', 'Strength'),
 ]
 
 BASE_ENUM = ['None', 'Leather', 'Scale', 'Veil', 'RunePlate', 'ArcaneWeave', 'Bastion', 'EchoVeil', 'EmberHide']

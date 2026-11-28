@@ -28,6 +28,9 @@ que também deve aparecer na tela de créditos do jogo.
 | Set Batedor (Patrulheiro, tier 3): couraça, calças, luvas e botas | Elven Ranger | div.andromeda | CC BY 4.0 | https://sketchfab.com/3d-models/daed59994fd340bc8f7e1d9bb30d6cdf |
 | Set Batedor (Patrulheiro, tier 3): elmo | Helmet - Archery | Multipainkiller_Studio | CC BY 4.0 | https://sketchfab.com/3d-models/5b082c77519345b2a37d3beaff65418a |
 | Set Sentinela Rubra (Patrulheiro, tier 4): armadura completa com elmo | Elsworn Leather Armor | SethBlaine | CC BY 4.0 | https://sketchfab.com/3d-models/5affa0d955554002b8cd44bc7aca352d |
+| Set Esgrimista (Lâmina, tier 1): armadura leve completa com elmo | Medieval Light Armor | frankestudios71 | CC BY 4.0 | https://sketchfab.com/3d-models/4dfb95c72f814d3fbe32e7ada8435fa9 |
+| Set Duelista (Lâmina, tier 3): placas gravadas completas com elmo | Medieval Knight Armour | GraphVFX | CC BY 4.0 | https://sketchfab.com/3d-models/5d076bc757674b94b55735791b35a995 |
+| Set Cervo de Prata (Lâmina, tier 4): placas, elmo com galhada, manoplas e botas | Eraden Paladin Armor - Male | EmClear | CC BY 4.0 | https://sketchfab.com/3d-models/3f437cd261b44ddeb0acfc2f58546ed1 |
 | Set Véu (Arcanista): botas | gerado no Tripo Studio pela conta do projeto | — | uso pelo plano do Tripo | — |
 
 Alterações feitas: braços colocados em pose de descanso, ajuste às medidas do corpo da classe, divisão nas peças

@@ -36,6 +36,8 @@ def setup(pre, model, set_name):
     G['ARM_EXCLUDE'] = ()
     G['HAT_Z'] = None
     G['NO_HELM_SPLIT'] = False
+    G['ARM_SLEEVES'] = False
+    G['FULL_SLEEVES'] = None
 
 
 def kind_of(o):
@@ -545,7 +547,8 @@ def inflate_all(parts, gap=0.012):
     out['torso'] = inflate(parts['Armadura'], (0, -0.025, 0.85), (0, -0.025, 1.52), tors, gap)
     for s in 'LR':
         arm = _wb_groups(('Arm' + s, 'ForeArm' + s))
-        out['arm' + s] = inflate(parts['Luva' + s], TJ['S' + s], TJ['W' + s], arm, gap * 0.8, tmin=0.08)
+        out['arm' + s] = inflate(parts['Luva' + s] + (parts['Armadura'] if globals().get('ARM_SLEEVES') else []),
+                                 TJ['S' + s], TJ['W' + s], arm, gap * 0.8, tmin=0.08)
         leg = _wb_groups(('Leg' + s, 'Shin' + s))
         out['leg' + s] = inflate(parts['Calca' + s] + parts['Armadura'], TJ['H' + s], TJ['A' + s], leg, gap, tmin=0.0, tmax=1.0)
     return out
@@ -742,10 +745,11 @@ def clean_hide(set_name, model, wb_name=None):
     from mathutils.kdtree import KDTree
     wb = bpy.data.objects[wb_name or WB]; mw = wb.matrix_world
     names = {g.index: g.name for g in wb.vertex_groups}
-    kd = KDTree(len(wb.data.vertices)); dom = []
+    kd = KDTree(len(wb.data.vertices)); dom = []; rawside = []
     for v in wb.data.vertices:
         kd.insert(mw @ v.co, v.index)
-        dom.append(names[max(v.groups, key=lambda g: g.weight).group].rstrip('LR') if v.groups else '')
+        raw = names[max(v.groups, key=lambda g: g.weight).group] if v.groups else ''
+        dom.append(raw.rstrip('LR')); rawside.append(raw[-1:] if raw[-1:] in ('L', 'R') else '')
     kd.balance()
     out = {}
     for path in [os.path.join(K_ROOT, 'Equip', 'Hide', f) for f in os.listdir(os.path.join(K_ROOT, 'Equip', 'Hide'))
@@ -763,6 +767,18 @@ def clean_hide(set_name, model, wb_name=None):
         if piece == 'Elmo' and of:                      # capuz aberto: o rosto fica à mostra
             top, yc = of
             keep = [p for p in keep if not (top - 0.25 < p[2] / 1000 < top - 0.05 and abs(p[0]) < 80 and p[1] / 1000 < yc - 0.02)]
+        full = (globals().get('FULL_SLEEVES') or {}).get(piece)
+        if full:                                        # manga comprida: o braço inteiro fica por baixo
+            side = os.path.basename(path)[len(set_name) + 1:-len(model) - 5][-1:] if piece == 'Luva' else ''
+            have = set(keep)
+            bo = bpy.data.objects[BODY]
+            for v in bo.data.vertices:
+                w = bo.matrix_world @ v.co
+                gi = kd.find(w)[1]
+                if dom[gi] in full and (not side or rawside[gi] == side):
+                    q = tuple(int(round(c * 1000)) for c in w)
+                    if q not in have:
+                        have.add(q); keep.append(q)
         with open(path, 'w', encoding='utf-8') as f:
             f.write('\n'.join('%d %d %d' % p for p in keep))
         out[os.path.basename(path)] = (len(pts), len(keep))
