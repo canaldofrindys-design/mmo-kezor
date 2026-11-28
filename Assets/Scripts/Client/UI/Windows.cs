@@ -86,7 +86,7 @@ namespace Kezor.Client.UI
             foreach (var w in _all)
             {
                 bool want = w.Wanted;
-                if (want != _shown[w]) { _shown[w] = want; w.Show(want); if (want) { w.Opened(); w.BringToFront(); } }
+                if (want != _shown[w]) { _shown[w] = want; w.Show(want); CombatAudio.Ensure().Ui(want ? "ui_open" : "ui_close", 0.4f); if (want) { w.Opened(); w.BringToFront(); } }
                 if (want) w.Refresh();
             }
         }
